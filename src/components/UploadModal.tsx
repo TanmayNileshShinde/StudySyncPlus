@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useResources } from '../context/ResourceContext';
 import { SubjectCategory, ResourceType, Semester, FormErrors } from '../types';
-import { X, UploadCloud, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { X, UploadCloud, AlertCircle, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface UploadModalProps {
@@ -9,13 +9,15 @@ interface UploadModalProps {
   onClose: () => void;
 }
 
-const SUBJECTS: SubjectCategory[] = [
-  'Web Computing & Modern Frameworks',
-  'Data Structures & Algorithms',
-  'Database Management Systems',
-  'Operating Systems',
-  'Computer Networks',
-  'Artificial Intelligence & Machine Learning'
+const SUBJECT_OPTIONS: { name: SubjectCategory; code: string }[] = [
+  { name: 'Web Technology II', code: 'CMLOR2VS201' },
+  { name: 'Operating System', code: 'CMCOR2PC202' },
+  { name: 'Data Structures', code: 'CMCOR2PC203' },
+  { name: 'Discrete Structures', code: 'CMCOR2PC201' },
+  { name: 'Microprocessor', code: 'CMCOR2PC204' },
+  { name: 'Foundation of Embedded System', code: 'CMCOR2MD201' },
+  { name: 'OOP with Java', code: 'CMLOR2VS202' },
+  { name: 'Engineering Career Navigation', code: 'CMLOR2ED201' }
 ];
 
 const RESOURCE_TYPES: ResourceType[] = [
@@ -30,35 +32,41 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
   const { addResource, userProfile } = useResources();
 
   const [title, setTitle] = useState('');
-  const [subject, setSubject] = useState<SubjectCategory>('Web Computing & Modern Frameworks');
-  const [semester, setSemester] = useState<Semester>(5);
+  const [subject, setSubject] = useState<SubjectCategory>('Web Technology II');
+  const [courseCode, setCourseCode] = useState('CMLOR2VS201');
+  const [semester, setSemester] = useState<Semester>(3);
   const [type, setType] = useState<ResourceType>('Lecture Notes');
   const [fileFormat, setFileFormat] = useState<'PDF' | 'DOCX' | 'ZIP' | 'PPTX'>('PDF');
   const [fileSizeMb, setFileSizeMb] = useState<string>('3.5');
   const [uploadedBy, setUploadedBy] = useState(userProfile.name);
   const [rollNumber, setRollNumber] = useState(userProfile.studentId);
   const [description, setDescription] = useState('');
-  const [tagsInput, setTagsInput] = useState('React, Syllabus, Notes');
+  const [tagsInput, setTagsInput] = useState('WebTech2, SAKEC, Solved');
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  // Real-time & submission form validation (CO1.3, CO1.4)
+  const handleSubjectChange = (subj: SubjectCategory) => {
+    setSubject(subj);
+    const found = SUBJECT_OPTIONS.find((s) => s.name === subj);
+    if (found) {
+      setCourseCode(found.code);
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // 1. Title validation
     if (!title.trim()) {
       newErrors.title = 'Resource title is mandatory.';
     } else if (title.trim().length < 6) {
       newErrors.title = 'Title must be at least 6 characters long.';
-    } else if (title.trim().length > 90) {
-      newErrors.title = 'Title must not exceed 90 characters.';
+    } else if (title.trim().length > 95) {
+      newErrors.title = 'Title must not exceed 95 characters.';
     }
 
-    // 2. Roll number regex validation
     const rollRegex = /^[0-9a-zA-Z]{2,15}$/;
     if (!rollNumber.trim()) {
       newErrors.rollNumber = 'Roll/Seat number is required.';
@@ -66,12 +74,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
       newErrors.rollNumber = 'Invalid roll number format (e.g. 126BTCM2008 or 67).';
     }
 
-    // 3. Uploader Name
     if (!uploadedBy.trim() || uploadedBy.trim().length < 3) {
       newErrors.uploadedBy = 'Please provide an author name (at least 3 characters).';
     }
 
-    // 4. File size validation
     const sizeNum = parseFloat(fileSizeMb);
     if (isNaN(sizeNum) || sizeNum <= 0) {
       newErrors.fileSize = 'File size must be a positive number.';
@@ -79,7 +85,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
       newErrors.fileSize = 'Maximum allowed file size is 50 MB.';
     }
 
-    // 5. Description validation
     if (!description.trim()) {
       newErrors.description = 'Please provide a helpful summary for peer students.';
     } else if (description.trim().length < 15) {
@@ -99,7 +104,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
 
     setIsSubmitting(true);
 
-    // Parse tags array using ES6 split, map, filter
     const parsedTags = tagsInput
       .split(',')
       .map((t) => t.trim().replace(/^#/, ''))
@@ -107,6 +111,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
 
     setTimeout(() => {
       addResource({
+        courseCode,
         title: title.trim(),
         subject,
         semester,
@@ -116,7 +121,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
         uploadedBy: uploadedBy.trim(),
         rollNumber: rollNumber.trim().toUpperCase(),
         description: description.trim(),
-        tags: parsedTags.length > 0 ? parsedTags : ['StudyMaterial', 'SemesterPrep']
+        tags: parsedTags.length > 0 ? parsedTags : ['StudyMaterial', 'Semester3']
       });
 
       confetti({
@@ -127,7 +132,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
 
       setIsSubmitting(false);
       onClose();
-      // Reset form fields
       setTitle('');
       setDescription('');
     }, 450);
@@ -167,7 +171,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             </label>
             <input
               type="text"
-              placeholder="e.g. Unit 3 Dynamic Programming & Memoization Notes"
+              placeholder="e.g. Unit 3 Dynamic Programming & AVL Trees Solved PYQs"
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value);
@@ -187,15 +191,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
           {/* Subject & Semester Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Subject</label>
+              <label className="block font-semibold text-slate-700 mb-1">Course / Subject</label>
               <select
                 value={subject}
-                onChange={(e) => setSubject(e.target.value as SubjectCategory)}
+                onChange={(e) => handleSubjectChange(e.target.value as SubjectCategory)}
                 className="w-full px-3 py-2.5 clay-input text-slate-800 bg-white"
               >
-                {SUBJECTS.map((sub) => (
-                  <option key={sub} value={sub}>
-                    {sub}
+                {SUBJECT_OPTIONS.map((sub) => (
+                  <option key={sub.code} value={sub.name}>
+                    {sub.name} ({sub.code})
                   </option>
                 ))}
               </select>
@@ -210,7 +214,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
               >
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
                   <option key={sem} value={sem}>
-                    Semester {sem}
+                    Semester {sem} {sem === 3 ? '(Current Scheme)' : ''}
                   </option>
                 ))}
               </select>
@@ -243,7 +247,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
               >
                 <option value="PDF">PDF Document</option>
                 <option value="DOCX">Word Document</option>
-                <option value="ZIP">ZIP Archive (Lab code)</option>
+                <option value="ZIP">ZIP Archive (Code/ALP)</option>
                 <option value="PPTX">PowerPoint Presentation</option>
               </select>
             </div>
@@ -303,7 +307,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             </label>
             <textarea
               rows={3}
-              placeholder="Summarize key chapters, professors, or exam points covered in this resource..."
+              placeholder="Summarize key units, experiments, or exam questions covered in this resource..."
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
@@ -327,7 +331,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             </label>
             <input
               type="text"
-              placeholder="e.g. Algorithms, Module3, MumbaiUniversity, Solved"
+              placeholder="e.g. WebTech2, CMLOR2VS201, Algorithms, SAKEC"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
               className="w-full px-4 py-2.5 clay-input text-slate-800"

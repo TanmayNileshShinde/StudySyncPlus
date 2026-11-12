@@ -2,7 +2,7 @@ import React from 'react';
 import { StudyResource } from '../types';
 import { useResources } from '../context/ResourceContext';
 import { apiService } from '../services/apiService';
-import { Download, Bookmark, Star, FileText, User, Trash2, Calendar, HardDrive } from 'lucide-react';
+import { Download, Bookmark, Star, User, Trash2, HardDrive } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface ResourceCardProps {
@@ -20,7 +20,6 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }
     incrementDownload(resource.id);
     showToast(`Downloading "${resource.title.slice(0, 25)}..."`);
 
-    // Little celebration for study downloads
     confetti({
       particleCount: 25,
       spread: 45,
@@ -61,9 +60,14 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }
       {/* Top Meta Header */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100/80">
-            Sem {resource.semester} • {resource.type}
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100/80">
+              Sem {resource.semester}
+            </span>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+              {resource.courseCode || 'CORE'}
+            </span>
+          </div>
           
           <div className="flex items-center gap-1.5">
             <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${getFormatBadgeColor(resource.fileFormat)}`}>
@@ -97,10 +101,11 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }
           {resource.title}
         </h3>
 
-        {/* Subject */}
-        <p className="text-xs font-medium text-indigo-500 mt-1">
-          {resource.subject}
-        </p>
+        {/* Subject & Type */}
+        <div className="flex items-center justify-between mt-1 text-xs">
+          <span className="font-semibold text-indigo-600">{resource.subject}</span>
+          <span className="text-[11px] text-slate-400 font-medium">{resource.type}</span>
+        </div>
 
         {/* Description snippet */}
         <p className="text-xs text-slate-500 mt-2.5 line-clamp-2 leading-relaxed">

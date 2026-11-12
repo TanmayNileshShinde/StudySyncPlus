@@ -1,10 +1,12 @@
 export type SubjectCategory = 
-  | 'Data Structures & Algorithms'
-  | 'Database Management Systems'
-  | 'Operating Systems'
-  | 'Web Computing & Modern Frameworks'
-  | 'Computer Networks'
-  | 'Artificial Intelligence & Machine Learning';
+  | 'Web Technology II'
+  | 'Operating System'
+  | 'Data Structures'
+  | 'Discrete Structures'
+  | 'Microprocessor'
+  | 'Foundation of Embedded System'
+  | 'OOP with Java'
+  | 'Engineering Career Navigation';
 
 export type ResourceType = 'Lecture Notes' | 'Past Exam Papers' | 'Lab Manual' | 'Cheat Sheet' | 'Reference Book';
 
@@ -12,6 +14,7 @@ export type Semester = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export interface StudyResource {
   id: string;
+  courseCode: string; // e.g. "CMLOR2VS201", "CMCOR2PC202"
   title: string;
   subject: SubjectCategory;
   semester: Semester;
@@ -40,7 +43,7 @@ export interface UserProfile {
   studyStreakDays: number;
 }
 
-export type ActiveTab = 'library' | 'analytics' | 'async-lab' | 'syllabus-viva';
+export type ActiveTab = 'library' | 'analytics' | 'async-lab' | 'syllabus-viva' | 'curriculum-scheme';
 
 export interface FormErrors {
   title?: string;
@@ -52,4 +55,18 @@ export interface FormErrors {
   fileSize?: string;
   fileFormat?: string;
   description?: string;
+}
+
+export interface OfficialCourseSchemeItem {
+  srNo: number;
+  category: string;
+  abbreviation: string;
+  courseCode: string;
+  courseName: string;
+  cl: number;
+  tl: number;
+  ll: number;
+  slPbl: number;
+  nh: number;
+  credits: number;
 }

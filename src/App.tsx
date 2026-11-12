@@ -9,6 +9,7 @@ import { BookmarksDrawer } from './components/BookmarksDrawer';
 import { AnalyticsCharts } from './components/AnalyticsCharts';
 import { JsSandboxModal } from './components/JsSandboxModal';
 import { SyllabusVivaModal } from './components/SyllabusVivaModal';
+import { CurriculumSchemeModal } from './components/CurriculumSchemeModal';
 import { StudyResource, SubjectCategory, ResourceType, Semester } from './types';
 import {
   Search,
@@ -17,26 +18,26 @@ import {
   BookOpen,
   FolderOpen,
   ArrowRight,
-  TrendingUp,
-  Award,
-  Layers,
-  CheckCircle2,
+  GraduationCap,
   X
 } from 'lucide-react';
 
 const SUBJECT_LIST: (SubjectCategory | 'All')[] = [
   'All',
-  'Web Computing & Modern Frameworks',
-  'Data Structures & Algorithms',
-  'Database Management Systems',
-  'Operating Systems',
-  'Computer Networks',
-  'Artificial Intelligence & Machine Learning'
+  'Web Technology II',
+  'Operating System',
+  'Data Structures',
+  'Discrete Structures',
+  'Microprocessor',
+  'Foundation of Embedded System',
+  'OOP with Java',
+  'Engineering Career Navigation'
 ];
 
 const MainContent: React.FC = () => {
   const {
     activeTab,
+    setActiveTab,
     filteredResources,
     searchQuery,
     setSearchQuery,
@@ -56,7 +57,7 @@ const MainContent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
-      {/* Toast Notification (CO1.2 DOM Manipulation) */}
+      {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 clay-box px-5 py-3.5 bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-2xl flex items-center gap-2.5 animate-bounce">
           <Sparkles className="w-4 h-4 text-amber-400" />
@@ -79,9 +80,19 @@ const MainContent: React.FC = () => {
             {/* Hero Banner with Claymorphism */}
             <div className="clay-box p-6 sm:p-10 bg-gradient-to-br from-white via-indigo-50/20 to-white relative overflow-hidden">
               <div className="relative z-10 max-w-3xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold mb-4 shadow-sm">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Shah & Anchor Kutchhi Engineering College • Semester Hub</span>
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Shah & Anchor Kutchhi Engineering College • Semester III Hub</span>
+                  </span>
+
+                  <button
+                    onClick={() => setActiveTab('curriculum-scheme')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200 hover:bg-amber-100 transition-colors"
+                  >
+                    <GraduationCap className="w-3.5 h-3.5 text-amber-600" />
+                    <span>View Official 22-Credit Scheme</span>
+                  </button>
                 </div>
                 
                 <h1 className="text-3xl sm:text-5xl font-black text-slate-800 tracking-tight leading-tight">
@@ -92,7 +103,7 @@ const MainContent: React.FC = () => {
                 </h1>
                 
                 <p className="text-slate-600 text-sm sm:text-base mt-3 leading-relaxed">
-                  StudySync is an elegant student-driven resource repository featuring verified lecture notes, solved past exam question papers, lab implementations, and comprehensive syllabus cheat sheets.
+                  StudySync is tailored for SAKEC Computer Engineering students. Access verified lecture notes, solved past papers, and lab manuals mapped directly to your Semester III course codes.
                 </p>
 
                 {/* Search Bar (AJAX dynamic filter) */}
@@ -101,7 +112,7 @@ const MainContent: React.FC = () => {
                     <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="Search by topic, subject, tag, or author (e.g. React, Tree, Tanmay)..."
+                      placeholder="Search by topic, course code (e.g. CMLOR2VS201, WebTech, Tanmay)..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-11 pr-10 py-3.5 clay-input text-xs sm:text-sm text-slate-800"
@@ -132,9 +143,9 @@ const MainContent: React.FC = () => {
               </div>
             </div>
 
-            {/* Filter Section (Bootstrap Responsive Layout Principles) */}
+            {/* Filter Section */}
             <div className="space-y-4">
-              {/* Subject Pills (Scrollable horizontally on mobile) */}
+              {/* Subject Pills */}
               <div className="flex items-center space-x-2 overflow-x-auto pb-2 no-scrollbar">
                 {SUBJECT_LIST.map((subject) => {
                   const isSelected = selectedSubject === subject;
@@ -175,7 +186,7 @@ const MainContent: React.FC = () => {
                     <option value="All">All Semesters</option>
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
                       <option key={s} value={s}>
-                        Semester {s}
+                        Semester {s} {s === 3 ? '(Current)' : ''}
                       </option>
                     ))}
                   </select>
@@ -203,13 +214,13 @@ const MainContent: React.FC = () => {
               </div>
             </div>
 
-            {/* Resources Grid (CO3 Responsive Grid layout) */}
+            {/* Resources Grid */}
             {filteredResources.length === 0 ? (
               <div className="clay-box p-12 bg-white text-center space-y-3">
                 <FolderOpen className="w-12 h-12 text-slate-300 mx-auto" />
                 <h3 className="text-lg font-bold text-slate-700">No matching study resources found</h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  Try clearing your search query or subject filters, or be the first student to upload notes for this module!
+                  Try clearing your search query or subject filters, or be the first student to upload notes for this course!
                 </p>
                 <button
                   onClick={() => {
@@ -237,13 +248,16 @@ const MainContent: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 2: VISUAL ANALYTICS (Chart.js) */}
+        {/* TAB 2: OFFICIAL SEMESTER 3 CURRICULUM SCHEME */}
+        {activeTab === 'curriculum-scheme' && <CurriculumSchemeModal />}
+
+        {/* TAB 3: VISUAL ANALYTICS (Chart.js) */}
         {activeTab === 'analytics' && <AnalyticsCharts />}
 
-        {/* TAB 3: ASYNC & JS LAB (Fetch API, Promises, Storage, Error Handling) */}
+        {/* TAB 4: ASYNC & JS LAB (Fetch API, Promises, Storage, Error Handling) */}
         {activeTab === 'async-lab' && <JsSandboxModal />}
 
-        {/* TAB 4: SYLLABUS & VIVA INSPECTOR (CO1-CO6 Mapping) */}
+        {/* TAB 5: SYLLABUS & VIVA INSPECTOR (CO1-CO6 Mapping) */}
         {activeTab === 'syllabus-viva' && <SyllabusVivaModal />}
 
       </main>

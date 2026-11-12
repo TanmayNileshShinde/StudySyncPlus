@@ -7,13 +7,7 @@ import {
   Download,
   Bookmark,
   Star,
-  FileText,
-  User,
-  Calendar,
-  HardDrive,
-  Share2,
-  CheckCircle2,
-  ExternalLink
+  Share2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -51,9 +45,12 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
         {/* Header */}
         <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-100">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700">
                 Semester {resource.semester}
+              </span>
+              <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-800 border border-slate-200">
+                {resource.courseCode}
               </span>
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-pink-50 text-pink-700">
                 {resource.type}

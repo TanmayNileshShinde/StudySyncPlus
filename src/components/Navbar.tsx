@@ -1,6 +1,6 @@
 import React from 'react';
 import { useResources } from '../context/ResourceContext';
-import { BookOpen, BarChart3, Terminal, Award, PlusCircle, RefreshCw, Bookmark } from 'lucide-react';
+import { BookOpen, BarChart3, Terminal, Award, PlusCircle, RefreshCw, Bookmark, TableProperties } from 'lucide-react';
 import { ActiveTab } from '../types';
 
 interface NavbarProps {
@@ -13,6 +13,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUpload, onOpenBookmarks })
 
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
     { id: 'library', label: 'Resource Library', icon: <BookOpen className="w-4 h-4" /> },
+    { id: 'curriculum-scheme', label: 'Sem 3 Scheme', icon: <TableProperties className="w-4 h-4" /> },
     { id: 'analytics', label: 'Visual Analytics', icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'async-lab', label: 'Async & JS Lab', icon: <Terminal className="w-4 h-4" /> },
     { id: 'syllabus-viva', label: 'Syllabus & Viva', icon: <Award className="w-4 h-4" /> }
@@ -32,7 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUpload, onOpenBookmarks })
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-xl tracking-tight text-slate-800">StudySync</span>
                 <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
-                  Student Hub
+                  Sem-3 Hub
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium hidden sm:block">
