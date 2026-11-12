@@ -10,14 +10,14 @@ export type SubjectCategory =
 
 export type ResourceType = 'Lecture Notes' | 'Past Exam Papers' | 'Lab Manual' | 'Cheat Sheet' | 'Reference Book';
 
-export type Semester = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type Semester = 3;
 
 export interface StudyResource {
   id: string;
   courseCode: string; // e.g. "CMLOR2VS201", "CMCOR2PC202"
   title: string;
   subject: SubjectCategory;
-  semester: Semester;
+  semester: 3;
   type: ResourceType;
   uploadedBy: string;
   rollNumber: string;
@@ -25,7 +25,7 @@ export interface StudyResource {
   fileSize: string; // e.g. "2.4 MB"
   downloadCount: number;
   rating: number; // 1-5
-  fileFormat: 'PDF' | 'DOCX' | 'ZIP' | 'PPTX';
+  fileFormat: 'PDF';
   description: string;
   tags: string[];
   externalUrl?: string;
@@ -36,7 +36,7 @@ export interface UserProfile {
   name: string;
   rollNumber: string;
   studentId: string;
-  semester: Semester;
+  semester: 3;
   branch: string;
   college: string;
   savedResourceIds: string[];
@@ -48,7 +48,6 @@ export type ActiveTab = 'library' | 'analytics' | 'async-lab' | 'syllabus-viva' 
 export interface FormErrors {
   title?: string;
   subject?: string;
-  semester?: string;
   type?: string;
   uploadedBy?: string;
   rollNumber?: string;

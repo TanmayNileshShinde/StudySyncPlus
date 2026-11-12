@@ -43,8 +43,6 @@ const MainContent: React.FC = () => {
     setSearchQuery,
     selectedSubject,
     setSelectedSubject,
-    selectedSemester,
-    setSelectedSemester,
     selectedType,
     setSelectedType,
     resources,
@@ -173,23 +171,16 @@ const MainContent: React.FC = () => {
                     <span className="font-bold text-slate-700">Filter By:</span>
                   </div>
 
-                  {/* Semester Dropdown */}
-                  <select
-                    value={selectedSemester}
-                    onChange={(e) =>
-                      setSelectedSemester(
-                        e.target.value === 'All' ? 'All' : (Number(e.target.value) as Semester)
-                      )
-                    }
-                    className="clay-input px-3 py-1.5 text-slate-700 text-xs font-medium"
-                  >
-                    <option value="All">All Semesters</option>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                      <option key={s} value={s}>
-                        Semester {s} {s === 3 ? '(Current)' : ''}
-                      </option>
-                    ))}
-                  </select>
+                  {/* Semester Badge (Fixed strictly to Sem 3) */}
+                  <div className="clay-badge px-3 py-1 bg-white text-indigo-700 font-bold rounded-lg border border-indigo-100 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Semester 3 Only</span>
+                  </div>
+
+                  {/* Format Badge (Fixed strictly to PDF) */}
+                  <div className="clay-badge px-2.5 py-1 bg-rose-50 text-rose-700 font-bold rounded-lg border border-rose-200">
+                    PDF Only
+                  </div>
 
                   {/* Resource Type Dropdown */}
                   <select
@@ -226,7 +217,6 @@ const MainContent: React.FC = () => {
                   onClick={() => {
                     setSearchQuery('');
                     setSelectedSubject('All');
-                    setSelectedSemester('All');
                     setSelectedType('All');
                   }}
                   className="clay-button px-4 py-2 text-xs font-bold text-indigo-600 rounded-xl mt-2"

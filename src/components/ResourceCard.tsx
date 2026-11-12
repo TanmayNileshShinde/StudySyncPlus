@@ -39,17 +39,8 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }
     }
   };
 
-  const getFormatBadgeColor = (format: StudyResource['fileFormat']) => {
-    switch (format) {
-      case 'PDF':
-        return 'bg-rose-100 text-rose-700 border-rose-200';
-      case 'ZIP':
-        return 'bg-amber-100 text-amber-700 border-amber-200';
-      case 'DOCX':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      default:
-        return 'bg-purple-100 text-purple-700 border-purple-200';
-    }
+  const getFormatBadgeColor = () => {
+    return 'bg-rose-100 text-rose-700 border-rose-200';
   };
 
   return (
@@ -70,7 +61,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }
           </div>
           
           <div className="flex items-center gap-1.5">
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${getFormatBadgeColor(resource.fileFormat)}`}>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${getFormatBadgeColor()}`}>
               {resource.fileFormat}
             </span>
 

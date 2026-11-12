@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useResources } from '../context/ResourceContext';
-import { SubjectCategory, ResourceType, Semester, FormErrors } from '../types';
-import { X, UploadCloud, AlertCircle, Sparkles } from 'lucide-react';
+import { SubjectCategory, ResourceType, FormErrors } from '../types';
+import { X, UploadCloud, AlertCircle, Sparkles, FileText } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface UploadModalProps {
@@ -34,14 +34,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState<SubjectCategory>('Web Technology II');
   const [courseCode, setCourseCode] = useState('CMLOR2VS201');
-  const [semester, setSemester] = useState<Semester>(3);
   const [type, setType] = useState<ResourceType>('Lecture Notes');
-  const [fileFormat, setFileFormat] = useState<'PDF' | 'DOCX' | 'ZIP' | 'PPTX'>('PDF');
   const [fileSizeMb, setFileSizeMb] = useState<string>('3.5');
   const [uploadedBy, setUploadedBy] = useState(userProfile.name);
   const [rollNumber, setRollNumber] = useState(userProfile.studentId);
   const [description, setDescription] = useState('');
-  const [tagsInput, setTagsInput] = useState('WebTech2, SAKEC, Solved');
+  const [tagsInput, setTagsInput] = useState('WebTech2, CMLOR2VS201, Notes');
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,14 +112,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
         courseCode,
         title: title.trim(),
         subject,
-        semester,
         type,
-        fileFormat,
         fileSize: `${parseFloat(fileSizeMb).toFixed(1)} MB`,
         uploadedBy: uploadedBy.trim(),
         rollNumber: rollNumber.trim().toUpperCase(),
         description: description.trim(),
-        tags: parsedTags.length > 0 ? parsedTags : ['StudyMaterial', 'Semester3']
+        tags: parsedTags.length > 0 ? parsedTags : ['StudyMaterial', 'Semester3', 'PDF']
       });
 
       confetti({
@@ -147,9 +143,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
               <UploadCloud className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-800">Share Study Resource</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-slate-800">Upload Semester 3 PDF Resource</h2>
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-700 rounded-md border border-rose-200">
+                  PDF Only
+                </span>
+              </div>
               <p className="text-xs text-slate-500 font-medium">
-                Contribute verified notes, PYQs, and cheat sheets for student peers
+                Contribute verified Semester III notes and lab manuals for student peers
               </p>
             </div>
           </div>
@@ -162,7 +163,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
           </button>
         </div>
 
-        {/* Form with Live Validation */}
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 text-xs sm:text-sm">
           {/* Resource Title */}
           <div>
@@ -188,10 +189,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             )}
           </div>
 
-          {/* Subject & Semester Grid */}
+          {/* Subject & Semester */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Course / Subject</label>
+              <label className="block font-semibold text-slate-700 mb-1">Semester 3 Course</label>
               <select
                 value={subject}
                 onChange={(e) => handleSubjectChange(e.target.value as SubjectCategory)}
@@ -206,18 +207,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Target Semester</label>
-              <select
-                value={semester}
-                onChange={(e) => setSemester(Number(e.target.value) as Semester)}
-                className="w-full px-3 py-2.5 clay-input text-slate-800 bg-white"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                  <option key={sem} value={sem}>
-                    Semester {sem} {sem === 3 ? '(Current Scheme)' : ''}
-                  </option>
-                ))}
-              </select>
+              <label className="block font-semibold text-slate-700 mb-1">Target Curriculum</label>
+              <div className="w-full px-3 py-2.5 clay-input text-slate-700 bg-slate-50 flex items-center justify-between font-medium">
+                <span>Semester III (Level 4.5)</span>
+                <span className="text-[11px] font-mono font-bold text-indigo-600">{courseCode}</span>
+              </div>
             </div>
           </div>
 
@@ -240,16 +234,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
 
             <div>
               <label className="block font-semibold text-slate-700 mb-1">File Format</label>
-              <select
-                value={fileFormat}
-                onChange={(e) => setFileFormat(e.target.value as any)}
-                className="w-full px-3 py-2.5 clay-input text-slate-800 bg-white"
-              >
-                <option value="PDF">PDF Document</option>
-                <option value="DOCX">Word Document</option>
-                <option value="ZIP">ZIP Archive (Code/ALP)</option>
-                <option value="PPTX">PowerPoint Presentation</option>
-              </select>
+              <div className="w-full px-3 py-2.5 clay-input text-rose-700 bg-rose-50/50 flex items-center gap-2 font-bold">
+                <FileText className="w-4 h-4 text-rose-600" />
+                <span>PDF Document</span>
+              </div>
             </div>
 
             <div>
@@ -269,7 +257,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             </div>
           </div>
 
-          {/* Author Details (Tanmay & Aditya or Custom) */}
+          {/* Author Details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Uploader Student Name</label>
@@ -307,7 +295,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             </label>
             <textarea
               rows={3}
-              placeholder="Summarize key units, experiments, or exam questions covered in this resource..."
+              placeholder="Summarize key units, experiments, or exam questions covered in this PDF..."
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
@@ -331,7 +319,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             </label>
             <input
               type="text"
-              placeholder="e.g. WebTech2, CMLOR2VS201, Algorithms, SAKEC"
+              placeholder="e.g. WebTech2, CMLOR2VS201, Algorithms, SAKEC, PDF"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
               className="w-full px-4 py-2.5 clay-input text-slate-800"
@@ -357,7 +345,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  <span>Publish to StudySync</span>
+                  <span>Publish PDF Resource</span>
                 </>
               )}
             </button>

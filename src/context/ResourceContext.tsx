@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { StudyResource, UserProfile, SubjectCategory, ResourceType, Semester, ActiveTab } from '../types';
+import { StudyResource, UserProfile, SubjectCategory, ResourceType, ActiveTab } from '../types';
 import { INITIAL_RESOURCES } from '../data/initialResources';
 
 interface ResourceContextType {
@@ -11,15 +11,13 @@ interface ResourceContextType {
   setSearchQuery: (query: string) => void;
   selectedSubject: SubjectCategory | 'All';
   setSelectedSubject: (subject: SubjectCategory | 'All') => void;
-  selectedSemester: Semester | 'All';
-  setSelectedSemester: (sem: Semester | 'All') => void;
   selectedType: ResourceType | 'All';
   setSelectedType: (type: ResourceType | 'All') => void;
   filteredResources: StudyResource[];
   toggleBookmark: (id: string) => void;
   isBookmarked: (id: string) => boolean;
   incrementDownload: (id: string) => void;
-  addResource: (newResource: Omit<StudyResource, 'id' | 'downloadCount' | 'uploadDate' | 'rating'>) => void;
+  addResource: (newResource: Omit<StudyResource, 'id' | 'downloadCount' | 'uploadDate' | 'rating' | 'fileFormat' | 'semester'>) => void;
   deleteResource: (id: string) => void;
   resetToDefaults: () => void;
   toastMessage: string | null;
@@ -27,25 +25,24 @@ interface ResourceContextType {
 }
 
 const STORAGE_KEYS = {
-  RESOURCES: 'studysync_resources_v1',
-  PROFILE: 'studysync_user_profile_v1'
+  RESOURCES: 'studysync_resources_v2',
+  PROFILE: 'studysync_user_profile_v2'
 };
 
 const DEFAULT_PROFILE: UserProfile = {
   name: 'Tanmay Shinde',
   rollNumber: '67',
   studentId: '126BTCM2008',
-  semester: 5,
-  branch: 'Computer Science & Engineering',
+  semester: 3,
+  branch: 'Computer Engineering',
   college: 'Shah & Anchor Kutchhi Engineering College (SAKEC)',
-  savedResourceIds: ['res-001', 'res-005'],
+  savedResourceIds: ['res-001', 'res-002'],
   studyStreakDays: 14
 };
 
 const ResourceContext = createContext<ResourceContextType | undefined>(undefined);
 
 export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // 1.4 localStorage persistence for resources
   const [resources, setResources] = useState<StudyResource[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.RESOURCES);
@@ -58,7 +55,6 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return INITIAL_RESOURCES;
   });
 
-  // 1.4 localStorage persistence for profile
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
@@ -71,15 +67,12 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return DEFAULT_PROFILE;
   });
 
-  // Navigation & Filter States
   const [activeTab, setActiveTab] = useState<ActiveTab>('library');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<SubjectCategory | 'All'>('All');
-  const [selectedSemester, setSelectedSemester] = useState<Semester | 'All'>('All');
   const [selectedType, setSelectedType] = useState<ResourceType | 'All'>('All');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Sync with localStorage whenever resources or profile change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(resources));
@@ -103,22 +96,21 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, 3500);
   }, []);
 
-  // Filter resources efficiently using useMemo (ES6 arrow functions & filter)
   const filteredResources = useMemo(() => {
     return resources.filter((item) => {
       const matchesSearch =
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.courseCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
         item.uploadedBy.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesSubject = selectedSubject === 'All' || item.subject === selectedSubject;
-      const matchesSemester = selectedSemester === 'All' || item.semester === selectedSemester;
       const matchesType = selectedType === 'All' || item.type === selectedType;
 
-      return matchesSearch && matchesSubject && matchesSemester && matchesType;
+      return matchesSearch && matchesSubject && matchesType;
     });
-  }, [resources, searchQuery, selectedSubject, selectedSemester, selectedType]);
+  }, [resources, searchQuery, selectedSubject, selectedType]);
 
   const toggleBookmark = useCallback((id: string) => {
     setUserProfile((prev) => {
@@ -146,10 +138,12 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const addResource = useCallback(
-    (newResource: Omit<StudyResource, 'id' | 'downloadCount' | 'uploadDate' | 'rating'>) => {
+    (newResource: Omit<StudyResource, 'id' | 'downloadCount' | 'uploadDate' | 'rating' | 'fileFormat' | 'semester'>) => {
       const created: StudyResource = {
         ...newResource,
         id: `res-${Date.now()}`,
+        semester: 3,
+        fileFormat: 'PDF',
         downloadCount: 0,
         uploadDate: new Date().toISOString().split('T')[0],
         rating: 5.0,
@@ -157,7 +151,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
 
       setResources((prev) => [created, ...prev]);
-      showToast(`Resource "${created.title.slice(0, 24)}..." successfully published!`);
+      showToast(`PDF Resource "${created.title.slice(0, 24)}..." published!`);
     },
     [showToast]
   );
@@ -176,7 +170,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setUserProfile(DEFAULT_PROFILE);
     localStorage.removeItem(STORAGE_KEYS.RESOURCES);
     localStorage.removeItem(STORAGE_KEYS.PROFILE);
-    showToast('Reset StudySync to default syllabus sample data.');
+    showToast('Reset StudySync to official Semester 3 PDF syllabus data.');
   }, [showToast]);
 
   const value = useMemo(
@@ -189,8 +183,6 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setSearchQuery,
       selectedSubject,
       setSelectedSubject,
-      selectedSemester,
-      setSelectedSemester,
       selectedType,
       setSelectedType,
       filteredResources,
@@ -209,7 +201,6 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       activeTab,
       searchQuery,
       selectedSubject,
-      selectedSemester,
       selectedType,
       filteredResources,
       toggleBookmark,

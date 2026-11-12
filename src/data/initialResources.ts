@@ -232,7 +232,7 @@ export const INITIAL_RESOURCES: StudyResource[] = [
     fileSize: '4.9 MB',
     downloadCount: 460,
     rating: 4.9,
-    fileFormat: 'DOCX',
+    fileFormat: 'PDF',
     description: 'Clean Java programs demonstrating abstract classes, interfaces, custom exception handling, generic collections, and thread synchronization.',
     tags: ['Java', 'CMLOR2VS202', 'OOP', 'Multithreading', 'Collections']
   },
