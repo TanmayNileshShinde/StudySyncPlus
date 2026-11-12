@@ -1,7 +1,8 @@
 import React from 'react';
 import { useResources } from '../context/ResourceContext';
+import { useOverlayBehavior } from '../hooks/useOverlayBehavior';
 import { StudyResource } from '../types';
-import { X, Bookmark, Trash2, Download, ExternalLink } from 'lucide-react';
+import { X, Bookmark, Trash2, Download } from 'lucide-react';
 import { apiService } from '../services/apiService';
 
 interface BookmarksDrawerProps {
@@ -16,66 +17,89 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
   onSelectResource
 }) => {
   const { resources, userProfile, toggleBookmark, incrementDownload, showToast } = useResources();
+  const panelRef = useOverlayBehavior(isOpen, onClose);
 
   if (!isOpen) return null;
 
   const savedResources = resources.filter((r) => userProfile.savedResourceIds.includes(r.id));
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-md bg-white h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-ink/40 animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bookmarks-title"
+        className="w-full max-w-md bg-paper h-full border-l border-ink shadow-overlay p-6 flex flex-col justify-between overflow-y-auto animate-fadeIn"
+      >
         <div>
           {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                <Bookmark className="w-5 h-5 fill-amber-500" />
+          <div className="flex items-start justify-between gap-3 pb-4 border-b border-ink">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <div className="w-9 h-9 bg-ink flex items-center justify-center shrink-0" aria-hidden="true">
+                <Bookmark className="w-4 h-4 text-lime" />
               </div>
-              <div>
-                <h3 className="font-bold text-slate-800 text-base">Saved Study Materials</h3>
-                <p className="text-[11px] text-slate-500">
+              <div className="min-w-0">
+                <h2 id="bookmarks-title" className="font-bold text-ink text-base leading-tight">
+                  Saved Study Materials
+                </h2>
+                <p className="text-[11px] text-ink-2 tabular">
                   {savedResources.length} saved for exam revision
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-            >
-              <X className="w-5 h-5" />
+            <button onClick={onClose} className="btn btn-ghost px-2 shrink-0" aria-label="Close saved resources">
+              <X className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
 
-          {/* List of bookmarks */}
-          <div className="mt-4 space-y-3">
+          {/* List */}
+          <div className="mt-4 space-y-2">
             {savedResources.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200 mt-6">
-                <Bookmark className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                No resources saved yet. Click the bookmark icon on any card to save it here!
+              <div className="ruled-sunk p-8 text-center text-xs text-ink-2 mt-4">
+                <Bookmark className="w-8 h-8 text-ink-3 mx-auto mb-3" aria-hidden="true" />
+                <p className="max-w-[36ch] mx-auto">
+                  Nothing saved yet. Use the bookmark icon on any resource card to keep it here for
+                  revision.
+                </p>
               </div>
             ) : (
               savedResources.map((res) => (
                 <div
                   key={res.id}
-                  className="clay-box p-3.5 bg-slate-50/50 hover:bg-white cursor-pointer transition-all border border-slate-100"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open ${res.title}`}
                   onClick={() => {
                     onSelectResource(res);
                     onClose();
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectResource(res);
+                      onClose();
+                    }
+                  }}
+                  className="ruled p-3.5 cursor-pointer transition-colors hover:border-ink"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] font-bold text-indigo-600 uppercase">
-                        Sem {res.semester} • {res.type}
+                    <div className="min-w-0">
+                      <span className="stamp stamp-outline">
+                        Sem {res.semester} · {res.type}
                       </span>
-                      <h4 className="font-bold text-xs text-slate-800 line-clamp-1 mt-0.5">
-                        {res.title}
-                      </h4>
-                      <p className="text-[10px] text-slate-400 mt-1">{res.subject}</p>
+                      <h3 className="font-bold text-xs text-ink line-clamp-1 mt-1.5">{res.title}</h3>
+                      <p className="text-[10px] text-ink-3 mt-0.5">{res.subject}</p>
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -83,10 +107,11 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
                           incrementDownload(res.id);
                           showToast(`Downloading ${res.title}`);
                         }}
-                        className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                        className="p-1.5 text-ink-2 hover:text-ink hover:bg-sunk transition-colors"
+                        aria-label={`Download ${res.title}`}
                         title="Download"
                       >
-                        <Download className="w-3.5 h-3.5" />
+                        <Download className="w-3.5 h-3.5" aria-hidden="true" />
                       </button>
 
                       <button
@@ -94,10 +119,11 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
                           e.stopPropagation();
                           toggleBookmark(res.id);
                         }}
-                        className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg"
+                        className="p-1.5 text-ink-3 hover:text-alert hover:bg-sunk transition-colors"
+                        aria-label={`Remove ${res.title} from saved`}
                         title="Remove"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -107,10 +133,11 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
           </div>
         </div>
 
-        {/* Footer info */}
-        <div className="pt-4 border-t border-slate-100 text-center">
-          <p className="text-[11px] text-slate-400">
-            Persistent storage maintained in your browser's <code className="font-mono text-indigo-600">localStorage</code>.
+        {/* Footer */}
+        <div className="pt-4 border-t border-rule text-center">
+          <p className="text-[11px] text-ink-3">
+            Persistent storage maintained in your browser's{' '}
+            <code className="font-mono text-ink">localStorage</code>.
           </p>
         </div>
       </div>

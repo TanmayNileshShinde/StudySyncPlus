@@ -2,13 +2,15 @@ import React from 'react';
 import { StudyResource } from '../types';
 import { useResources } from '../context/ResourceContext';
 import { apiService } from '../services/apiService';
-import { Download, Bookmark, Star, User, Trash2, HardDrive } from 'lucide-react';
+import { Download, Bookmark, Star, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface ResourceCardProps {
   resource: StudyResource;
   onSelect: (resource: StudyResource) => void;
 }
+
+const CONFETTI_COLORS = ['#111111', '#a3e635', '#d6d3d1'];
 
 export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }) => {
   const { toggleBookmark, isBookmarked, incrementDownload, deleteResource, showToast } = useResources();
@@ -23,7 +25,8 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }
     confetti({
       particleCount: 25,
       spread: 45,
-      origin: { y: 0.8 }
+      origin: { y: 0.8 },
+      colors: CONFETTI_COLORS
     });
   };
 
@@ -39,121 +42,91 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }
     }
   };
 
-  const getFormatBadgeColor = () => {
-    return 'bg-rose-100 text-rose-700 border-rose-200';
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect(resource);
+    }
   };
 
   return (
-    <div
+    <article
+      role="button"
+      tabIndex={0}
+      aria-label={`Open details for ${resource.title}`}
       onClick={() => onSelect(resource)}
-      className="clay-box p-5 sm:p-6 flex flex-col justify-between cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
+      onKeyDown={handleKeyDown}
+      className="ruled p-6 flex flex-col text-left cursor-pointer group transition-colors duration-200 hover:border-ink focus-visible:outline-2"
     >
-      {/* Top Meta Header */}
-      <div>
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100/80">
-              Sem {resource.semester}
-            </span>
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-              {resource.courseCode || 'CORE'}
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-1.5">
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${getFormatBadgeColor()}`}>
-              {resource.fileFormat}
-            </span>
+      {/* Identity row: official course code + actions */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[11px] font-semibold text-ink-3 uppercase tracking-[0.08em] truncate">
+          {resource.courseCode || 'CORE'}
+        </span>
 
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button
+            onClick={handleBookmark}
+            className={`p-1.5 transition-colors ${
+              bookmarked ? 'text-lime-deep bg-lime-wash' : 'text-ink-3 hover:text-ink hover:bg-sunk'
+            }`}
+            aria-pressed={bookmarked}
+            title={bookmarked ? 'Remove bookmark' : 'Bookmark resource'}
+            aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark resource'}
+          >
+            <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-lime-deep' : ''}`} aria-hidden="true" />
+          </button>
+
+          {resource.isUserUploaded && (
             <button
-              onClick={handleBookmark}
-              className={`p-1.5 rounded-lg transition-colors ${
-                bookmarked ? 'text-amber-500 bg-amber-50' : 'text-slate-400 hover:text-slate-600'
-              }`}
-              title={bookmarked ? 'Remove bookmark' : 'Bookmark resource'}
+              onClick={handleDelete}
+              className="p-1.5 text-ink-3 hover:text-alert hover:bg-sunk transition-colors"
+              aria-label={`Delete ${resource.title}`}
+              title="Delete uploaded resource"
             >
-              <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-amber-500' : ''}`} />
+              <Trash2 className="w-4 h-4" aria-hidden="true" />
             </button>
-
-            {resource.isUserUploaded && (
-              <button
-                onClick={handleDelete}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                title="Delete uploaded resource"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Resource Title */}
-        <h3 className="font-bold text-base sm:text-lg text-slate-800 leading-snug line-clamp-2 group-hover:text-indigo-600 transition-colors">
-          {resource.title}
-        </h3>
-
-        {/* Subject & Type */}
-        <div className="flex items-center justify-between mt-1 text-xs">
-          <span className="font-semibold text-indigo-600">{resource.subject}</span>
-          <span className="text-[11px] text-slate-400 font-medium">{resource.type}</span>
-        </div>
-
-        {/* Description snippet */}
-        <p className="text-xs text-slate-500 mt-2.5 line-clamp-2 leading-relaxed">
-          {resource.description}
-        </p>
-
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {resource.tags.slice(0, 3).map((tag, idx) => (
-            <span
-              key={idx}
-              className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md"
-            >
-              #{tag}
-            </span>
-          ))}
-          {resource.tags.length > 3 && (
-            <span className="text-[10px] text-slate-400 font-medium px-1">
-              +{resource.tags.length - 3}
-            </span>
           )}
         </div>
       </div>
 
-      {/* Footer Info & Download Action */}
-      <div className="pt-4 mt-4 border-t border-slate-100 flex flex-col gap-3">
-        {/* Author & Size Details */}
-        <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
-          <div className="flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="truncate max-w-[120px]">{resource.uploadedBy}</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-400">
-            <span className="flex items-center gap-1">
-              <HardDrive className="w-3 h-3" />
-              {resource.fileSize}
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1 text-amber-500 font-bold">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-              {resource.rating}
-            </span>
-          </div>
+      {/* Substance: title, subject · type, description */}
+      <h3 className="mt-3.5 font-bold text-[17px] leading-snug text-ink line-clamp-2 group-hover:underline underline-offset-2 decoration-2">
+        {resource.title}
+      </h3>
+
+      <p className="mt-1.5 text-xs">
+        <span className="font-semibold text-ink">{resource.subject}</span>
+        <span className="text-ink-3"> · {resource.type}</span>
+      </p>
+
+      <p className="mt-2.5 text-[13px] text-ink-2 leading-relaxed line-clamp-3">{resource.description}</p>
+
+      <div className="flex-1" aria-hidden="true" />
+
+      {/* Provenance + primary action, separated by a hairline */}
+      <div className="mt-5 pt-4 border-t border-rule flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 text-[11px] text-ink-2 min-w-0">
+          <span className="truncate">{resource.uploadedBy}</span>
+          <span className="text-ink-3" aria-hidden="true">·</span>
+          <span className="font-mono tabular shrink-0">{resource.fileSize}</span>
+          <span className="text-ink-3" aria-hidden="true">·</span>
+          <span className="flex items-center gap-1 tabular shrink-0">
+            <Star className="w-3 h-3 fill-lime text-lime-deep" aria-hidden="true" />
+            {resource.rating.toFixed(1)}
+          </span>
         </div>
 
-        {/* Action Button */}
         <button
           onClick={handleDownload}
-          className="w-full clay-button py-2 px-3 text-xs font-semibold text-slate-700 flex items-center justify-center gap-2 hover:text-indigo-600 group/btn"
+          className="btn btn-secondary px-3 shrink-0"
+          aria-label={`Download ${resource.title} (${resource.fileSize})`}
         >
-          <Download className="w-3.5 h-3.5 text-indigo-500 group-hover/btn:translate-y-0.5 transition-transform" />
-          <span>Download Resource</span>
-          <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md font-mono">
-            {resource.downloadCount}
-          </span>
+          <Download className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>Download</span>
+          <span className="font-mono text-[10px] tabular text-ink-3">{resource.downloadCount}</span>
         </button>
       </div>
-    </div>
+    </article>
   );
 };

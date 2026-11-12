@@ -119,7 +119,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ? prev.savedResourceIds.filter((item) => item !== id)
         : [...prev.savedResourceIds, id];
       
-      showToast(alreadySaved ? 'Removed from saved bookmarks' : 'Added to saved bookmarks! ⭐');
+      showToast(alreadySaved ? 'Removed from saved bookmarks' : 'Added to saved bookmarks');
       return {
         ...prev,
         savedResourceIds: updatedSaved
