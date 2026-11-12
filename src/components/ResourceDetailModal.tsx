@@ -1,30 +1,75 @@
-import React from 'react';
-import { StudyResource } from '../types';
+import React, { useState } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import type { StudyResource } from '../types';
 import { useResources } from '../context/ResourceContext';
 import { useOverlayBehavior } from '../hooks/useOverlayBehavior';
-import { apiService } from '../services/apiService';
-import { X, Download, Bookmark, Star, Share2 } from 'lucide-react';
+import { getOwnerKey } from '../lib/owner';
+import { asResourceId } from '../lib/convexIds';
+import { X, Download, Bookmark, Star, Share2, Pencil, FileText } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface ResourceDetailModalProps {
   resource: StudyResource | null;
   onClose: () => void;
+  onEdit: (resource: StudyResource) => void;
 }
 
 const CONFETTI_COLORS = ['#111111', '#a3e635', '#d6d3d1'];
 
-export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resource, onClose }) => {
-  const { toggleBookmark, isBookmarked, incrementDownload, showToast } = useResources();
+const RatingWidget: React.FC<{ resourceId: string }> = ({ resourceId }) => {
+  const { rateResource } = useResources();
+  const ownerKey = getOwnerKey();
+  const myRating = useQuery(api.ratings.getMine, { ownerKey, resourceId: asResourceId(resourceId) });
+  const [hoverValue, setHoverValue] = useState<number | null>(null);
+
+  const displayValue = hoverValue ?? myRating ?? 0;
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="flex items-center" role="group" aria-label="Rate this resource">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            onClick={() => void rateResource(resourceId, value)}
+            onMouseEnter={() => setHoverValue(value)}
+            onMouseLeave={() => setHoverValue(null)}
+            className="p-0.5 text-lime-deep hover:text-ink transition-colors"
+            aria-label={`Rate ${value} out of 5`}
+            aria-pressed={myRating === value}
+          >
+            <Star
+              className={`w-4 h-4 ${value <= displayValue ? 'fill-lime text-lime-deep' : 'text-ink-3'}`}
+              aria-hidden="true"
+            />
+          </button>
+        ))}
+      </div>
+      <span className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em]">
+        {myRating ? `Your rating ${myRating}/5` : 'Add your peer review'}
+      </span>
+    </div>
+  );
+};
+
+export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resource, onClose, onEdit }) => {
+  const { toggleBookmark, isBookmarked, downloadResource, showToast } = useResources();
   const panelRef = useOverlayBehavior(!!resource, onClose);
+  const ownerKey = getOwnerKey();
+
+  // Hooks run unconditionally; queries skip while the modal is closed.
+  const fileData = useQuery(
+    api.resources.fileUrl,
+    resource && resource.hasFile ? { id: asResourceId(resource.id) } : 'skip'
+  );
 
   if (!resource) return null;
 
   const bookmarked = isBookmarked(resource.id);
+  const isOwner = resource.isUserUploaded && resource.ownerKey === ownerKey;
 
   const handleDownload = () => {
-    apiService.generateAndDownloadResource(resource);
-    incrementDownload(resource.id);
-    showToast(`Downloading verified academic package: "${resource.title}"`);
+    void downloadResource(resource);
     confetti({
       particleCount: 30,
       spread: 50,
@@ -65,7 +110,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
             <h2 id="detail-modal-title" className="text-xl sm:text-2xl font-display font-black text-ink leading-tight">
               {resource.title}
             </h2>
-            <p className="text-xs font-semibold text-ink-2 mt-1">{resource.subject}</p>
+            <p className="text-xs font-semibold text-ink-2 mt-1">{resource.subjectName}</p>
           </div>
 
           <button onClick={onClose} className="btn btn-ghost px-2 shrink-0" aria-label="Close details">
@@ -97,7 +142,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
             <div className="p-3">
               <dt className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em]">Downloads</dt>
               <dd className="font-bold text-ink font-mono tabular mt-0.5">{resource.downloadCount}</dd>
-              <dd className="text-[10px] text-lime-text font-semibold">Verified</dd>
+              <dd className="text-[10px] text-lime-text font-semibold">{resource.hasFile ? 'Stored PDF' : 'Verified'}</dd>
             </div>
             <div className="p-3">
               <dt className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em]">Rating</dt>
@@ -105,9 +150,41 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
                 <Star className="w-3.5 h-3.5 fill-lime text-lime-deep" aria-hidden="true" />
                 <span>{resource.rating.toFixed(1)} / 5</span>
               </dd>
-              <dd className="text-[10px] text-ink-3">Peer Reviewed</dd>
+              <dd className="text-[10px] text-ink-3 tabular">{resource.ratingCount} reviews</dd>
             </div>
           </dl>
+
+          {/* Inline preview for stored PDFs */}
+          {resource.hasFile && (
+            <div>
+              <h3 className="text-[11px] font-mono font-semibold text-ink-3 uppercase tracking-[0.08em] mb-2">
+                Document Preview
+              </h3>
+              <div className="ruled-sunk p-2">
+                {fileData ? (
+                  <object
+                    data={fileData.url}
+                    type="application/pdf"
+                    className="w-full h-64 sm:h-80 bg-paper"
+                    aria-label={`Preview of ${resource.title}`}
+                  >
+                    <p className="p-4 text-ink-2">
+                      Inline preview is not supported in this browser.{' '}
+                      <a href={fileData.url} target="_blank" rel="noreferrer" className="underline text-ink">
+                        Open the PDF
+                      </a>
+                      .
+                    </p>
+                  </object>
+                ) : (
+                  <div className="h-24 flex items-center justify-center gap-2 text-ink-3 text-xs">
+                    <FileText className="w-4 h-4" aria-hidden="true" />
+                    <span className="font-mono text-[11px] uppercase tracking-[0.08em]">Preparing preview…</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Tags */}
           <div>
@@ -125,13 +202,18 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
               ))}
             </div>
           </div>
+
+          {/* Peer rating */}
+          <div className="pt-1">
+            <RatingWidget resourceId={resource.id} />
+          </div>
         </div>
 
         {/* Actions */}
         <div className="pt-4 border-t border-rule flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => toggleBookmark(resource.id)}
+              onClick={() => void toggleBookmark(resource.id)}
               aria-pressed={bookmarked}
               className={`btn ${bookmarked ? 'btn-secondary bg-lime-wash border-lime-deep text-lime-text' : 'btn-secondary'}`}
             >
@@ -143,6 +225,13 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
               <Share2 className="w-4 h-4" aria-hidden="true" />
               <span>Share</span>
             </button>
+
+            {isOwner && (
+              <button onClick={() => onEdit(resource)} className="btn btn-secondary">
+                <Pencil className="w-4 h-4" aria-hidden="true" />
+                <span>Edit</span>
+              </button>
+            )}
           </div>
 
           <button onClick={handleDownload} className="btn btn-primary px-6">

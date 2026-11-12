@@ -1,9 +1,8 @@
 import React from 'react';
 import { useResources } from '../context/ResourceContext';
 import { useOverlayBehavior } from '../hooks/useOverlayBehavior';
-import { StudyResource } from '../types';
+import type { StudyResource } from '../types';
 import { X, Bookmark, Trash2, Download } from 'lucide-react';
-import { apiService } from '../services/apiService';
 
 interface BookmarksDrawerProps {
   isOpen: boolean;
@@ -16,12 +15,13 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
   onClose,
   onSelectResource
 }) => {
-  const { resources, userProfile, toggleBookmark, incrementDownload, showToast } = useResources();
+  const { resources, bookmarkIds, toggleBookmark, downloadResource } = useResources();
   const panelRef = useOverlayBehavior(isOpen, onClose);
 
   if (!isOpen) return null;
 
-  const savedResources = resources.filter((r) => userProfile.savedResourceIds.includes(r.id));
+  const bookmarkSet = new Set(bookmarkIds);
+  const savedResources = resources.filter((r) => bookmarkSet.has(r.id));
 
   return (
     <div
@@ -96,16 +96,14 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
                         Sem {res.semester} · {res.type}
                       </span>
                       <h3 className="font-bold text-xs text-ink line-clamp-1 mt-1.5">{res.title}</h3>
-                      <p className="text-[10px] text-ink-3 mt-0.5">{res.subject}</p>
+                      <p className="text-[10px] text-ink-3 mt-0.5">{res.subjectName}</p>
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          apiService.generateAndDownloadResource(res);
-                          incrementDownload(res.id);
-                          showToast(`Downloading ${res.title}`);
+                          void downloadResource(res);
                         }}
                         className="p-1.5 text-ink-2 hover:text-ink hover:bg-sunk transition-colors"
                         aria-label={`Download ${res.title}`}
@@ -117,7 +115,7 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleBookmark(res.id);
+                          void toggleBookmark(res.id);
                         }}
                         className="p-1.5 text-ink-3 hover:text-alert hover:bg-sunk transition-colors"
                         aria-label={`Remove ${res.title} from saved`}
@@ -136,8 +134,8 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
         {/* Footer */}
         <div className="pt-4 border-t border-rule text-center">
           <p className="text-[11px] text-ink-3">
-            Persistent storage maintained in your browser's{' '}
-            <code className="font-mono text-ink">localStorage</code>.
+            Synced through the <code className="font-mono text-ink">Convex</code> backend — saved across
+            sessions in this browser.
           </p>
         </div>
       </div>

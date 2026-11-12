@@ -1,25 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useResources } from '../context/ResourceContext';
 import { useOverlayBehavior } from '../hooks/useOverlayBehavior';
-import { SubjectCategory, ResourceType, FormErrors } from '../types';
+import type { ResourceType, FormErrors, StudyResource } from '../types';
 import { X, UploadCloud, AlertCircle, Sparkles, FileText } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Present when the modal is editing an existing user-uploaded resource. */
+  editing?: StudyResource | null;
 }
-
-const SUBJECT_OPTIONS: { name: SubjectCategory; code: string }[] = [
-  { name: 'Web Technology II', code: 'CMLOR2VS201' },
-  { name: 'Operating System', code: 'CMCOR2PC202' },
-  { name: 'Data Structures', code: 'CMCOR2PC203' },
-  { name: 'Discrete Structures', code: 'CMCOR2PC201' },
-  { name: 'Microprocessor', code: 'CMCOR2PC204' },
-  { name: 'Foundation of Embedded System', code: 'CMCOR2MD201' },
-  { name: 'OOP with Java', code: 'CMLOR2VS202' },
-  { name: 'Engineering Career Navigation', code: 'CMLOR2ED201' }
-];
 
 const RESOURCE_TYPES: ResourceType[] = [
   'Lecture Notes',
@@ -29,7 +20,12 @@ const RESOURCE_TYPES: ResourceType[] = [
   'Reference Book'
 ];
 
+/** Parity with the server-side storage cap. */
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
+
 const CONFETTI_COLORS = ['#111111', '#a3e635', '#d6d3d1'];
+
+const DEMO_STUDENT = { name: 'Tanmay Shinde', studentId: '126BTCM2008' };
 
 const FieldError: React.FC<{ message?: string; id?: string }> = ({ message, id }) =>
   message ? (
@@ -38,32 +34,66 @@ const FieldError: React.FC<{ message?: string; id?: string }> = ({ message, id }
     </p>
   ) : null;
 
-export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
-  const { addResource, userProfile } = useResources();
+function formatBytes(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, editing }) => {
+  const { subjects, addResource, updateResource, showToast } = useResources();
   const panelRef = useOverlayBehavior(isOpen, onClose);
 
   const [title, setTitle] = useState('');
-  const [subject, setSubject] = useState<SubjectCategory>('Web Technology II');
-  const [courseCode, setCourseCode] = useState('CMLOR2VS201');
+  const [subjectId, setSubjectId] = useState<string>('');
   const [type, setType] = useState<ResourceType>('Lecture Notes');
-  const [fileSizeMb, setFileSizeMb] = useState<string>('3.5');
-  const [uploadedBy, setUploadedBy] = useState(userProfile.name);
-  const [rollNumber, setRollNumber] = useState(userProfile.studentId);
+  const [uploadedBy, setUploadedBy] = useState(DEMO_STUDENT.name);
+  const [rollNumber, setRollNumber] = useState(DEMO_STUDENT.studentId);
   const [description, setDescription] = useState('');
-  const [tagsInput, setTagsInput] = useState('WebTech2, CMLOR2VS201, Notes');
+  const [tagsInput, setTagsInput] = useState('');
 
+  const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'uploading' | 'publishing'>('idle');
+  const isSubmitting = phase !== 'idle';
+
+  const isEditing = !!editing;
+
+  // Ensure the select has a valid option (including an archived subject kept on edit).
+  const subjectChoices = React.useMemo(() => {
+    if (editing && !subjects.some((s) => s.id === editing.subjectId)) {
+      return [{ id: editing.subjectId, name: editing.subjectName, courseCode: editing.courseCode }, ...subjects];
+    }
+    return subjects;
+  }, [subjects, editing]);
+
+  // Reset the form each time the modal opens.
+  useEffect(() => {
+    if (!isOpen) return;
+    setPhase('idle');
+    setErrors({});
+    setFile(null);
+    if (editing) {
+      setTitle(editing.title);
+      setSubjectId(editing.subjectId);
+      setType(editing.type);
+      setUploadedBy(editing.uploadedBy);
+      setRollNumber(editing.rollNumber);
+      setDescription(editing.description);
+      setTagsInput(editing.tags.join(', '));
+    } else {
+      setTitle('');
+      setSubjectId(subjects[0]?.id ?? '');
+      setType('Lecture Notes');
+      setUploadedBy(DEMO_STUDENT.name);
+      setRollNumber(DEMO_STUDENT.studentId);
+      setDescription('');
+      setTagsInput(subjects[0] ? `${subjects[0].courseCode}, Semester3, PDF` : '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, editing]);
 
   if (!isOpen) return null;
 
-  const handleSubjectChange = (subj: SubjectCategory) => {
-    setSubject(subj);
-    const found = SUBJECT_OPTIONS.find((s) => s.name === subj);
-    if (found) {
-      setCourseCode(found.code);
-    }
-  };
+  const selectedSubject = subjectChoices.find((s) => s.id === subjectId);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -74,6 +104,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
       newErrors.title = 'Title must be at least 6 characters long.';
     } else if (title.trim().length > 95) {
       newErrors.title = 'Title must not exceed 95 characters.';
+    }
+
+    if (!subjectId) {
+      newErrors.subject = 'Select the course this resource belongs to.';
     }
 
     const rollRegex = /^[0-9a-zA-Z]{2,15}$/;
@@ -87,11 +121,17 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
       newErrors.uploadedBy = 'Please provide an author name (at least 3 characters).';
     }
 
-    const sizeNum = parseFloat(fileSizeMb);
-    if (isNaN(sizeNum) || sizeNum <= 0) {
-      newErrors.fileSize = 'File size must be a positive number.';
-    } else if (sizeNum > 50) {
-      newErrors.fileSize = 'Maximum allowed file size is 50 MB.';
+    if (!isEditing && !file) {
+      newErrors.file = 'Attach the PDF file to be catalogued.';
+    } else if (file) {
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (!isPdf) {
+        newErrors.file = 'Only PDF files can be catalogued.';
+      } else if (file.size > MAX_FILE_BYTES) {
+        newErrors.file = 'Maximum allowed file size is 50 MB.';
+      } else if (file.size === 0) {
+        newErrors.file = 'The selected file appears to be empty.';
+      }
     }
 
     if (!description.trim()) {
@@ -104,52 +144,76 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    setIsSubmitting(true);
-
     const parsedTags = tagsInput
       .split(',')
       .map((t) => t.trim().replace(/^#/, ''))
       .filter((t) => t.length > 0);
 
-    setTimeout(() => {
-      addResource({
-        courseCode,
-        title: title.trim(),
-        subject,
-        type,
-        fileSize: `${parseFloat(fileSizeMb).toFixed(1)} MB`,
-        uploadedBy: uploadedBy.trim(),
-        rollNumber: rollNumber.trim().toUpperCase(),
-        description: description.trim(),
-        tags: parsedTags.length > 0 ? parsedTags : ['StudyMaterial', 'Semester3', 'PDF']
-      });
+    const tags = parsedTags.length > 0 ? parsedTags : ['StudyMaterial', 'Semester3', 'PDF'];
 
-      confetti({
-        particleCount: 70,
-        spread: 60,
-        origin: { y: 0.6 },
-        colors: CONFETTI_COLORS
-      });
-
-      setIsSubmitting(false);
+    try {
+      if (isEditing && editing) {
+        setPhase('publishing');
+        await updateResource(editing.id, {
+          title: title.trim(),
+          subjectId,
+          type,
+          uploadedBy: uploadedBy.trim(),
+          rollNumber: rollNumber.trim().toUpperCase(),
+          description: description.trim(),
+          tags,
+          replaceFile: file ?? undefined
+        });
+      } else {
+        setPhase('uploading');
+        await addResource({
+          file: file as File,
+          title: title.trim(),
+          subjectId,
+          type,
+          uploadedBy: uploadedBy.trim(),
+          rollNumber: rollNumber.trim().toUpperCase(),
+          description: description.trim(),
+          tags
+        });
+        confetti({
+          particleCount: 70,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: CONFETTI_COLORS
+        });
+      }
       onClose();
-      setTitle('');
-      setDescription('');
-    }, 450);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Publishing failed. Please try again.');
+      setPhase('idle');
+    }
   };
+
+  const buttonLabel = isEditing
+    ? phase === 'idle'
+      ? 'Save Changes'
+      : phase === 'uploading'
+        ? 'Uploading PDF…'
+        : 'Saving Changes…'
+    : phase === 'idle'
+      ? 'Publish PDF Resource'
+      : phase === 'uploading'
+        ? 'Uploading PDF…'
+        : 'Publishing…';
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-fadeIn"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !isSubmitting) onClose();
       }}
     >
       <div
@@ -169,12 +233,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 id="upload-modal-title" className="text-lg font-bold text-ink leading-tight">
-                  Upload Semester 3 PDF Resource
+                  {isEditing ? 'Edit Resource' : 'Upload Semester 3 PDF Resource'}
                 </h2>
                 <span className="stamp stamp-ink">PDF Only</span>
               </div>
               <p className="text-xs text-ink-2 mt-0.5">
-                Contribute verified Semester III notes and lab manuals for student peers.
+                {isEditing
+                  ? 'Update the catalogue entry. Replace the file if the scan was wrong.'
+                  : 'Contribute verified Semester III notes and lab manuals for student peers.'}
               </p>
             </div>
           </div>
@@ -183,6 +249,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             onClick={onClose}
             className="btn btn-ghost px-2 shrink-0"
             aria-label="Close upload form"
+            disabled={isSubmitting}
           >
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
@@ -216,33 +283,41 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="upload-subject" className="block font-semibold text-ink mb-1">
-                Semester 3 Course
+                Semester Course
               </label>
               <select
                 id="upload-subject"
-                value={subject}
-                onChange={(e) => handleSubjectChange(e.target.value as SubjectCategory)}
-                className="field w-full px-3 py-2.5"
+                value={subjectId}
+                onChange={(e) => {
+                  setSubjectId(e.target.value);
+                  if (errors.subject) setErrors((prev) => ({ ...prev, subject: undefined }));
+                }}
+                aria-invalid={!!errors.subject}
+                aria-describedby={errors.subject ? 'upload-subject-error' : undefined}
+                className={`field w-full px-3 py-2.5 ${errors.subject ? 'field-error' : ''}`}
               >
-                {SUBJECT_OPTIONS.map((sub) => (
-                  <option key={sub.code} value={sub.name}>
-                    {sub.name} ({sub.code})
+                {subjectChoices.map((sub) => (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.name} ({sub.courseCode})
                   </option>
                 ))}
               </select>
+              <FieldError id="upload-subject-error" message={errors.subject} />
             </div>
 
             <div>
-              <span className="block font-semibold text-ink mb-1">Target Curriculum</span>
+              <span className="block font-semibold text-ink mb-1">Paired Course Code</span>
               <div className="field w-full px-3 py-2.5 flex items-center justify-between font-medium">
-                <span className="text-ink-2">Semester III (Level 4.5)</span>
-                <span className="font-mono font-bold text-ink text-[11px]">{courseCode}</span>
+                <span className="text-ink-2">Auto-paired</span>
+                <span className="font-mono font-bold text-ink text-[11px]">
+                  {selectedSubject?.courseCode || '—'}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Type, format, size */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Type + file */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="upload-type" className="block font-semibold text-ink mb-1">
                 Resource Category
@@ -262,31 +337,44 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             </div>
 
             <div>
-              <span className="block font-semibold text-ink mb-1">File Format</span>
-              <div className="field w-full px-3 py-2.5 flex items-center gap-2 font-semibold">
-                <FileText className="w-4 h-4 text-ink" aria-hidden="true" />
-                <span>PDF Document</span>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="upload-size" className="block font-semibold text-ink mb-1">
-                Estimated Size (MB)
+              <label htmlFor="upload-file" className="block font-semibold text-ink mb-1">
+                {isEditing ? 'Replace PDF (optional)' : 'PDF File'}{' '}
+                {!isEditing && <span className="text-alert" aria-hidden="true">*</span>}
               </label>
               <input
-                id="upload-size"
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="50"
-                aria-invalid={!!errors.fileSize}
-                aria-describedby={errors.fileSize ? 'upload-size-error' : undefined}
-                value={fileSizeMb}
-                onChange={(e) => setFileSizeMb(e.target.value)}
-                className={`field w-full px-3 py-2.5 ${errors.fileSize ? 'field-error' : ''}`}
+                id="upload-file"
+                type="file"
+                accept="application/pdf,.pdf"
+                aria-required={!isEditing}
+                aria-invalid={!!errors.file}
+                aria-describedby={errors.file ? 'upload-file-error' : undefined}
+                onChange={(e) => {
+                  setFile(e.target.files?.[0] ?? null);
+                  if (errors.file) setErrors((prev) => ({ ...prev, file: undefined }));
+                }}
+                className={`field w-full px-3 py-2 file:mr-3 file:px-2 file:py-1 file:border file:border-ink file:bg-paper file:text-[11px] file:font-semibold file:text-ink ${
+                  errors.file ? 'field-error' : ''
+                }`}
               />
-              <FieldError id="upload-size-error" message={errors.fileSize} />
+              <FieldError id="upload-file-error" message={errors.file} />
             </div>
+          </div>
+
+          {/* File status row */}
+          <div className="ruled-sunk px-3.5 py-2.5 flex items-center gap-2.5 text-[11px]">
+            <FileText className="w-4 h-4 text-ink shrink-0" aria-hidden="true" />
+            {file ? (
+              <span className="min-w-0 truncate text-ink">
+                <strong>{file.name}</strong>
+                <span className="text-ink-3"> · {formatBytes(file.size)} · will be stored on the backend</span>
+              </span>
+            ) : isEditing ? (
+              <span className="text-ink-2">
+                Keeping the current stored PDF ({editing?.fileSize}) — attach a file above to replace it.
+              </span>
+            ) : (
+              <span className="text-ink-3">PDF up to 50 MB. The file is stored and served by the backend.</span>
+            )}
           </div>
 
           {/* Author */}
@@ -301,7 +389,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
                 aria-invalid={!!errors.uploadedBy}
                 aria-describedby={errors.uploadedBy ? 'upload-author-error' : undefined}
                 value={uploadedBy}
-                onChange={(e) => setUploadedBy(e.target.value)}
+                onChange={(e) => {
+                  setUploadedBy(e.target.value);
+                  if (errors.uploadedBy) setErrors((prev) => ({ ...prev, uploadedBy: undefined }));
+                }}
                 placeholder="Tanmay Shinde"
                 className={`field w-full px-3 py-2.5 ${errors.uploadedBy ? 'field-error' : ''}`}
               />
@@ -318,7 +409,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
                 aria-invalid={!!errors.rollNumber}
                 aria-describedby={errors.rollNumber ? 'upload-roll-error' : undefined}
                 value={rollNumber}
-                onChange={(e) => setRollNumber(e.target.value)}
+                onChange={(e) => {
+                  setRollNumber(e.target.value);
+                  if (errors.rollNumber) setErrors((prev) => ({ ...prev, rollNumber: undefined }));
+                }}
                 placeholder="126BTCM2008"
                 className={`field w-full px-3 py-2.5 font-mono ${errors.rollNumber ? 'field-error' : ''}`}
               />
@@ -365,12 +459,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
 
           {/* Actions */}
           <div className="pt-4 border-t border-rule flex items-center justify-end gap-3">
-            <button type="button" onClick={onClose} className="btn btn-ghost px-5">
+            <button type="button" onClick={onClose} className="btn btn-ghost px-5" disabled={isSubmitting}>
               Cancel
             </button>
-            <button type="submit" disabled={isSubmitting} className="btn btn-primary px-6">
+            <button type="submit" disabled={isSubmitting || subjectChoices.length === 0} className="btn btn-primary px-6">
               <Sparkles className="w-4 h-4" aria-hidden="true" />
-              <span>{isSubmitting ? 'Validating & Storing…' : 'Publish PDF Resource'}</span>
+              <span>{buttonLabel}</span>
             </button>
           </div>
         </form>

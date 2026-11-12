@@ -25,8 +25,8 @@ const SYLLABUS_MODULES: SyllabusModule[] = [
       '1.5 Error handling and debugging techniques (try/catch blocks, error simulation)'
     ],
     implementationInApp:
-      'All components are built with modern ES6+ syntax. Dynamic DOM updates are handled via React VDOM, form validation checks title length, regex roll numbers and positive file sizes, while localStorage retains all uploads and user bookmarks.',
-    codeReference: 'src/components/UploadModal.tsx & src/context/ResourceContext.tsx'
+      'All components are built with modern ES6+ syntax. Dynamic DOM updates are handled via React VDOM, form validation checks title length, regex roll numbers and PDF size caps, while resources, bookmarks and ratings persist in the Convex backend; the Async & JS Lab retains a live browser localStorage inspector for the syllabus outcome.',
+    codeReference: 'src/components/UploadModal.tsx & convex/resources.ts'
   },
   {
     moduleNumber: 2,
@@ -58,7 +58,7 @@ const SYLLABUS_MODULES: SyllabusModule[] = [
       '3.5 State Management in React using Context API'
     ],
     implementationInApp:
-      'Modern Single Page Application built using React 19, TypeScript, and a paper-and-ink Course File design system. State is centralized in ResourceContext with custom hooks, providing instantaneous live filtering, bookmarking, and resource deletion.',
+      'Modern Single Page Application built using React 19, TypeScript, and a paper-and-ink Course File design system. Temporary UI state (tab, search, filters) is centralized in ResourceContext while all study data streams reactively from Convex queries, providing instantaneous live filtering, bookmarking, editing, and resource deletion.',
     codeReference: 'src/App.tsx & src/context/ResourceContext.tsx'
   },
   {
@@ -73,8 +73,8 @@ const SYLLABUS_MODULES: SyllabusModule[] = [
       '4.5 Deployment workflows on GitHub Pages & Netlify'
     ],
     implementationInApp:
-      'Integrated Chart.js and react-chartjs-2 with dynamic Bar, Line, and Doughnut charts reflecting live user resource metrics. Automated build scripts configured with relative asset paths for immediate GitHub Pages hosting.',
-    codeReference: 'src/components/AnalyticsCharts.tsx & vite.config.ts'
+      'Integrated Chart.js and react-chartjs-2 with dynamic Bar, Line, and Doughnut charts reflecting live user resource metrics from the Convex backend. Automated build scripts configured with relative asset paths for GitHub Pages hosting of the SPA, with Convex serving data and PDF storage.',
+    codeReference: 'src/components/AnalyticsCharts.tsx & convex/resources.ts'
   }
 ];
 

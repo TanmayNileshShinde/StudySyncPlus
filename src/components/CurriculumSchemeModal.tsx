@@ -1,44 +1,86 @@
-import React from 'react';
-import { OFFICIAL_SEMESTER_3_SCHEME } from '../data/initialResources';
-import { Layers } from 'lucide-react';
+import React, { useState } from 'react';
 import { useResources } from '../context/ResourceContext';
+import { Layers, PlusCircle, Archive, RotateCcw } from 'lucide-react';
+import type { NewSubjectInput } from '../types';
+
+const EMPTY_FORM = {
+  name: '',
+  courseCode: '',
+  category: 'Program Core',
+  abbreviation: 'PC',
+  cl: 30,
+  tl: 0,
+  ll: 30,
+  slPbl: 0,
+  nh: 60,
+  credits: 2,
+  inLibrary: true
+};
 
 export const CurriculumSchemeModal: React.FC = () => {
-  const { setSelectedSubject, setActiveTab, showToast } = useResources();
+  const {
+    schemeCourses,
+    semester,
+    addSubject,
+    setSubjectArchived,
+    setSelectedSubject,
+    setActiveTab,
+    showToast
+  } = useResources();
 
-  const handleFilterByCourse = (courseName: string) => {
-    // Map official name to available subject category if matched
-    if (
-      courseName.includes('Web Technology') ||
-      courseName.includes('Data Structures') ||
-      courseName.includes('Operating System') ||
-      courseName.includes('Discrete Structures') ||
-      courseName.includes('Microprocessor') ||
-      courseName.includes('Embedded') ||
-      courseName.includes('OOP with Java') ||
-      courseName.includes('Career Navigation')
-    ) {
-      const match = courseName.includes('Web Technology')
-        ? 'Web Technology II'
-        : courseName.includes('Data Structures')
-        ? 'Data Structures'
-        : courseName.includes('Operating System')
-        ? 'Operating System'
-        : courseName.includes('Discrete Structures')
-        ? 'Discrete Structures'
-        : courseName.includes('Microprocessor')
-        ? 'Microprocessor'
-        : courseName.includes('Embedded')
-        ? 'Foundation of Embedded System'
-        : courseName.includes('OOP with Java')
-        ? 'OOP with Java'
-        : 'Engineering Career Navigation';
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [form, setForm] = useState<NewSubjectInput>(EMPTY_FORM);
+  const [isSaving, setIsSaving] = useState(false);
 
-      setSelectedSubject(match as any);
+  const semesterLabel = semester?.label ?? 'Semester III';
+
+  const handleFilterByCourse = (course: { courseName: string; inLibrary: boolean }) => {
+    if (course.inLibrary) {
+      setSelectedSubject(course.courseName);
       setActiveTab('library');
-      showToast(`Library filtered for: ${match}`);
+      showToast(`Library filtered for: ${course.courseName}`);
+    } else {
+      showToast(`No library section for "${course.courseName}" yet.`);
     }
   };
+
+  const handleAddCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.courseCode.trim()) {
+      showToast('Course name and code are required.');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await addSubject(form);
+      setForm(EMPTY_FORM);
+      setIsAddOpen(false);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not add the course.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const numberField = (
+    label: string,
+    key: keyof NewSubjectInput,
+    props: { min?: number } = {}
+  ) => (
+    <div>
+      <label htmlFor={`scheme-${key}`} className="block font-mono text-[10px] font-semibold text-ink-3 uppercase tracking-[0.08em] mb-1">
+        {label}
+      </label>
+      <input
+        id={`scheme-${key}`}
+        type="number"
+        min={props.min ?? 0}
+        value={String(form[key])}
+        onChange={(e) => setForm((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
+        className="field w-full px-2.5 py-2"
+      />
+    </div>
+  );
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -49,7 +91,7 @@ export const CurriculumSchemeModal: React.FC = () => {
             Department Course Structure &amp; Credit Matrix
           </h1>
           <p className="text-sm text-ink-2 mt-1.5 max-w-[58ch]">
-            Direct alignment with the SAKEC Semester 3 teaching &amp; learning scheme —{' '}
+            Direct alignment with the SAKEC {semesterLabel.toLowerCase()} teaching &amp; learning scheme —{' '}
             <span className="font-mono text-[11px] text-ink-3">Level 4.5 · UG Certificate</span>
           </p>
         </div>
@@ -65,10 +107,101 @@ export const CurriculumSchemeModal: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-4 border-b border-ink">
           <h2 className="font-bold text-ink text-sm sm:text-base flex items-center gap-2">
             <Layers className="w-4 h-4" aria-hidden="true" />
-            Semester III Course Breakdown &amp; Hour Distribution
+            {semesterLabel} Course Breakdown &amp; Hour Distribution
           </h2>
-          <span className="text-[11px] font-mono text-ink-3">Click any course row to filter the library</span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-mono text-ink-3 hidden sm:inline">Click any course row to filter the library</span>
+            <button
+              onClick={() => setIsAddOpen((prev) => !prev)}
+              className="btn btn-secondary px-2.5 py-1.5 text-[11px] min-h-0"
+              aria-expanded={isAddOpen}
+            >
+              <PlusCircle className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>{isAddOpen ? 'Close Form' : 'Add Course'}</span>
+            </button>
+          </div>
         </div>
+
+        {/* Add-course form (collapsed by default) */}
+        {isAddOpen && (
+          <form onSubmit={handleAddCourse} className="px-6 py-4 border-b border-rule bg-sunk space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="col-span-2 sm:col-span-2">
+                <label htmlFor="scheme-name" className="block font-mono text-[10px] font-semibold text-ink-3 uppercase tracking-[0.08em] mb-1">
+                  Course Name
+                </label>
+                <input
+                  id="scheme-name"
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g. Computer Networks"
+                  className="field w-full px-2.5 py-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="scheme-code" className="block font-mono text-[10px] font-semibold text-ink-3 uppercase tracking-[0.08em] mb-1">
+                  Course Code
+                </label>
+                <input
+                  id="scheme-code"
+                  type="text"
+                  value={form.courseCode}
+                  onChange={(e) => setForm((prev) => ({ ...prev, courseCode: e.target.value }))}
+                  placeholder="CMCOR2PC205"
+                  className="field w-full px-2.5 py-2 font-mono"
+                />
+              </div>
+              <div>
+                <label htmlFor="scheme-category" className="block font-mono text-[10px] font-semibold text-ink-3 uppercase tracking-[0.08em] mb-1">
+                  Category
+                </label>
+                <input
+                  id="scheme-category"
+                  type="text"
+                  value={form.category}
+                  onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
+                  className="field w-full px-2.5 py-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="scheme-abbr" className="block font-mono text-[10px] font-semibold text-ink-3 uppercase tracking-[0.08em] mb-1">
+                  Abbr.
+                </label>
+                <input
+                  id="scheme-abbr"
+                  type="text"
+                  value={form.abbreviation}
+                  onChange={(e) => setForm((prev) => ({ ...prev, abbreviation: e.target.value }))}
+                  className="field w-full px-2.5 py-2 font-mono"
+                />
+              </div>
+              {numberField('CL', 'cl')}
+              {numberField('LL', 'll')}
+              {numberField('SL/PBL', 'slPbl')}
+              {numberField('TL', 'tl')}
+              {numberField('NH', 'nh')}
+              {numberField('Credits', 'credits')}
+              <div className="flex items-end pb-1">
+                <label className="flex items-center gap-2 text-[11px] font-medium text-ink cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.inLibrary}
+                    onChange={(e) => setForm((prev) => ({ ...prev, inLibrary: e.target.checked }))}
+                    className="w-4 h-4 accent-[#111111]"
+                  />
+                  In library rail
+                </label>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button type="submit" disabled={isSaving} className="btn btn-primary px-5">
+                <PlusCircle className="w-4 h-4" aria-hidden="true" />
+                <span>{isSaving ? 'Adding…' : 'Add to Scheme'}</span>
+              </button>
+            </div>
+          </form>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-ink border-collapse">
@@ -88,11 +221,11 @@ export const CurriculumSchemeModal: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-rule">
-              {OFFICIAL_SEMESTER_3_SCHEME.map((item) => (
+              {schemeCourses.map((item) => (
                 <tr
-                  key={item.srNo}
-                  className="transition-colors hover:bg-lime-wash group cursor-pointer"
-                  onClick={() => handleFilterByCourse(item.courseName)}
+                  key={item.id}
+                  className={`transition-colors hover:bg-lime-wash group cursor-pointer ${item.isArchived ? 'opacity-50' : ''}`}
+                  onClick={() => handleFilterByCourse(item)}
                 >
                   <td className="py-3 px-3 font-mono text-ink-3 tabular">{item.srNo}</td>
                   <td className="py-3 px-3 font-medium text-ink-2">
@@ -104,6 +237,9 @@ export const CurriculumSchemeModal: React.FC = () => {
                   <td className="py-3 px-3 font-mono font-semibold text-ink-2">{item.courseCode}</td>
                   <td className="py-3 px-3 font-bold text-ink group-hover:underline underline-offset-2 decoration-2">
                     {item.courseName}
+                    {item.isArchived && (
+                      <span className="stamp stamp-outline ml-2 align-middle">Archived</span>
+                    )}
                   </td>
                   <td className="py-3 px-3 text-center font-mono text-ink-2 tabular">{item.cl || '—'}</td>
                   <td className="py-3 px-3 text-center font-mono text-ink-2 tabular">{item.ll || '—'}</td>
@@ -113,16 +249,35 @@ export const CurriculumSchemeModal: React.FC = () => {
                     {item.credits}
                   </td>
                   <td className="py-3 px-3 text-right">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleFilterByCourse(item.courseName);
-                      }}
-                      className="btn btn-secondary px-2.5 py-1.5 text-[11px] min-h-0"
-                      aria-label={`View notes for ${item.courseName}`}
-                    >
-                      View Notes
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      {!item.isArchived && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFilterByCourse(item);
+                          }}
+                          className="btn btn-secondary px-2.5 py-1.5 text-[11px] min-h-0"
+                          aria-label={`View notes for ${item.courseName}`}
+                        >
+                          View Notes
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void setSubjectArchived(item.id, !item.isArchived);
+                        }}
+                        className="p-1.5 text-ink-3 hover:text-alert hover:bg-sunk transition-colors"
+                        aria-label={item.isArchived ? `Restore ${item.courseName}` : `Archive ${item.courseName}`}
+                        title={item.isArchived ? 'Restore course to the library' : 'Archive course (hidden from library rail and uploads)'}
+                      >
+                        {item.isArchived ? (
+                          <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                        ) : (
+                          <Archive className="w-3.5 h-3.5" aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -130,7 +285,7 @@ export const CurriculumSchemeModal: React.FC = () => {
             <tfoot>
               <tr className="bg-sunk font-bold text-ink text-xs border-t-2 border-ink">
                 <td colSpan={5} className="py-3.5 px-3 font-mono uppercase tracking-[0.06em] text-[10px]">
-                  Total Scheme Hours &amp; Credits (Semester III)
+                  Total Scheme Hours &amp; Credits ({semesterLabel})
                 </td>
                 <td className="py-3.5 px-3 text-center font-mono tabular">150</td>
                 <td className="py-3.5 px-3 text-center font-mono tabular">360+60*</td>

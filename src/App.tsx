@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { Component, useMemo, useState } from 'react';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
 import { ResourceProvider, useResources } from './context/ResourceContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -10,20 +11,14 @@ import { AnalyticsCharts } from './components/AnalyticsCharts';
 import { JsSandboxModal } from './components/JsSandboxModal';
 import { SyllabusVivaModal } from './components/SyllabusVivaModal';
 import { CurriculumSchemeModal } from './components/CurriculumSchemeModal';
-import { StudyResource, SubjectCategory, ResourceType } from './types';
-import { Search, X, FolderOpen, CheckCircle2 } from 'lucide-react';
+import type { StudyResource, ResourceType } from './types';
+import { Search, X, FolderOpen, CheckCircle2, AlertCircle } from 'lucide-react';
 
-const SUBJECT_LIST: (SubjectCategory | 'All')[] = [
-  'All',
-  'Web Technology II',
-  'Operating System',
-  'Data Structures',
-  'Discrete Structures',
-  'Microprocessor',
-  'Foundation of Embedded System',
-  'OOP with Java',
-  'Engineering Career Navigation'
-];
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL as string | undefined;
+if (!CONVEX_URL) {
+  console.error('VITE_CONVEX_URL is not set — the library cannot reach the backend.');
+}
+const convexClient = new ConvexReactClient(CONVEX_URL ?? 'https://missing.convex.cloud');
 
 type SortKey = 'featured' | 'downloads' | 'rating' | 'newest' | 'title';
 
@@ -39,10 +34,44 @@ const Toast: React.FC<{ message: string }> = ({ message }) => (
   </div>
 );
 
+/** Last-resort boundary so a Convex hiccup shows a ruled panel, not a blank page. */
+class LibraryErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen flex flex-col justify-between bg-paper text-ink">
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 w-full flex-1 pt-24">
+            <div className="ruled p-12 text-center space-y-3">
+              <AlertCircle className="w-10 h-10 text-ink-3 mx-auto" aria-hidden="true" />
+              <h2 className="text-base font-bold text-ink">The course file could not be opened</h2>
+              <p className="text-xs text-ink-2 max-w-md mx-auto">
+                StudySyncPlus could not reach its backend. Check your connection and reload the page.
+              </p>
+              <button onClick={() => window.location.reload()} className="btn btn-secondary mt-2">
+                Reload
+              </button>
+            </div>
+          </main>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const MainContent: React.FC = () => {
   const {
     activeTab,
+    semester,
+    subjects,
     filteredResources,
+    isLibraryLoading,
     searchQuery,
     setSearchQuery,
     selectedSubject,
@@ -56,9 +85,14 @@ const MainContent: React.FC = () => {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isBookmarksOpen, setIsBookmarksOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<StudyResource | null>(null);
+  const [editingResource, setEditingResource] = useState<StudyResource | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>('featured');
 
   const resultCount = filteredResources.length;
+  const semesterLabel = semester?.label ?? 'Semester III';
+  const schemeLabel = semester?.schemeLabel ?? '22+2* credits · 2022 scheme';
+
+  const subjectRail = useMemo(() => ['All', ...subjects.map((s) => s.name)], [subjects]);
 
   const sortedResources = useMemo(() => {
     const list = [...filteredResources];
@@ -97,17 +131,17 @@ const MainContent: React.FC = () => {
             {/* Editorial hero: headline, one line of support, one ruled facts row */}
             <section aria-label="Library introduction">
               <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-[1.04]">
-                The Semester III{' '}
+                The {semesterLabel}{' '}
                 <span className="bg-lime text-ink px-2 box-decoration-clone">course file.</span>
               </h1>
 
               <p className="text-ink-2 text-sm sm:text-base mt-5 leading-relaxed max-w-[58ch]">
-                Verified lecture notes, past papers, and lab manuals for every SAKEC Semester 3
-                course — each stamped with its official code.
+                Verified lecture notes, past papers, and lab manuals for every SAKEC course in{' '}
+                {semesterLabel.toLowerCase()} — each stamped with its official code.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-y-2.5 text-xs">
-                <span className="font-semibold text-ink sm:pr-6">22+2* credits · 2022 scheme</span>
+                <span className="font-semibold text-ink sm:pr-6">{schemeLabel}</span>
                 <span className="text-ink-2 sm:border-l sm:border-rule sm:pl-6 sm:pr-6">SAKEC · Computer Engineering</span>
                 <span className="text-ink-2 sm:border-l sm:border-rule sm:pl-6 sm:pr-6">
                   <span className="font-mono font-bold text-ink tabular">{resources.length}</span>{' '}
@@ -124,7 +158,7 @@ const MainContent: React.FC = () => {
               <div className="ruled">
                 {/* Subject index rail — highlighter on the index, horizontally scrollable */}
                 <div className="flex overflow-x-auto no-scrollbar">
-                  {SUBJECT_LIST.map((subject) => {
+                  {subjectRail.map((subject) => {
                     const isSelected = selectedSubject === subject;
                     return (
                       <button
@@ -196,7 +230,9 @@ const MainContent: React.FC = () => {
                     <option value="title">Title A–Z</option>
                   </select>
 
-                  <span className="stamp stamp-outline hidden md:inline-flex">Sem 3 · PDF only</span>
+                  <span className="stamp stamp-outline hidden md:inline-flex">
+                    {semester ? `Sem ${semester.number} · PDF only` : 'PDF only'}
+                  </span>
 
                   <p className="ml-auto text-xs text-ink-3 tabular" key={resultCount}>
                     <span className="font-mono font-bold text-ink animate-flash inline-block px-1">
@@ -210,7 +246,14 @@ const MainContent: React.FC = () => {
 
             {/* Resources grid */}
             <section aria-label="Study resources" className="mt-8">
-              {resultCount === 0 ? (
+              {isLibraryLoading ? (
+                <div className="ruled p-12 text-center space-y-2">
+                  <p className="font-mono text-[11px] font-semibold text-ink-3 uppercase tracking-[0.08em]">
+                    Opening the course file
+                  </p>
+                  <p className="text-xs text-ink-2">Cataloguing the {semesterLabel.toLowerCase()} library…</p>
+                </div>
+              ) : resultCount === 0 ? (
                 <div className="ruled p-12 text-center space-y-3">
                   <FolderOpen className="w-10 h-10 text-ink-3 mx-auto" aria-hidden="true" />
                   <h3 className="text-base font-bold text-ink">No resources match the current search and filters</h3>
@@ -257,7 +300,14 @@ const MainContent: React.FC = () => {
         {activeTab === 'syllabus-viva' && <SyllabusVivaModal />}
       </main>
 
-      <UploadModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
+      <UploadModal
+        isOpen={isUploadOpen}
+        onClose={() => {
+          setIsUploadOpen(false);
+          setEditingResource(null);
+        }}
+        editing={editingResource}
+      />
 
       <BookmarksDrawer
         isOpen={isBookmarksOpen}
@@ -268,6 +318,11 @@ const MainContent: React.FC = () => {
       <ResourceDetailModal
         resource={selectedResource}
         onClose={() => setSelectedResource(null)}
+        onEdit={(r) => {
+          setSelectedResource(null);
+          setEditingResource(r);
+          setIsUploadOpen(true);
+        }}
       />
 
       <Footer />
@@ -277,9 +332,13 @@ const MainContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <ResourceProvider>
-      <MainContent />
-    </ResourceProvider>
+    <ConvexProvider client={convexClient}>
+      <LibraryErrorBoundary>
+        <ResourceProvider>
+          <MainContent />
+        </ResourceProvider>
+      </LibraryErrorBoundary>
+    </ConvexProvider>
   );
 };
 

@@ -1,7 +1,6 @@
 import React from 'react';
-import { StudyResource } from '../types';
+import type { StudyResource } from '../types';
 import { useResources } from '../context/ResourceContext';
-import { apiService } from '../services/apiService';
 import { Download, Bookmark, Star, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -13,15 +12,12 @@ interface ResourceCardProps {
 const CONFETTI_COLORS = ['#111111', '#a3e635', '#d6d3d1'];
 
 export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }) => {
-  const { toggleBookmark, isBookmarked, incrementDownload, deleteResource, showToast } = useResources();
+  const { toggleBookmark, isBookmarked, downloadResource, deleteResource } = useResources();
   const bookmarked = isBookmarked(resource.id);
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    apiService.generateAndDownloadResource(resource);
-    incrementDownload(resource.id);
-    showToast(`Downloading "${resource.title.slice(0, 25)}..."`);
-
+    void downloadResource(resource);
     confetti({
       particleCount: 25,
       spread: 45,
@@ -32,13 +28,13 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }
 
   const handleBookmark = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleBookmark(resource.id);
+    void toggleBookmark(resource.id);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm(`Delete "${resource.title}"?`)) {
-      deleteResource(resource.id);
+      void deleteResource(resource.id);
     }
   };
 
@@ -96,7 +92,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onSelect }
       </h3>
 
       <p className="mt-1.5 text-xs">
-        <span className="font-semibold text-ink">{resource.subject}</span>
+        <span className="font-semibold text-ink">{resource.subjectName}</span>
         <span className="text-ink-3"> · {resource.type}</span>
       </p>
 

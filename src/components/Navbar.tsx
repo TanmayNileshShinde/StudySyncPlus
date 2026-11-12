@@ -9,7 +9,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenUpload, onOpenBookmarks }) => {
-  const { activeTab, setActiveTab, userProfile, resetToDefaults } = useResources();
+  const { activeTab, setActiveTab, bookmarkCount, resetToDefaults } = useResources();
 
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
     { id: 'library', label: 'Resource Library', icon: <BookOpen className="w-4 h-4" /> },
@@ -19,7 +19,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUpload, onOpenBookmarks })
     { id: 'syllabus-viva', label: 'Syllabus & Viva', icon: <Award className="w-4 h-4" /> }
   ];
 
-  const savedCount = userProfile.savedResourceIds.length;
+  const savedCount = bookmarkCount;
+
+  const handleReset = () => {
+    if (window.confirm('Reset the library to the official Semester 3 dataset? Student-uploaded files will be removed.')) {
+      void resetToDefaults();
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-paper border-b border-rule">
@@ -71,7 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUpload, onOpenBookmarks })
             </button>
 
             <button
-              onClick={resetToDefaults}
+              onClick={handleReset}
               className="btn btn-ghost px-2"
               title="Reset to initial syllabus demo data"
               aria-label="Reset to initial syllabus demo data"

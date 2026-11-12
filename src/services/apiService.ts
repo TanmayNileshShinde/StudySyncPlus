@@ -121,7 +121,7 @@ Course Project: Web Computing & Modern Frameworks
 
 Title: ${resource.title}
 Course Code: ${resource.courseCode}
-Subject: ${resource.subject}
+Subject: ${resource.subjectName}
 Semester: ${resource.semester}
 Resource Type: ${resource.type}
 File Format: ${resource.fileFormat}

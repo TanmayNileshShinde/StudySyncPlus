@@ -1,62 +1,48 @@
-export type SubjectCategory = 
-  | 'Web Technology II'
-  | 'Operating System'
-  | 'Data Structures'
-  | 'Discrete Structures'
-  | 'Microprocessor'
-  | 'Foundation of Embedded System'
-  | 'OOP with Java'
-  | 'Engineering Career Navigation';
+/**
+ * Frontend types. Subject/semester data is now dynamic (stored in Convex),
+ * so subject names are plain strings; the fixed set lives in the database,
+ * seeded with the Semester III course file.
+ */
 
 export type ResourceType = 'Lecture Notes' | 'Past Exam Papers' | 'Lab Manual' | 'Cheat Sheet' | 'Reference Book';
 
-export type Semester = 3;
+export type SubjectName = string;
 
 export interface StudyResource {
-  id: string;
-  courseCode: string; // e.g. "CMLOR2VS201", "CMCOR2PC202"
+  id: string; // Convex resource id
+  courseCode: string;
   title: string;
-  subject: SubjectCategory;
-  semester: 3;
+  subjectId: string;
+  subjectName: SubjectName;
+  semester: number;
   type: ResourceType;
   uploadedBy: string;
   rollNumber: string;
-  uploadDate: string;
-  fileSize: string; // e.g. "2.4 MB"
+  uploadDate: string; // YYYY-MM-DD
+  fileSize: string; // display string, derived from fileSizeBytes
+  fileSizeBytes: number;
   downloadCount: number;
-  rating: number; // 1-5
+  rating: number; // aggregate 0..5 (0 = unrated)
+  ratingCount: number;
   fileFormat: 'PDF';
   description: string;
   tags: string[];
-  externalUrl?: string;
-  isUserUploaded?: boolean;
+  isUserUploaded: boolean; // false = official seeded content
+  ownerKey: string | null; // owner identity for uploads (null = official)
+  hasFile: boolean; // real stored PDF (vs legacy summary-card fallback)
+  fileName: string | null;
 }
 
-export interface UserProfile {
+/** Library rail + upload picker entry (active, unarchived courses only). */
+export interface SubjectOption {
+  id: string;
   name: string;
-  rollNumber: string;
-  studentId: string;
-  semester: 3;
-  branch: string;
-  college: string;
-  savedResourceIds: string[];
-  studyStreakDays: number;
+  courseCode: string;
 }
 
-export type ActiveTab = 'library' | 'analytics' | 'async-lab' | 'syllabus-viva' | 'curriculum-scheme';
-
-export interface FormErrors {
-  title?: string;
-  subject?: string;
-  type?: string;
-  uploadedBy?: string;
-  rollNumber?: string;
-  fileSize?: string;
-  fileFormat?: string;
-  description?: string;
-}
-
-export interface OfficialCourseSchemeItem {
+/** Row of the scheme/credit-matrix table (all courses of the semester). */
+export interface SchemeCourse {
+  id: string;
   srNo: number;
   category: string;
   abbreviation: string;
@@ -68,4 +54,61 @@ export interface OfficialCourseSchemeItem {
   slPbl: number;
   nh: number;
   credits: number;
+  inLibrary: boolean;
+  isArchived: boolean;
+}
+
+export interface SemesterInfo {
+  id: string;
+  number: number;
+  label: string;
+  schemeLabel: string;
+}
+
+export type ActiveTab = 'library' | 'analytics' | 'async-lab' | 'syllabus-viva' | 'curriculum-scheme';
+
+export interface FormErrors {
+  title?: string;
+  subject?: string;
+  type?: string;
+  uploadedBy?: string;
+  rollNumber?: string;
+  file?: string;
+  description?: string;
+}
+
+export interface ResourceUploadInput {
+  file: File;
+  title: string;
+  subjectId: string;
+  type: ResourceType;
+  uploadedBy: string;
+  rollNumber: string;
+  description: string;
+  tags: string[];
+}
+
+export interface ResourceEditInput {
+  title?: string;
+  description?: string;
+  type?: ResourceType;
+  subjectId?: string;
+  tags?: string[];
+  uploadedBy?: string;
+  rollNumber?: string;
+  replaceFile?: File;
+}
+
+export interface NewSubjectInput {
+  name: string;
+  courseCode: string;
+  category: string;
+  abbreviation: string;
+  cl: number;
+  tl: number;
+  ll: number;
+  slPbl: number;
+  nh: number;
+  credits: number;
+  inLibrary: boolean;
 }
