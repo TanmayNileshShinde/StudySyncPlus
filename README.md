@@ -1,8 +1,8 @@
-# 🎓 StudySync — Student Resource Sharing Hub
+# 🎓 StudySyncPlus — Semester 3 Student Resource Sharing Hub
 
 > **A Claymorphic Modern Web Application for Academic Resource Collaboration & Visual Analytics**  
 > Developed for **Shah & Anchor Kutchhi Engineering College (SAKEC)**  
-> **Course:** Web Computing & Modern Frameworks
+> **Curriculum:** Semester III [Level 4.5, UG Certificate] • Course: Web Computing & Modern Frameworks
 
 ---
 
@@ -15,13 +15,13 @@
 ---
 
 ## 🌟 Live Demo & Deployment
-- 🌐 **Live Website (GitHub Pages):** [https://TanmayNileshShinde.github.io/studysync/](https://TanmayNileshShinde.github.io/studysync/)
-- 💻 **Source Repository:** [https://github.com/TanmayNileshShinde/studysync](https://github.com/TanmayNileshShinde/studysync)
+- 🌐 **Live Website (GitHub Pages):** [https://TanmayNileshShinde.github.io/StudySyncPlus/](https://TanmayNileshShinde.github.io/StudySyncPlus/)
+- 💻 **Source Repository:** [https://github.com/TanmayNileshShinde/StudySyncPlus](https://github.com/TanmayNileshShinde/StudySyncPlus)
 
 ---
 
 ## 🎨 Claymorphism UI Design System
-StudySync is styled using a modern **Claymorphic** aesthetic:
+StudySyncPlus is styled using a modern **Claymorphic** aesthetic:
 - **Soft 3D Tactile Elements:** Rounded squircles (`rounded-3xl`), dual-tone drop shadows, and subtle inner inset lighting highlights.
 - **Friendly Pastel Palette:** Clean slate typography against soft lavender, mint, peach, and indigo accent gradients.
 - **Micro-Interactions:** Smooth button lift animations, real-time tag pills, and celebratory confetti upon downloads and resource uploads.
@@ -34,7 +34,7 @@ This project was built to comprehensively fulfill all four curriculum modules an
 
 ### 🧩 Module 1: Advanced JavaScript Concepts (CO1)
 - **1.1 ES6 Features:** Built with arrow functions, `let`/`const`, template literals, array/object destructuring, and spread/rest operators throughout the codebase.
-- **1.2 DOM Manipulation:** Real-time modal portals, dynamic card rendering, toast message dispatch, and dynamic text-file Blob generator.
+- **1.2 DOM Manipulation:** Real-time modal portals, dynamic card rendering, toast message dispatch, and dynamic PDF Blob generator.
 - **1.3 Events & Form Validation:** Live regex-validated resource upload modal checking title length, roll number patterns (`126BTCM2008`), and file size thresholds.
 - **1.4 Client Storage (`localStorage` API):** Persistent client-side storage for resources, saved bookmarks, and user profiles across browser sessions.
 - **1.5 Error Handling & Debugging:** Resilient `try...catch` blocks with an interactive intentional error injection simulator in the Async Lab tab.
@@ -51,7 +51,7 @@ This project was built to comprehensively fulfill all four curriculum modules an
 ### ⚛️ Module 3: Front-End Frameworks and UI (CO3, CO4)
 - **3.1 & 3.2 Responsive Grid:** Mobile-first responsive grid system implementing Bootstrap 5 layout principles.
 - **3.3 React.js Ecosystem:** Modular JSX components, strictly typed props, and React 19 functional hooks (`useState`, `useEffect`, `useContext`, `useMemo`, `useCallback`).
-- **3.4 Single Page Application (SPA):** Seamless tab-based routing between Library, Analytics, Async Lab, and Syllabus Viva tabs.
+- **3.4 Single Page Application (SPA):** Seamless tab-based routing between Library, Sem 3 Scheme, Analytics, Async Lab, and Syllabus Viva tabs.
 - **3.5 React Context API:** Global state centralized in `ResourceContext` managing resources, bookmarks, filters, and downloads.
 
 ### 📊 Module 4: Data Visualization and Deployment (CO5, CO6)
@@ -78,8 +78,8 @@ This project was built to comprehensively fulfill all four curriculum modules an
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/TanmayNileshShinde/studysync.git
-   cd studysync
+   git clone https://github.com/TanmayNileshShinde/StudySyncPlus.git
+   cd StudySyncPlus
    ```
 
 2. **Install dependencies:**

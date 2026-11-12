@@ -1,9 +1,9 @@
 {
-  "name": "studysync",
+  "name": "studysyncplus",
   "private": false,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://TanmayNileshShinde.github.io/studysync",
+  "homepage": "https://TanmayNileshShinde.github.io/StudySyncPlus",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

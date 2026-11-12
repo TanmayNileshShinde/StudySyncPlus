@@ -36,7 +36,7 @@ export const CurriculumSchemeModal: React.FC = () => {
 
       setSelectedSubject(match as any);
       setActiveTab('library');
-      showToast(`Filtered StudySync library for: ${match}`);
+      showToast(`Filtered StudySyncPlus library for: ${match}`);
     }
   };
 

@@ -91,7 +91,7 @@ class ApiService {
         // Step 3: Storage persistence & response packaging
         return new Promise<string>((resolve) => {
           setTimeout(() => {
-            resolve(`${status2} ➔ [Success] Resource indexed into StudySync database.`);
+            resolve(`${status2} ➔ [Success] Resource indexed into StudySyncPlus database.`);
           }, 300);
         });
       })
@@ -114,12 +114,13 @@ class ApiService {
    */
   generateAndDownloadResource(resource: StudyResource): void {
     const content = `==========================================================
-STUDYSYNC — STUDENT RESOURCE SHARING HUB
+STUDYSYNCPLUS — SEMESTER 3 STUDENT RESOURCE SHARING HUB
 Shah & Anchor Kutchhi Engineering College (SAKEC)
 Course Project: Web Computing & Modern Frameworks
 ==========================================================
 
 Title: ${resource.title}
+Course Code: ${resource.courseCode}
 Subject: ${resource.subject}
 Semester: ${resource.semester}
 Resource Type: ${resource.type}
@@ -136,7 +137,7 @@ ${resource.description}
 TAGS: ${resource.tags.join(', ')}
 
 ==========================================================
-Verified Academic Material | StudySync Academic Portal
+Verified Academic Material | StudySyncPlus Academic Portal
 Developed by:
   - Tanmay Shinde (126BTCM2008 | Roll 67)
   - Aditya Shah   (126BTCM2009 | Roll 68)
@@ -147,7 +148,7 @@ Developed by:
     const url = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
     downloadAnchor.href = url;
-    downloadAnchor.download = `${resource.title.replace(/[^a-zA-Z0-9]/g, '_')}_StudySync.pdf`;
+    downloadAnchor.download = `${resource.title.replace(/[^a-zA-Z0-9]/g, '_')}_StudySyncPlus.pdf`;
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     document.body.removeChild(downloadAnchor);

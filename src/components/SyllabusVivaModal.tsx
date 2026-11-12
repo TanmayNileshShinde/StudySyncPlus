@@ -101,7 +101,7 @@ export const SyllabusVivaModal: React.FC = () => {
               Syllabus & Viva Alignment Guide
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Direct mapping of all Course Outcomes (CO1 to CO6) and Modules 1–4 to StudySync code.
+              Direct mapping of all Course Outcomes (CO1 to CO6) and Modules 1–4 to StudySyncPlus code.
             </p>
           </div>
 

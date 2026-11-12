@@ -101,7 +101,7 @@ const MainContent: React.FC = () => {
                 </h1>
                 
                 <p className="text-slate-600 text-sm sm:text-base mt-3 leading-relaxed">
-                  StudySync is tailored for SAKEC Computer Engineering students. Access verified lecture notes, solved past papers, and lab manuals mapped directly to your Semester III course codes.
+                  StudySyncPlus is tailored for SAKEC Computer Engineering students. Access verified lecture notes, solved past papers, and lab manuals mapped directly to your Semester III course codes.
                 </p>
 
                 {/* Search Bar (AJAX dynamic filter) */}

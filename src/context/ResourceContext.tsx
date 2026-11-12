@@ -25,8 +25,8 @@ interface ResourceContextType {
 }
 
 const STORAGE_KEYS = {
-  RESOURCES: 'studysync_resources_v2',
-  PROFILE: 'studysync_user_profile_v2'
+  RESOURCES: 'studysyncplus_resources_v3',
+  PROFILE: 'studysyncplus_user_profile_v3'
 };
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -170,7 +170,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setUserProfile(DEFAULT_PROFILE);
     localStorage.removeItem(STORAGE_KEYS.RESOURCES);
     localStorage.removeItem(STORAGE_KEYS.PROFILE);
-    showToast('Reset StudySync to official Semester 3 PDF syllabus data.');
+    showToast('Reset StudySyncPlus to official Semester 3 PDF syllabus data.');
   }, [showToast]);
 
   const value = useMemo(

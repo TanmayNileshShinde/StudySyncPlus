@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
                 <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
                   <BookOpen className="w-4 h-4" />
                 </div>
-                <span className="font-extrabold text-lg text-slate-800 tracking-tight">StudySync</span>
+                <span className="font-extrabold text-lg text-slate-800 tracking-tight">StudySyncPlus</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
                   Claymorphic Web App
                 </span>

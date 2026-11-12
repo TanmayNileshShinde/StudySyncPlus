@@ -31,7 +31,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUpload, onOpenBookmarks })
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xl tracking-tight text-slate-800">StudySync</span>
+                <span className="font-extrabold text-xl tracking-tight text-slate-800">StudySyncPlus</span>
                 <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
                   Sem-3 Hub
                 </span>

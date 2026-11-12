@@ -321,7 +321,7 @@ export const JsSandboxModal: React.FC = () => {
           Syllabus Architecture Note: Cross-Origin Resource Sharing (CORS)
         </h3>
         <p className="text-xs text-slate-600 leading-relaxed">
-          When frontend Single Page Applications communicate with remote APIs (e.g. OpenLibrary or college servers), modern browsers enforce the Same-Origin Policy. To permit cross-origin requests, servers respond with HTTP headers such as <code className="font-mono bg-slate-100 text-indigo-600 px-1 py-0.5 rounded">Access-Control-Allow-Origin: *</code>. In StudySync, public endpoints are accessed with CORS headers, while internal resource state is safely managed via React Context and browser storage.
+          When frontend Single Page Applications communicate with remote APIs (e.g. OpenLibrary or college servers), modern browsers enforce the Same-Origin Policy. To permit cross-origin requests, servers respond with HTTP headers such as <code className="font-mono bg-slate-100 text-indigo-600 px-1 py-0.5 rounded">Access-Control-Allow-Origin: *</code>. In StudySyncPlus, public endpoints are accessed with CORS headers, while internal resource state is safely managed via React Context and browser storage.
         </p>
       </div>
     </div>
