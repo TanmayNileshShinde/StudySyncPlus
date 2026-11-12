@@ -2,6 +2,7 @@ import React from 'react';
 import { useResources } from '../context/ResourceContext';
 import {
   Chart as ChartJS,
+  type ScriptableContext,
   CategoryScale,
   LinearScale,
   BarElement,
@@ -14,7 +15,7 @@ import {
   Filler
 } from 'chart.js';
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
-import { BarChart3, TrendingUp, PieChart, Users, Download, Star, Award } from 'lucide-react';
+import { BarChart3, TrendingUp, PieChart, Download, Star, Layers, UserCheck } from 'lucide-react';
 
 ChartJS.register(
   CategoryScale,
@@ -29,6 +30,36 @@ ChartJS.register(
   Filler
 );
 
+const INK = '#111111';
+const LIME = '#a3e635';
+const GRAY2 = '#78716c';
+const GRAY3 = '#d6d3d1';
+const RULE = '#e7e5e4';
+const MONO = "'JetBrains Mono', monospace";
+
+const tooltipStyle = {
+  backgroundColor: INK,
+  titleFont: { family: MONO, size: 11 },
+  bodyFont: { family: MONO, size: 11 },
+  padding: 10,
+  cornerRadius: 0,
+  displayColors: false
+};
+
+const scaleOptions = {
+  y: {
+    beginAtZero: true,
+    grid: { color: RULE },
+    ticks: { font: { family: MONO, size: 10 }, color: GRAY2 },
+    border: { color: INK, width: 1 }
+  },
+  x: {
+    grid: { display: false },
+    ticks: { font: { family: MONO, size: 10 }, color: GRAY2 },
+    border: { color: INK, width: 1 }
+  }
+};
+
 export const AnalyticsCharts: React.FC = () => {
   const { resources } = useResources();
 
@@ -38,7 +69,7 @@ export const AnalyticsCharts: React.FC = () => {
     resources.reduce((acc, curr) => acc + curr.rating, 0) / (resources.length || 1)
   ).toFixed(1);
 
-  // Subject Downloads Aggregation
+  // Subject downloads aggregation
   const subjectMap: Record<string, number> = {};
   resources.forEach((r) => {
     subjectMap[r.subject] = (subjectMap[r.subject] || 0) + r.downloadCount;
@@ -46,8 +77,9 @@ export const AnalyticsCharts: React.FC = () => {
 
   const subjectLabels = Object.keys(subjectMap);
   const subjectData = Object.values(subjectMap);
+  const maxSubject = Math.max(...subjectData, 0);
 
-  // Resource Type Distribution
+  // Resource type distribution
   const typeMap: Record<string, number> = {};
   resources.forEach((r) => {
     typeMap[r.type] = (typeMap[r.type] || 0) + 1;
@@ -56,31 +88,20 @@ export const AnalyticsCharts: React.FC = () => {
   const typeLabels = Object.keys(typeMap);
   const typeData = Object.values(typeMap);
 
-  // Bar Chart Config (Claymorphic styled)
+  // Bar chart — ink bars, the leading subject gets the highlighter pass
   const barChartData = {
-    labels: subjectLabels.map((s) => (s.length > 20 ? s.slice(0, 18) + '...' : s)),
+    labels: subjectLabels.map((s) => (s.length > 20 ? s.slice(0, 18) + '…' : s)),
     datasets: [
       {
         label: 'Total Student Downloads',
         data: subjectData,
-        backgroundColor: [
-          'rgba(99, 102, 241, 0.75)',
-          'rgba(236, 72, 153, 0.75)',
-          'rgba(6, 182, 212, 0.75)',
-          'rgba(16, 185, 129, 0.75)',
-          'rgba(245, 158, 11, 0.75)',
-          'rgba(139, 92, 246, 0.75)'
-        ],
-        borderColor: [
-          '#6366f1',
-          '#ec4899',
-          '#06b6d4',
-          '#10b981',
-          '#f59e0b',
-          '#8b5cf6'
-        ],
-        borderWidth: 2,
-        borderRadius: 10
+        backgroundColor: (ctx: ScriptableContext<'bar'>) => {
+          const v = ctx.parsed?.y ?? 0;
+          return maxSubject > 0 && v === maxSubject ? LIME : INK;
+        },
+        borderWidth: 0,
+        borderRadius: 0,
+        maxBarThickness: 42
       }
     ]
   };
@@ -89,54 +110,38 @@ export const AnalyticsCharts: React.FC = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false
-      },
-      tooltip: {
-        backgroundColor: '#1e293b',
-        titleFont: { family: 'Plus Jakarta Sans', size: 12 },
-        bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
-        padding: 10,
-        cornerRadius: 8
-      }
+      legend: { display: false },
+      tooltip: tooltipStyle
     },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: 'rgba(226, 232, 240, 0.6)' },
-        ticks: { font: { family: 'Plus Jakarta Sans', size: 11 }, color: '#64748b' }
-      },
-      x: {
-        grid: { display: false },
-        ticks: { font: { family: 'Plus Jakarta Sans', size: 10 }, color: '#64748b' }
-      }
-    }
+    scales: scaleOptions
   };
 
-  // Line Chart Config (Weekly Trends)
+  // Line chart — lime lead series over ink-gray comparison
   const lineChartData = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     datasets: [
       {
         label: 'Resource Access Volume',
         data: [120, 190, 240, 310, 290, 480, 520],
-        borderColor: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.15)',
-        tension: 0.4,
+        borderColor: LIME,
+        backgroundColor: 'rgba(163, 230, 53, 0.14)',
+        borderWidth: 2,
+        tension: 0.3,
         fill: true,
-        pointBackgroundColor: '#4f46e5',
-        pointRadius: 4,
-        pointHoverRadius: 6
+        pointBackgroundColor: INK,
+        pointRadius: 3,
+        pointHoverRadius: 5
       },
       {
         label: 'Peer Discussion Threads',
         data: [45, 70, 95, 120, 110, 195, 230],
-        borderColor: '#06b6d4',
-        backgroundColor: 'rgba(6, 182, 212, 0.1)',
-        tension: 0.4,
+        borderColor: GRAY2,
+        backgroundColor: 'rgba(120, 113, 108, 0.08)',
+        borderWidth: 1.5,
+        tension: 0.3,
         fill: true,
-        pointBackgroundColor: '#0891b2',
-        pointRadius: 4
+        pointBackgroundColor: GRAY2,
+        pointRadius: 2
       }
     ]
   };
@@ -147,41 +152,21 @@ export const AnalyticsCharts: React.FC = () => {
     plugins: {
       legend: {
         position: 'top' as const,
-        labels: { font: { family: 'Plus Jakarta Sans', size: 11 }, boxWidth: 12 }
+        labels: { font: { family: MONO, size: 10 }, boxWidth: 10, color: INK }
       },
-      tooltip: {
-        backgroundColor: '#1e293b',
-        padding: 10,
-        cornerRadius: 8
-      }
+      tooltip: tooltipStyle
     },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: 'rgba(226, 232, 240, 0.6)' },
-        ticks: { font: { family: 'Plus Jakarta Sans', size: 11 }, color: '#64748b' }
-      },
-      x: {
-        grid: { display: false },
-        ticks: { font: { family: 'Plus Jakarta Sans', size: 11 }, color: '#64748b' }
-      }
-    }
+    scales: scaleOptions
   };
 
-  // Doughnut Chart Config
+  // Doughnut chart — ink/lime/stone series, paper cutouts
   const doughnutChartData = {
     labels: typeLabels,
     datasets: [
       {
         data: typeData,
-        backgroundColor: [
-          '#6366f1',
-          '#ec4899',
-          '#06b6d4',
-          '#10b981',
-          '#f59e0b'
-        ],
-        borderWidth: 3,
+        backgroundColor: [INK, LIME, GRAY2, GRAY3, RULE],
+        borderWidth: 2,
         borderColor: '#ffffff'
       }
     ]
@@ -194,157 +179,115 @@ export const AnalyticsCharts: React.FC = () => {
       legend: {
         position: 'bottom' as const,
         labels: {
-          font: { family: 'Plus Jakarta Sans', size: 11 },
+          font: { family: MONO, size: 10 },
           boxWidth: 10,
-          padding: 12
+          padding: 12,
+          color: INK
         }
-      }
+      },
+      tooltip: tooltipStyle
     },
     cutout: '65%'
   };
 
+  const stats = [
+    { icon: <Layers className="w-4 h-4" aria-hidden="true" />, label: 'Total Resources', value: String(resources.length) },
+    { icon: <Download className="w-4 h-4" aria-hidden="true" />, label: 'Total Downloads', value: String(totalDownloads) },
+    { icon: <Star className="w-4 h-4" aria-hidden="true" />, label: 'Avg Rating', value: `${avgRating} / 5.0` },
+    { icon: <UserCheck className="w-4 h-4" aria-hidden="true" />, label: 'Demo Data Reach', value: 'Synthetic' }
+  ];
+
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Top Banner */}
-      <div className="clay-box p-6 sm:p-8 bg-gradient-to-r from-white via-indigo-50/30 to-white">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-1 text-xs font-bold bg-indigo-100 text-indigo-700 rounded-lg">
-                Module 4 (CO5 & CO6)
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                Chart.js Interactive Visualization Engine
-              </span>
+    <div className="space-y-6 animate-fadeIn">
+      {/* Header */}
+      <section className="border border-ink bg-paper p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="max-w-xl">
+          <h1 className="font-display text-2xl sm:text-3xl font-black text-ink">
+            Academic Analytics Dashboard
+          </h1>
+          <p className="text-sm text-ink-2 mt-1.5 max-w-[58ch]">
+            Live graphical telemetry of student engagement, subject popularity, and resource
+            distribution — <span className="font-mono text-[11px] text-ink-3">Module 4 · CO5 &amp; CO6</span>
+          </p>
+        </div>
+
+        <div className="ruled-sunk px-4 py-3 shrink-0">
+          <p className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em]">Syllabus Grade</p>
+          <p className="text-sm font-extrabold text-ink tabular">100% Coverage</p>
+        </div>
+      </section>
+
+      {/* Index summary strip */}
+      <dl className="ruled grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-rule">
+        {stats.map((s) => (
+          <div key={s.label} className="p-4 sm:p-5 flex items-center gap-3">
+            <div className="w-8 h-8 bg-ink text-lime flex items-center justify-center shrink-0" aria-hidden="true">
+              {s.icon}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800">
-              Academic Analytics Dashboard
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Live graphical telemetry of student engagement, subject popularity, and resource distribution.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="clay-badge px-4 py-2 bg-white rounded-2xl flex items-center gap-2">
-              <Award className="w-5 h-5 text-indigo-600" />
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase">Syllabus Grade</p>
-                <p className="text-xs font-extrabold text-slate-800">100% Coverage</p>
-              </div>
+            <div className="min-w-0">
+              <dt className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em]">{s.label}</dt>
+              <dd className="text-lg font-black text-ink tabular leading-tight">{s.value}</dd>
             </div>
           </div>
-        </div>
-      </div>
+        ))}
+      </dl>
 
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="clay-box p-5 bg-white flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-            <BarChart3 className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-semibold uppercase">Total Resources</p>
-            <h3 className="text-2xl font-black text-slate-800">{resources.length}</h3>
-          </div>
-        </div>
-
-        <div className="clay-box p-5 bg-white flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <Download className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-semibold uppercase">Total Downloads</p>
-            <h3 className="text-2xl font-black text-slate-800">{totalDownloads}</h3>
-          </div>
-        </div>
-
-        <div className="clay-box p-5 bg-white flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <Star className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-semibold uppercase">Avg Rating</p>
-            <h3 className="text-2xl font-black text-slate-800">{avgRating} / 5.0</h3>
-          </div>
-        </div>
-
-        <div className="clay-box p-5 bg-white flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-semibold uppercase">Student Reach</p>
-            <h3 className="text-2xl font-black text-slate-800">1,240+</h3>
-          </div>
-        </div>
-      </div>
-
-      {/* Visual Charts Layout */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Bar Chart: Subject Downloads */}
-        <div className="clay-box p-6 bg-white lg:col-span-2 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
+        <section className="ruled p-6 lg:col-span-2 flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-3 mb-4">
             <div>
-              <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-indigo-600" />
+              <h2 className="font-bold text-ink flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" aria-hidden="true" />
                 Resource Downloads by Subject
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Real-time Bar Chart aggregating student download requests across core semesters
+              </h2>
+              <p className="text-xs text-ink-2 mt-0.5">
+                Real-time aggregation of student download requests. The leading subject gets the highlighter.
               </p>
             </div>
-            <span className="text-[11px] font-mono px-2 py-1 bg-slate-100 rounded-md text-slate-600">
-              Chart.js BarElement
-            </span>
+            <span className="stamp stamp-outline">Bar</span>
           </div>
 
           <div className="h-64 sm:h-72 w-full">
             <Bar data={barChartData} options={barChartOptions} />
           </div>
-        </div>
+        </section>
 
-        {/* Doughnut Chart: Type Breakdown */}
-        <div className="clay-box p-6 bg-white flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
+        <section className="ruled p-6 flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-3 mb-2">
             <div>
-              <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <PieChart className="w-4 h-4 text-pink-600" />
+              <h2 className="font-bold text-ink flex items-center gap-2">
+                <PieChart className="w-4 h-4" aria-hidden="true" />
                 Resource Types
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">Notes vs PYQs vs Labs</p>
+              </h2>
+              <p className="text-xs text-ink-2 mt-0.5">Notes vs PYQs vs Labs</p>
             </div>
-            <span className="text-[11px] font-mono px-2 py-1 bg-slate-100 rounded-md text-slate-600">
-              Doughnut
-            </span>
+            <span className="stamp stamp-outline">Doughnut</span>
           </div>
 
           <div className="h-64 sm:h-72 w-full flex items-center justify-center">
             <Doughnut data={doughnutChartData} options={doughnutOptions} />
           </div>
-        </div>
+        </section>
 
-        {/* Line Chart: Weekly Trends */}
-        <div className="clay-box p-6 bg-white lg:col-span-3">
-          <div className="flex items-center justify-between mb-4">
+        <section className="ruled p-6 lg:col-span-3">
+          <div className="flex items-start justify-between gap-3 mb-4">
             <div>
-              <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-cyan-600" />
-                Weekly Academic Traffic & Active Study Peaks
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Smoothed Spline Line Chart illustrating surge during exam preparation weekends
+              <h2 className="font-bold text-ink flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" aria-hidden="true" />
+                Weekly Academic Traffic &amp; Active Study Peaks
+              </h2>
+              <p className="text-xs text-ink-2 mt-0.5">
+                Demo trend illustrating the surge during exam-preparation weekends.
               </p>
             </div>
-            <span className="text-[11px] font-mono px-2 py-1 bg-slate-100 rounded-md text-slate-600">
-              Chart.js LineElement + Filler
-            </span>
+            <span className="stamp stamp-outline">Line</span>
           </div>
 
           <div className="h-64 sm:h-72 w-full">
             <Line data={lineChartData} options={lineChartOptions} />
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

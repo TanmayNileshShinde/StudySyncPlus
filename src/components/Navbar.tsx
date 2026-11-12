@@ -19,98 +19,87 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUpload, onOpenBookmarks })
     { id: 'syllabus-viva', label: 'Syllabus & Viva', icon: <Award className="w-4 h-4" /> }
   ];
 
+  const savedCount = userProfile.savedResourceIds.length;
+
   return (
-    <header className="sticky top-0 z-40 bg-[#eef2f7]/90 backdrop-blur-md border-b border-white/60 py-3 px-4 sm:px-6">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
-        
-        {/* Brand & Team Badge */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-indigo-700 flex items-center justify-center text-white shadow-clay-colored">
-              <BookOpen className="w-6 h-6 stroke-[2.5]" />
+    <header className="sticky top-0 z-40 bg-paper border-b border-rule">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        {/* Top row: brand + actions */}
+        <div className="flex items-center justify-between gap-3 pt-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* File mark: ink square, lime index bar */}
+            <div className="w-10 h-10 bg-ink flex items-center justify-center shrink-0" aria-hidden="true">
+              <div className="w-5 h-1.5 bg-lime" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xl tracking-tight text-slate-800">StudySyncPlus</span>
-                <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
-                  Sem-3 Hub
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium hidden sm:block">
-                Course Project by <strong className="text-slate-700">Tanmay Shinde (67)</strong> & <strong className="text-slate-700">Aditya Shah (68)</strong>
+            <div className="min-w-0">
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight text-ink leading-none whitespace-nowrap">
+                StudySyncPlus
+              </span>
+              <p className="text-[11px] text-ink-3 font-medium truncate mt-0.5">
+                SAKEC · Semester III Course File
               </p>
             </div>
           </div>
 
-          {/* Mobile Actions */}
-          <div className="flex items-center gap-2 md:hidden">
+          {/* Actions */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onOpenBookmarks}
-              className="p-2.5 clay-button text-slate-700 rounded-xl flex items-center gap-1 text-xs"
-              title="Saved Resources"
+              className="btn btn-ghost hidden md:inline-flex"
+              title="View saved bookmarks"
+              aria-label={`Saved resources: ${savedCount}`}
             >
-              <Bookmark className="w-4 h-4 text-amber-500" />
-              <span>{userProfile.savedResourceIds.length}</span>
+              <Bookmark className="w-4 h-4" aria-hidden="true" />
+              <span>Saved</span>
+              <span className="font-mono text-[11px] tabular px-1.5 py-0.5 bg-sunk border border-rule">{savedCount}</span>
             </button>
+
             <button
-              onClick={onOpenUpload}
-              className="clay-button-primary px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+              onClick={onOpenBookmarks}
+              className="btn btn-secondary md:hidden"
+              title="View saved bookmarks"
+              aria-label={`Saved resources: ${savedCount}`}
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>Upload</span>
+              <Bookmark className="w-4 h-4" aria-hidden="true" />
+              <span className="font-mono text-[11px] tabular">{savedCount}</span>
+            </button>
+
+            <button onClick={onOpenUpload} className="btn btn-primary">
+              <PlusCircle className="w-4 h-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Upload Resource</span>
+              <span className="sm:hidden">Upload</span>
+            </button>
+
+            <button
+              onClick={resetToDefaults}
+              className="btn btn-ghost px-2"
+              title="Reset to initial syllabus demo data"
+              aria-label="Reset to initial syllabus demo data"
+            >
+              <RefreshCw className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        {/* Navigation Tabs (Single Page Application SPA Switching) */}
-        <nav className="flex items-center justify-start overflow-x-auto py-1 space-x-1 sm:space-x-2 no-scrollbar">
+        {/* Tab rail */}
+        <nav className="tab-rail no-scrollbar mt-3" aria-label="Sections">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
-                  isActive
-                    ? 'clay-pill-active'
-                    : 'text-slate-600 hover:text-indigo-600 hover:bg-white/60'
-                }`}
+                aria-current={isActive ? 'page' : undefined}
+                className={`tab-rail-item ${isActive ? 'is-active' : ''}`}
               >
-                {item.icon}
-                <span>{item.label}</span>
+                <span className="inline-flex items-center gap-2">
+                  {item.icon}
+                  <span>{item.label}</span>
+                </span>
               </button>
             );
           })}
         </nav>
-
-        {/* Right CTA Actions */}
-        <div className="hidden md:flex items-center space-x-3">
-          <button
-            onClick={onOpenBookmarks}
-            className="clay-button px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-2 hover:text-amber-600"
-            title="View saved bookmarks"
-          >
-            <Bookmark className="w-4 h-4 text-amber-500" />
-            <span>Saved ({userProfile.savedResourceIds.length})</span>
-          </button>
-
-          <button
-            onClick={onOpenUpload}
-            className="clay-button-primary px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2"
-          >
-            <PlusCircle className="w-4 h-4 stroke-[2.5]" />
-            <span>Upload Resource</span>
-          </button>
-
-          <button
-            onClick={resetToDefaults}
-            className="p-2 clay-button rounded-xl text-slate-500 hover:text-slate-800"
-            title="Reset to initial syllabus demo data"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        </div>
-
       </div>
     </header>
   );

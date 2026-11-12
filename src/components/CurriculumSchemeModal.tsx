@@ -1,6 +1,6 @@
 import React from 'react';
 import { OFFICIAL_SEMESTER_3_SCHEME } from '../data/initialResources';
-import { GraduationCap, BookOpen, Layers, Award, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Layers } from 'lucide-react';
 import { useResources } from '../context/ResourceContext';
 
 export const CurriculumSchemeModal: React.FC = () => {
@@ -36,56 +36,44 @@ export const CurriculumSchemeModal: React.FC = () => {
 
       setSelectedSubject(match as any);
       setActiveTab('library');
-      showToast(`Filtered StudySyncPlus library for: ${match}`);
+      showToast(`Library filtered for: ${match}`);
     }
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Header Banner */}
-      <div className="clay-box p-6 sm:p-8 bg-gradient-to-r from-white via-indigo-50/20 to-white">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-1 text-xs font-bold bg-indigo-100 text-indigo-700 rounded-lg">
-                Official Curriculum Scheme
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                SEMESTER - III [Level 4.5, UG Certificate]
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800">
-              Department Course Structure & Credit Matrix
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Direct alignment with Shah & Anchor Kutchhi Engineering College (SAKEC) Semester 3 teaching & learning scheme.
-            </p>
-          </div>
-
-          <div className="clay-badge p-3.5 bg-white rounded-2xl border border-slate-100 flex items-center gap-3">
-            <GraduationCap className="w-8 h-8 text-indigo-600" />
-            <div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase">Total Credits</p>
-              <p className="text-base font-black text-slate-800">22 + 2* Credits</p>
-            </div>
-          </div>
+    <div className="space-y-6 animate-fadeIn">
+      {/* Header */}
+      <section className="border border-ink bg-paper p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="max-w-xl">
+          <h1 className="font-display text-2xl sm:text-3xl font-black text-ink">
+            Department Course Structure &amp; Credit Matrix
+          </h1>
+          <p className="text-sm text-ink-2 mt-1.5 max-w-[58ch]">
+            Direct alignment with the SAKEC Semester 3 teaching &amp; learning scheme —{' '}
+            <span className="font-mono text-[11px] text-ink-3">Level 4.5 · UG Certificate</span>
+          </p>
         </div>
-      </div>
 
-      {/* Official Table Representation */}
-      <div className="clay-box p-6 bg-white overflow-hidden">
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-          <h3 className="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
-            <Layers className="w-4 h-4 text-indigo-600" />
-            Semester III Course Breakdown & Hour Distribution
-          </h3>
-          <span className="text-xs text-slate-400">Click any course to filter notes</span>
+        <div className="ruled-sunk px-4 py-3 shrink-0">
+          <p className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em]">Total Credits</p>
+          <p className="text-sm font-extrabold text-ink tabular">22 + 2* Credits</p>
+        </div>
+      </section>
+
+      {/* Official table */}
+      <section className="ruled overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-4 border-b border-ink">
+          <h2 className="font-bold text-ink text-sm sm:text-base flex items-center gap-2">
+            <Layers className="w-4 h-4" aria-hidden="true" />
+            Semester III Course Breakdown &amp; Hour Distribution
+          </h2>
+          <span className="text-[11px] font-mono text-ink-3">Click any course row to filter the library</span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700 border-collapse">
+          <table className="w-full text-left text-xs text-ink border-collapse">
             <thead>
-              <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <tr className="bg-sunk text-[10px] font-mono font-semibold text-ink-2 uppercase tracking-[0.06em] border-b border-ink">
                 <th className="py-3 px-3">S.N.</th>
                 <th className="py-3 px-3">Category</th>
                 <th className="py-3 px-3">Abbr.</th>
@@ -94,34 +82,34 @@ export const CurriculumSchemeModal: React.FC = () => {
                 <th className="py-3 px-3 text-center">CL</th>
                 <th className="py-3 px-3 text-center">LL</th>
                 <th className="py-3 px-3 text-center">SL/PBL</th>
-                <th className="py-3 px-3 text-center font-bold text-slate-700">Total NH</th>
-                <th className="py-3 px-3 text-center font-bold text-indigo-600">Credits</th>
+                <th className="py-3 px-3 text-center">Total NH</th>
+                <th className="py-3 px-3 text-center text-lime-text">Credits</th>
                 <th className="py-3 px-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-rule">
               {OFFICIAL_SEMESTER_3_SCHEME.map((item) => (
                 <tr
                   key={item.srNo}
-                  className="hover:bg-indigo-50/40 transition-colors group cursor-pointer"
+                  className="transition-colors hover:bg-lime-wash group cursor-pointer"
                   onClick={() => handleFilterByCourse(item.courseName)}
                 >
-                  <td className="py-3 px-3 font-bold text-slate-400">{item.srNo}</td>
-                  <td className="py-3 px-3 font-medium text-slate-600">
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-semibold">
+                  <td className="py-3 px-3 font-mono text-ink-3 tabular">{item.srNo}</td>
+                  <td className="py-3 px-3 font-medium text-ink-2">
+                    <span className="px-1.5 py-0.5 border border-rule text-[10px] font-mono text-ink-2 bg-paper">
                       {item.category}
                     </span>
                   </td>
-                  <td className="py-3 px-3 font-mono font-bold text-indigo-600">{item.abbreviation}</td>
-                  <td className="py-3 px-3 font-mono font-bold text-slate-800">{item.courseCode}</td>
-                  <td className="py-3 px-3 font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                  <td className="py-3 px-3 font-mono font-bold text-ink">{item.abbreviation}</td>
+                  <td className="py-3 px-3 font-mono font-semibold text-ink-2">{item.courseCode}</td>
+                  <td className="py-3 px-3 font-bold text-ink group-hover:underline underline-offset-2 decoration-2">
                     {item.courseName}
                   </td>
-                  <td className="py-3 px-3 text-center text-slate-500">{item.cl || '-'}</td>
-                  <td className="py-3 px-3 text-center text-slate-500">{item.ll || '-'}</td>
-                  <td className="py-3 px-3 text-center text-slate-500">{item.slPbl || '-'}</td>
-                  <td className="py-3 px-3 text-center font-mono font-bold text-slate-700">{item.nh}</td>
-                  <td className="py-3 px-3 text-center font-bold text-indigo-600 text-sm">
+                  <td className="py-3 px-3 text-center font-mono text-ink-2 tabular">{item.cl || '—'}</td>
+                  <td className="py-3 px-3 text-center font-mono text-ink-2 tabular">{item.ll || '—'}</td>
+                  <td className="py-3 px-3 text-center font-mono text-ink-2 tabular">{item.slPbl || '—'}</td>
+                  <td className="py-3 px-3 text-center font-mono font-bold text-ink tabular">{item.nh}</td>
+                  <td className="py-3 px-3 text-center font-bold text-lime-text tabular text-sm">
                     {item.credits}
                   </td>
                   <td className="py-3 px-3 text-right">
@@ -130,7 +118,8 @@ export const CurriculumSchemeModal: React.FC = () => {
                         e.stopPropagation();
                         handleFilterByCourse(item.courseName);
                       }}
-                      className="clay-button px-2.5 py-1 text-[11px] font-bold text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all rounded-lg"
+                      className="btn btn-secondary px-2.5 py-1.5 text-[11px] min-h-0"
+                      aria-label={`View notes for ${item.courseName}`}
                     >
                       View Notes
                     </button>
@@ -139,27 +128,28 @@ export const CurriculumSchemeModal: React.FC = () => {
               ))}
             </tbody>
             <tfoot>
-              <tr className="bg-indigo-50/60 font-bold text-slate-800 text-xs border-t-2 border-indigo-200">
-                <td colSpan={5} className="py-3.5 px-3 uppercase tracking-wider">
-                  Total Scheme Hours & Credits (Semester - III)
+              <tr className="bg-sunk font-bold text-ink text-xs border-t-2 border-ink">
+                <td colSpan={5} className="py-3.5 px-3 font-mono uppercase tracking-[0.06em] text-[10px]">
+                  Total Scheme Hours &amp; Credits (Semester III)
                 </td>
-                <td className="py-3.5 px-3 text-center font-mono">150</td>
-                <td className="py-3.5 px-3 text-center font-mono">360+60*</td>
-                <td className="py-3.5 px-3 text-center font-mono">150</td>
-                <td className="py-3.5 px-3 text-center font-mono text-indigo-700">660+60*</td>
-                <td className="py-3.5 px-3 text-center font-mono text-indigo-700 text-sm">22+2*</td>
+                <td className="py-3.5 px-3 text-center font-mono tabular">150</td>
+                <td className="py-3.5 px-3 text-center font-mono tabular">360+60*</td>
+                <td className="py-3.5 px-3 text-center font-mono tabular">150</td>
+                <td className="py-3.5 px-3 text-center font-mono tabular">660+60*</td>
+                <td className="py-3.5 px-3 text-center font-mono text-lime-text tabular text-sm">22+2*</td>
                 <td></td>
               </tr>
             </tfoot>
           </table>
         </div>
 
-        {/* Legend Notes */}
-        <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
-          <span>CL: Classroom Learning • LL: Lab Learning • SL/PBL: Self Learning / Project Based Learning • NH: Notional Hours</span>
-          <span className="text-indigo-600 font-medium">Mapped for Tanmay Shinde (67) & Aditya Shah (68)</span>
+        <div className="px-6 py-3 border-t border-rule flex flex-wrap items-center justify-between gap-2 text-[11px]">
+          <span className="text-ink-3 font-mono">
+            CL: Classroom · LL: Lab · SL/PBL: Self/Project-Based · NH: Notional Hours
+          </span>
+          <span className="text-ink-2 font-medium">Mapped for Tanmay Shinde (67) &amp; Aditya Shah (68)</span>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

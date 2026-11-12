@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Award, CheckCircle2, ChevronRight, Code, FileText, Globe, Layers, UserCheck } from 'lucide-react';
+import { CheckCircle2, Layers, Code } from 'lucide-react';
 
 interface SyllabusModule {
   moduleNumber: number;
@@ -58,7 +58,7 @@ const SYLLABUS_MODULES: SyllabusModule[] = [
       '3.5 State Management in React using Context API'
     ],
     implementationInApp:
-      'Modern Single Page Application built using React 18, TypeScript, and Claymorphism design. State is centralized in ResourceContext with custom hooks, providing instantaneous live filtering, bookmarking, and resource deletion.',
+      'Modern Single Page Application built using React 19, TypeScript, and a paper-and-ink Course File design system. State is centralized in ResourceContext with custom hooks, providing instantaneous live filtering, bookmarking, and resource deletion.',
     codeReference: 'src/App.tsx & src/context/ResourceContext.tsx'
   },
   {
@@ -84,130 +84,106 @@ export const SyllabusVivaModal: React.FC = () => {
   const selectedModule = SYLLABUS_MODULES.find((m) => m.moduleNumber === activeModule)!;
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn">
       {/* Header */}
-      <div className="clay-box p-6 sm:p-8 bg-gradient-to-r from-white via-indigo-50/20 to-white">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-1 text-xs font-bold bg-indigo-100 text-indigo-700 rounded-lg">
-                Academic Evaluation Matrix
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                Shah & Anchor Kutchhi Engineering College (SAKEC)
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800">
-              Syllabus & Viva Alignment Guide
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Direct mapping of all Course Outcomes (CO1 to CO6) and Modules 1–4 to StudySyncPlus code.
-            </p>
-          </div>
+      <section className="border border-ink bg-paper p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="max-w-xl">
+          <h1 className="font-display text-2xl sm:text-3xl font-black text-ink">
+            Syllabus &amp; Viva Alignment Guide
+          </h1>
+          <p className="text-sm text-ink-2 mt-1.5 max-w-[58ch]">
+            Direct mapping of all Course Outcomes (CO1–CO6) and Modules 1–4 to StudySyncPlus code —
+            <span className="font-mono text-[11px] text-ink-3"> SAKEC</span>
+          </p>
+        </div>
 
-          {/* Student Authors */}
-          <div className="clay-badge p-3.5 bg-white rounded-2xl border border-slate-100">
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
-              Project Authors
+        <div className="ruled-sunk px-4 py-3 shrink-0">
+          <p className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em] mb-1">Project Authors</p>
+          <div className="text-xs text-ink space-y-0.5 tabular">
+            <p>
+              <strong>Tanmay Shinde</strong> · Roll 67{' '}
+              <span className="font-mono text-[11px] text-ink-2">126BTCM2008</span>
             </p>
-            <div className="text-xs text-slate-700 space-y-0.5">
-              <p>
-                <strong>Tanmay Shinde</strong> — Roll 67 (<span className="font-mono text-indigo-600">126BTCM2008</span>)
-              </p>
-              <p>
-                <strong>Aditya Shah</strong> — Roll 68 (<span className="font-mono text-indigo-600">126BTCM2009</span>)
-              </p>
-            </div>
+            <p>
+              <strong>Aditya Shah</strong> · Roll 68{' '}
+              <span className="font-mono text-[11px] text-ink-2">126BTCM2009</span>
+            </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Module Selector Pills */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Module selector rail */}
+      <nav className="tab-rail" aria-label="Syllabus modules">
         {SYLLABUS_MODULES.map((mod) => (
           <button
             key={mod.moduleNumber}
             onClick={() => setActiveModule(mod.moduleNumber)}
-            className={`p-4 text-left rounded-2xl transition-all ${
-              activeModule === mod.moduleNumber
-                ? 'clay-box bg-indigo-600 text-white shadow-clay-colored'
-                : 'clay-box bg-white text-slate-700 hover:text-indigo-600'
+            aria-pressed={activeModule === mod.moduleNumber}
+            className={`tab-rail-item flex flex-col items-start gap-1 ${
+              activeModule === mod.moduleNumber ? 'is-active' : ''
             }`}
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold font-mono">Module {mod.moduleNumber}</span>
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                  activeModule === mod.moduleNumber
-                    ? 'bg-white/20 text-white'
-                    : 'bg-indigo-50 text-indigo-700'
-                }`}
-              >
-                {mod.mappedCO}
-              </span>
-            </div>
-            <h4 className="font-bold text-xs sm:text-sm line-clamp-1">{mod.name}</h4>
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] opacity-80">
+              Module {mod.moduleNumber} · {mod.mappedCO}
+            </span>
+            <span className="font-bold text-xs sm:text-sm">{mod.name}</span>
           </button>
         ))}
-      </div>
+      </nav>
 
-      {/* Detailed Module Inspector */}
-      <div className="clay-box p-6 sm:p-8 bg-white space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+      {/* Detail inspector */}
+      <section className="ruled p-6 sm:p-8 space-y-6">
+        <div className="flex items-start justify-between gap-3 pb-4 border-b border-ink">
           <div>
-            <div className="flex items-center gap-2 text-indigo-600 font-mono text-xs font-bold mb-1">
-              <span>MODULE {selectedModule.moduleNumber}</span>
-              <span>•</span>
-              <span>{selectedModule.mappedCO}</span>
-              <span>•</span>
-              <span>{selectedModule.hours} Lecture Hours</span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-800">{selectedModule.name}</h2>
+            <p className="font-mono text-[11px] font-semibold text-ink-3 uppercase tracking-[0.08em] mb-1">
+              Module {selectedModule.moduleNumber} · {selectedModule.mappedCO} · {selectedModule.hours} Lecture Hours
+            </p>
+            <h2 className="font-display text-xl sm:text-2xl font-black text-ink">{selectedModule.name}</h2>
           </div>
-          <span className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 hidden sm:block">
-            <CheckCircle2 className="w-6 h-6" />
-          </span>
+          <span className="stamp stamp-verified animate-stamp hidden sm:inline-flex">Covered</span>
         </div>
 
-        {/* Outcomes Checklist */}
+        {/* Outcomes checklist */}
         <div>
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+          <h3 className="text-[11px] font-mono font-semibold text-ink-3 uppercase tracking-[0.08em] mb-3">
             Syllabus Topics Covered
           </h3>
-          <ul className="space-y-2.5">
+          <ul className="space-y-2">
             {selectedModule.outcomes.map((topic, i) => (
               <li
                 key={i}
-                className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs sm:text-sm text-slate-700"
+                className="flex items-start gap-2.5 p-3 ruled-sunk text-xs sm:text-sm text-ink-2"
               >
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-lime-text shrink-0 mt-0.5" aria-hidden="true" />
                 <span>{topic}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Implementation Summary */}
-        <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100/80">
-          <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-            <Layers className="w-4 h-4 text-indigo-600" />
+        {/* Implementation summary */}
+        <div className="ruled-sunk p-4 border-l border-l-ink">
+          <h3 className="text-[11px] font-mono font-semibold text-ink uppercase tracking-[0.08em] mb-1 flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5" aria-hidden="true" />
             Project Implementation Details
-          </h4>
-          <p className="text-xs sm:text-sm text-indigo-950 leading-relaxed">
+          </h3>
+          <p className="text-xs sm:text-sm text-ink-2 leading-relaxed">
             {selectedModule.implementationInApp}
           </p>
         </div>
 
-        {/* Code Reference Pill */}
-        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 text-slate-300 font-mono text-xs">
-          <div className="flex items-center gap-2">
-            <Code className="w-4 h-4 text-cyan-400" />
-            <span>Source Code:</span>
-            <span className="text-white font-bold">{selectedModule.codeReference}</span>
+        {/* Code reference bar */}
+        <div className="bg-ink text-paper font-mono text-xs p-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Code className="w-4 h-4 text-lime shrink-0" aria-hidden="true" />
+            <span className="text-ink-3">Source Code:</span>
+            <span className="text-paper font-bold break-all">{selectedModule.codeReference}</span>
           </div>
-          <span className="text-[10px] text-emerald-400 font-bold uppercase">Verified & Active</span>
+          <span className="text-lime font-bold uppercase text-[10px] tracking-[0.08em] shrink-0">
+            Verified &amp; Active
+          </span>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

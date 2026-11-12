@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T00:00:00Z",
+  "title": "Design System: StudySyncPlus",
+  "extensions": {
+    "colorMeta": {
+      "lime": {
+        "role": "primary",
+        "displayName": "Highlighter Lime",
+        "canonical": "#a3e635",
+        "tonalRamp": ["#f4fce4", "#a3e635", "#65a30d", "#365314"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Iron Ink",
+        "canonical": "#111111",
+        "tonalRamp": ["#111111", "#57534e", "#78716c", "#e7e5e4"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Course-File Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#ffffff", "#f7f7f5", "#e7e5e4"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Tab hero headline only; expanded Archivo 900, one lime highlighter phrase."
+      },
+      "label": {
+        "displayName": "Data Label",
+        "purpose": "JetBrains Mono, tracked uppercase — course codes, counts, provenance data only; never mono as costume."
+      }
+    },
+    "shadows": [
+      {
+        "name": "overlay-elevation",
+        "value": "0 24px 64px rgba(17, 17, 17, 0.18)",
+        "purpose": "The only shadow in the system: elevation for modal, drawer, and toast. Flat UI carries no shadows."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-stamp",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Exponential ease-out for all damped motion; the authored moment is the 160ms stamp-in."
+      },
+      {
+        "name": "duration-damped",
+        "value": "240ms",
+        "purpose": "Standard duration for fade/rise entrances and toast enter/exit; reduced-motion collapses to opacity."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Lime highlighter fill with ink text — the single loudest action per view (Upload). Zero radius.",
+      "html": "<button class=\"ds-btn-primary\">Upload Resource</button>",
+      "css": ".ds-btn-primary { background: #a3e635; color: #111111; font-weight: 600; font-size: 13px; padding: 0 14px; height: 36px; border: 1px solid transparent; border-radius: 0; cursor: pointer; transition: background-color 0.15s ease-out; } .ds-btn-primary:hover { background: #8bc922; } .ds-btn-primary:active { background: #65a30d; }"
+    },
+    {
+      "name": "Index Rail Item",
+      "kind": "chip",
+      "refersTo": "subject-rail-item",
+      "description": "Subject index text button; the active state is the highlighter pass — solid lime rectangle, flush in the rail.",
+      "html": "<button class=\"ds-rail-item ds-rail-active\">Data Structures</button>",
+      "css": ".ds-rail-item { padding: 12px 16px; font-size: 13px; font-weight: 500; color: #57534e; background: transparent; border: none; border-radius: 0; white-space: nowrap; cursor: pointer; } .ds-rail-item:hover { color: #111111; background: #f7f7f5; } .ds-rail-active { background: #a3e635; color: #111111; }"
+    },
+    {
+      "name": "Resource Card",
+      "kind": "card",
+      "refersTo": "resource-card",
+      "description": "White ruled tile, zero radius: mono course code, title, subject · type, description, hairline provenance footer with compact Download.",
+      "html": "<article class=\"ds-card\"><span class=\"ds-card-code\">CMLOR2VS201</span><h3>Web Technology II — ES6, Fetch API, DOM &amp; React Master Notes</h3><footer><span>Tanmay Shinde · 4.2 MB · ★ 4.9</span><button class=\"ds-card-dl\">Download 420</button></footer></article>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid #e7e5e4; border-radius: 0; padding: 24px; display: flex; flex-direction: column; } .ds-card:hover { border-color: #111111; } .ds-card-code { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #78716c; } .ds-card h3 { font-weight: 700; font-size: 17px; color: #111111; margin: 14px 0 6px; } .ds-card footer { margin-top: auto; padding-top: 16px; border-top: 1px solid #e7e5e4; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #57534e; font-variant-numeric: tabular-nums; } .ds-card-dl { background: #ffffff; color: #111111; border: 1px solid #e7e5e4; border-radius: 0; font-weight: 600; font-size: 13px; padding: 0 12px; height: 36px; cursor: pointer; } .ds-card-dl:hover { background: #111111; color: #ffffff; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The official department course file — stamped, ruled, one highlighter.",
+    "overview": "StudySyncPlus reads like the college's official Semester III course file: paper-white ground, iron-black ink, true 1px hairline rules, and stamped marks that carry trust. The palette is user-pinned (white / near-black / single lime accent) and lime does real jobs only — primary action, active subject mark, verified stamp, lead data series. Revision 2 moves the composition editorial: the page ground is generous whitespace, density lives inside ruled containers, and the hero, discovery, cards, and footer were each stripped to their essential job.",
+    "keyCharacteristics": [
+      "Zero border-radius everywhere; rectangles only",
+      "True 1px hairlines on --rule; ink rules demote section boundaries",
+      "One lime accent doing real jobs; roughly ≤4 lime instances per viewport region",
+      "Archivo for display/UI, JetBrains Mono strictly for data",
+      "Tabular numerals in every count, size, and rating",
+      "Editorial page rhythm: unboxed hero, one discovery band, calm 3-column card grid, single-row footer"
+    ]
+  }
+}
