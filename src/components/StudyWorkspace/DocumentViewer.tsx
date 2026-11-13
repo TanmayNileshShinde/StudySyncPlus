@@ -131,6 +131,27 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     return () => window.document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  // Persist last studied document and page for "Continue Studying"
+  useEffect(() => {
+    if (activeDoc?.id) {
+      try {
+        localStorage.setItem(
+          'studysyncplus_recent_doc',
+          JSON.stringify({
+            id: activeDoc.id,
+            page: viewerPage ?? 1,
+            title: activeDoc.title,
+            courseCode: activeDoc.courseCode,
+            subjectId: activeDoc.subjectId,
+            updatedAt: Date.now()
+          })
+        );
+      } catch {
+        // ignore storage quota errors
+      }
+    }
+  }, [activeDoc?.id, activeDoc?.title, activeDoc?.courseCode, activeDoc?.subjectId, viewerPage]);
+
   // Fetch real file URL from Convex Storage
   const fileData = useQuery(
     api.resources.fileUrl,
