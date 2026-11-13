@@ -289,7 +289,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
     return resources.filter((r) => r.subjectId === activeDocument.subjectId).length;
   }, [activeDocument, resources]);
 
-  // Turns list: persisted messages + optimistic pairs
+  // Turns list: persisted messages + optimistic pairs without duplicates
   const turns: Turn[] = useMemo(() => {
     const base: Turn[] = (persisted ?? []).map((m) => ({
       role: m.role,
@@ -304,14 +304,38 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
     }));
 
     if (pending) {
-      base.push({ role: 'user', content: pending.userText });
+      // Check if the pending user message is already in base (synced in realtime via Convex WebSocket)
+      const lastMessage = base[base.length - 1];
+      const userMessageAlreadyInBase =
+        lastMessage &&
+        lastMessage.role === 'user' &&
+        lastMessage.content.trim() === pending.userText.trim();
+
+      if (!userMessageAlreadyInBase) {
+        base.push({ role: 'user', content: pending.userText });
+      }
+
+      // Always show the thinking assistant placeholder while generation is pending
       base.push({ role: 'assistant', content: '' });
       return base;
     }
 
-    if (localReply && persisted && !persisted.some((m) => m.role === 'user' && m.content === localReply.userText)) {
-      base.push({ role: 'user', content: localReply.userText });
-      base.push({ role: 'assistant', content: localReply.reply });
+    if (localReply && persisted) {
+      const lastMessage = base[base.length - 1];
+      const hasAssistantReply =
+        lastMessage &&
+        lastMessage.role === 'assistant' &&
+        lastMessage.content.trim().length > 0;
+
+      if (!hasAssistantReply) {
+        const hasUserMessage = base.some(
+          (m) => m.role === 'user' && m.content.trim() === localReply.userText.trim()
+        );
+        if (!hasUserMessage) {
+          base.push({ role: 'user', content: localReply.userText });
+        }
+        base.push({ role: 'assistant', content: localReply.reply });
+      }
     }
 
     return base;
@@ -355,6 +379,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
 
       setError(null);
       setDraft('');
+      setLocalReply(null);
       setPending({ userText: trimmed });
 
       const args: Record<string, unknown> = {
@@ -363,7 +388,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
       };
 
       if (threadId) {
-        args.threadId = asResourceId(threadId);
+        args.threadId = asThreadId(threadId);
       }
 
       // Map scope to Convex retrieval mode

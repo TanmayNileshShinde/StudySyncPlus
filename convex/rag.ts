@@ -37,18 +37,20 @@ function getChatModel(): string {
 
 /**
  * Maximum completion tokens for chat responses.
- * Default is 4096 tokens (giving plenty of room for reasoning tokens + full comprehensive answer),
- * while staying well within provider limits, Convex action timeouts, and preserving context budget for RAG.
+ * Defaults to 8192 tokens (providing ample budget for reasoning/thinking tokens
+ * plus full multi-function C programs, algorithms, and complexity analyses).
+ * Supports up to 16384 tokens. Enforces a minimum of 8192 tokens so stale
+ * lower environment variables (e.g. 1800 or 4096) cannot throttle generation.
  */
 function getMaxCompletionTokens(): number {
   const envVal = process.env.NVIDIA_MAX_TOKENS || process.env.NVIDIA_MAX_COMPLETION_TOKENS;
   if (envVal) {
     const parsed = parseInt(envVal, 10);
-    if (!isNaN(parsed) && parsed >= 512 && parsed <= 8192) {
+    if (!isNaN(parsed) && parsed >= 8192 && parsed <= 16384) {
       return parsed;
     }
   }
-  return 4096;
+  return 8192;
 }
 
 /** Sleep helper with optional jitter for exponential backoff. */
@@ -498,13 +500,64 @@ export const chat = action({
       threadId = args.threadId;
     }
 
-    // Save user message to thread
+    // Step 2: Fetch existing chat history BEFORE appending the new message
+    // This allows detecting conversational follow-ups and preserving topic context.
+    const rawHistory = await ctx.runQuery(api.chat.listMessages, { threadId });
+    const existingMessages = (rawHistory as Array<{
+      role: string;
+      content: string;
+      citations?: Array<{
+        chunkId: Id<"documentChunks">;
+        resourceId: Id<"resources">;
+        resourceTitle: string;
+        page?: number;
+        fileKind?: string;
+        textSnippet: string;
+        score: number;
+      }>;
+    }>) || [];
+
+    // Save current user message to thread
     await ctx.runMutation(api.chat.appendUserMessage, {
       threadId,
       content: userText,
     });
 
-    // Step 2: Retrieve relevant context chunks using vector search
+    // Step 3: Contextual Query Expansion for Vector Search
+    // If this is a follow-up in an ongoing thread, combine the prior conversation anchor
+    // with the current query so dense vector search retains topic relevance.
+    let searchQuery = userText;
+    const isOngoingThread = existingMessages.length > 0;
+
+    if (isOngoingThread) {
+      const lastUserMsg = [...existingMessages].reverse().find((m) => m.role === "user");
+      const wordCount = userText.trim().split(/\s+/).length;
+      // Explicit anaphoric / relative markers (always indicate a follow-up):
+      const hasAnaphoricMarker = /\b(it|this|that|these|those|them|step\s*\d+|above|previous|earlier|the\s+same|the\s+other|the\s+first|the\s+second|the\s+third|the\s+last)\b/i.test(
+        userText
+      );
+      // Short contextual continuation requests (<= 14 words with elaboration/code/table/continuation keywords, or very short <= 6 words):
+      const isContextualShort =
+        wordCount <= 6 ||
+        (wordCount <= 14 &&
+          /\b(code|table|diagram|flowchart|example|more|elaborate|explain|why|how|what about|continue|trace)\b/i.test(
+            userText
+          ));
+
+      if (lastUserMsg && (hasAnaphoricMarker || isContextualShort)) {
+        // Strip out any redundant prefixes from previous query
+        const cleanPreviousTopic = lastUserMsg.content
+          .replace(/^DOCUMENT CONTEXT:[\s\S]*?STUDENT QUESTION:\s*/i, "")
+          .slice(0, 150)
+          .replace(/\s+/g, " ")
+          .trim();
+        if (cleanPreviousTopic && cleanPreviousTopic.toLowerCase() !== userText.toLowerCase()) {
+          searchQuery = `${cleanPreviousTopic} — ${userText}`;
+        }
+      }
+    }
+
+    // Step 4: Retrieve relevant context chunks using vector search
     let citations: Array<{
       chunkId: Id<"documentChunks">;
       resourceId: Id<"resources">;
@@ -518,7 +571,7 @@ export const chat = action({
 
     try {
       citations = await ctx.runAction(api.rag.search, {
-        query: userText,
+        query: searchQuery,
         mode: args.mode,
         resourceId: args.resourceId,
         semesterId: args.semesterId,
@@ -532,43 +585,97 @@ export const chat = action({
       // Fallback: Proceed without context or indicate search error
     }
 
-    // Step 3: Fetch existing chat history for context continuity
-    const history = await ctx.runQuery(api.chat.listMessages, { threadId });
-    // Keep last 6 messages before current user turn
-    const recentHistory = (history as Array<{ role: string; content: string }>)
-      .slice(-7, -1)
-      .map((m: { role: string; content: string }) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      }));
+    // Step 5: Citation Carry-Forward
+    // If the follow-up search produced 0 citations, carry forward the previous assistant turn's citations
+    // so the grounded context from earlier turns is preserved throughout the discussion.
+    if (citations.length === 0 && isOngoingThread) {
+      const lastAssistantWithCitations = [...existingMessages]
+        .reverse()
+        .find((m) => m.role === "assistant" && m.citations && m.citations.length > 0);
 
-    // Step 4: Construct Grounded System Prompt
+      if (lastAssistantWithCitations?.citations && lastAssistantWithCitations.citations.length > 0) {
+        citations = lastAssistantWithCitations.citations.map((c) => ({
+          chunkId: c.chunkId,
+          resourceId: c.resourceId,
+          resourceTitle: c.resourceTitle,
+          courseCode: "Course Notes",
+          fileKind: (c.fileKind as "pdf" | "ppt" | "pptx" | null) ?? null,
+          page: c.page,
+          text: c.textSnippet,
+          score: c.score ?? 0.8,
+        }));
+      }
+    }
+
+    // Step 6: Format sanitized history window for the LLM
+    // Take up to 10 messages (5 full turns), strip reasoning tags, and guarantee alternating user->assistant turns.
+    const historySlice = existingMessages.slice(-10);
+    // Ensure the history slice starts with a 'user' turn
+    const alignedSlice =
+      historySlice.length > 0 && historySlice[0].role === "assistant"
+        ? historySlice.slice(1)
+        : historySlice;
+
+    const recentHistory = alignedSlice.map((m) => {
+      let content = m.content || "";
+      if (m.role === "assistant") {
+        // Strip <think>...</think> reasoning blocks from previous assistant replies
+        content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+        // Truncate overly long past answers to protect context window budget
+        if (content.length > 2500) {
+          content = content.slice(0, 2500) + "… [earlier reply summarized for brevity]";
+        }
+      }
+      return {
+        role: m.role as "user" | "assistant",
+        content,
+      };
+    });
+
+    // Step 7: Construct Grounded System Prompt
     const hasContext = citations.length > 0;
     /** "Page 28" for PDFs, "Slide 5" for PowerPoint decks. */
     const refLabel = (kind: string | null | undefined, page?: number): string => {
       if (!page) return "";
       return kind && kind !== "pdf" ? ` · Slide ${page}` : ` · Page ${page}`;
     };
-    const contextBlock = hasContext
-      ? citations
-          .map(
-            (c, i) =>
-              `[SOURCE ${i + 1}] Document: "${c.resourceTitle}" (${c.courseCode})${refLabel(c.fileKind, c.page)}\nContent:\n${c.text}`
-          )
-          .join("\n\n---\n\n")
-      : "NO RELEVANT COURSE DOCUMENTS FOUND FOR THIS QUERY.";
+    let contextBlock: string;
+    if (hasContext) {
+      contextBlock = citations
+        .map(
+          (c, i) =>
+            `[SOURCE ${i + 1}] Document: "${c.resourceTitle}" (${c.courseCode})${refLabel(c.fileKind, c.page)}\nContent:\n${c.text}`
+        )
+        .join("\n\n---\n\n");
+    } else if (isOngoingThread) {
+      contextBlock =
+        "[CONVERSATIONAL CONTINUITY: The student is continuing an ongoing study conversation. Use the preceding conversation history to resolve their question and maintain context.]";
+    } else {
+      contextBlock = "NO RELEVANT COURSE DOCUMENTS FOUND FOR THIS QUERY.";
+    }
 
     const systemPrompt = `You are StudySync AI, the authoritative academic study assistant for Semester III Computer Engineering students at Shah & Anchor Kutchhi Engineering College (SAKEC).
 
 CRITICAL RESPONSE GUIDELINES (STRICTLY ENFORCED):
 
-1. CONCISE & SUMMARIZED (ZERO FLUFF):
-   - Deliver tight, summarized, high-yield academic answers. Answer ONLY what the student asked for.
-   - Do NOT add wordy greetings, lengthy historical background essays, or repetitive conclusions.
-   - If asked for a table: output the table directly with a brief 1-2 sentence explanation.
-   - If asked for code: output the clean, commented code snippet with time/space complexity notes.
-   - If asked for a flowchart: output the Mermaid block directly with a concise 1-2 sentence walkthrough.
-   - Keep total text under 250–350 words unless explicitly asked for an exhaustive explanation.
+1. COMPLETE CODE FIRST & STRUCTURED WALKTHROUGH:
+   Whenever the student asks for code, implementation, or a data structure/algorithm (e.g. Stack, Queue, Linked List, Tree, Graph, Sorting, Search):
+   - FORMAT ORDER (MANDATORY):
+     1. 💻 COMPLETE WORKING CODE (ON TOP):
+        - Output the full, compilation-ready C (or requested language) program FIRST, right at the top.
+        - ALWAYS include all essential operations—NEVER give only one partial function!
+          (e.g., For Stack: isFull, isEmpty, push, pop, peek, display, and a complete main() driver menu).
+          (e.g., For Queue: isEmpty, isFull, enqueue, dequeue, display, and main()).
+          (e.g., For Linked List: createNode, insertAtBeginning/End, deleteNode, display, and main()).
+        - Use clean, standard C with meaningful variable names, robust boundary checks (overflow, underflow), and helpful inline comments.
+     2. 📋 ALGORITHM IN POINTS:
+        - Right after the code, provide the step-by-step algorithmic procedure in clean numbered points.
+        - Break it down by operation (e.g. "Algorithm for Push:", "Algorithm for Pop:").
+        - Highlight critical conditions (e.g. "Step 1: Check if top == MAX - 1 (Overflow).").
+     3. ⏱️ COMPLEXITY ANALYSIS:
+        - List Time Complexity (Best, Average, Worst case) for each operation.
+        - List Space Complexity (Auxiliary & Total).
+   - Zero fluff: Skip chatty conversational greetings or repetitive filler ("Here is your code", "Hope this helps"). Start immediately with the high-yield technical answer.
 
 2. TABLES & COMPARISONS (MANDATORY WHEN REQUESTED):
    - Whenever the student mentions "table", "tabular", "compare", "comparison", "trace", or asks for step-by-step conversion steps (e.g., infix-to-postfix table, postfix evaluation table, stack vs queue comparison):
@@ -589,7 +696,17 @@ CRITICAL RESPONSE GUIDELINES (STRICTLY ENFORCED):
    - Always use standard \`flowchart TD\` or \`flowchart LR\`.
    - CRITICAL: Always enclose node text labels in double quotes if they contain parentheses, punctuation, operators, or function calls (e.g. node["Read symbol()"], op["opnd2 = pop()"], res["result = opnd1 + opnd2"]).
    - NEVER use reserved keywords like 'end', 'graph', or 'subgraph' as node identifiers. Use 'finish([END])' or 'stop([STOP])' instead.
-   - Always enclose edge labels containing parentheses in double quotes (e.g. -->|"OUTPUT pop()"|).`;
+   - Always enclose edge labels containing parentheses in double quotes (e.g. -->|"OUTPUT pop()"|).
+
+5. CONVERSATIONAL CONTINUITY & FOLLOW-UP INSTRUCTIONS:
+   - You are in an active, continuous study session with the student.
+   - When the student asks follow-up questions (using pronouns or relative references such as "it", "that", "this", "these", "step 2", "the above table", "write code for that", "show an example", "continue", "explain more", "why is that?"), ALWAYS connect their question to the preceding dialogue.
+   - NEVER treat follow-up questions as isolated queries or ask the student what they are referring to when it was discussed in earlier turns.
+   - Maintain consistent terminology, notation, algorithm conventions, and academic level established in earlier turns.
+
+6. REASONING & TOKEN BUDGET EFFICIENCY:
+   - Keep internal scratchpad/reasoning concise and directly focused on the technical requirements.
+   - Dedicate your token output to the visible solution: complete, compilation-ready code, clear numbered algorithms, complexity analysis, and trace tables. Never truncate code or stop midway.`;
 
     const userPromptWithContext = `DOCUMENT CONTEXT:
 ${contextBlock}
