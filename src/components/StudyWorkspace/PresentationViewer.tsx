@@ -408,12 +408,13 @@ export const PresentationViewer: React.FC<PresentationViewerProps> = ({
         </aside>
       )}
 
-      {/* Main Slide Presentation Stage */}
-      <div
-        ref={scrollAreaRef}
-        className="flex-1 h-full overflow-auto relative p-4 sm:p-8 flex items-center justify-center select-text"
-      >
-        {/* Loading overlay */}
+      {/* Main Slide Presentation Stage & Floating Dock */}
+      <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden">
+        <div
+          ref={scrollAreaRef}
+          className="flex-1 h-full overflow-auto relative p-4 sm:p-8 flex items-center justify-center select-text"
+        >
+          {/* Loading overlay */}
         {loading && viewMode === 'native' && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-paper-sunk/80 backdrop-blur-[1px] p-4 text-center">
             <LoaderCircle className="w-8 h-8 text-lime-deep animate-spin mb-3" aria-hidden="true" />
@@ -536,9 +537,10 @@ export const PresentationViewer: React.FC<PresentationViewerProps> = ({
             </div>
           </div>
         )}
+        </div>
 
-        {/* Floating Quick Action Overlay (Bottom Right) */}
-        <div className="fixed bottom-4 left-6 sm:left-auto sm:right-6 z-30 flex items-center gap-2 bg-paper/95 backdrop-blur-xs border border-ink px-2.5 py-1.5 shadow-overlay select-none">
+        {/* Floating Quick Action Overlay (Centered at Bottom of Presentation Stage) */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-paper/95 backdrop-blur-xs border border-ink px-2.5 py-1.5 shadow-overlay select-none max-w-[calc(100%-2rem)]">
           <div className="flex items-center gap-1 font-mono text-xs font-bold text-ink mr-1">
             <span>Slide</span>
             <span className="text-lime-deep">{currentSlide}</span>
