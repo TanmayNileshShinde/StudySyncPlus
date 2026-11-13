@@ -10,7 +10,7 @@
 | Roll No. | Student ID | Full Name | GitHub Profile |
 |:---:|:---:|:---:|:---:|
 | **67** | `126BTCM2008` | **Tanmay Shinde** | [@TanmayNileshShinde](https://github.com/TanmayNileshShinde) |
-| **68** | `126BTCM2009` | **Aditya Shah** | Contributor / Peer Author |
+| **68** | `126BTCM2009` | **Aditya Shah** | [@adityashah2701](https://github.com/adityashah2701) |
 
 ---
 
