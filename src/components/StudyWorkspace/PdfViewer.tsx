@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { pdfjsLib } from '../../lib/pdfjsWorker';
+import { pdfjsLib, getSharedPdfWorker } from '../../lib/pdfjsWorker';
 import { PdfPage } from './PdfPage';
 import { PdfThumbnail } from './PdfThumbnail';
 import { LoaderCircle, AlertCircle, X } from 'lucide-react';
@@ -62,20 +62,33 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
   // Load PDF Document via PDF.js with progress tracking and abort cleanup
   useEffect(() => {
+    let isCurrent = true;
+
+    const worker = getSharedPdfWorker();
     const loadingTask = pdfjsLib.getDocument({
       url: fileUrl,
       withCredentials: false,
-      cMapPacked: true
+      cMapPacked: true,
+      worker,
     });
 
     loadingTask.onProgress = ({ loaded, total }: { loaded: number; total: number }) => {
-      if (total > 0) {
+      if (isCurrent && total > 0) {
         setLoadingProgress(Math.min(95, Math.round((loaded / total) * 100)));
       }
     };
 
     loadingTask.promise
       .then(async (doc) => {
+        if (!isCurrent) {
+          try {
+            void doc.destroy();
+          } catch {
+            // ignore cleanup errors
+          }
+          return;
+        }
+
         setPdfDoc(doc);
         setLoadedUrl(fileUrl);
         setNumPages(doc.numPages);
@@ -83,6 +96,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
         try {
           const firstPage = await doc.getPage(1);
+          if (!isCurrent) return;
           const vp = firstPage.getViewport({ scale: 1 });
           setBaseSize({ width: vp.width, height: vp.height });
         } catch {
@@ -90,13 +104,27 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         }
       })
       .catch((err: any) => {
-        if (err?.name !== 'WorkerDestroyedException' && err?.name !== 'AbortException') {
+        // Stale or aborted task must never pollute current state
+        if (!isCurrent) return;
+
+        const msg = String(err?.message || '');
+        const name = String(err?.name || '');
+        const isAbort =
+          name === 'AbortException' ||
+          name === 'WorkerDestroyedException' ||
+          name === 'RenderingCancelledException' ||
+          msg.includes('Worker was destroyed') ||
+          msg.includes('Loading aborted') ||
+          loadingTask.destroyed;
+
+        if (!isAbort) {
           console.error('Failed to load PDF with PDF.js:', err);
-          setLoadError(err?.message || 'Failed to load PDF document.');
+          setLoadError(msg || 'Failed to load PDF document.');
         }
       });
 
     return () => {
+      isCurrent = false;
       try {
         void loadingTask.destroy();
       } catch {
@@ -286,8 +314,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           </div>
         )}
 
-        {/* Load Error State */}
-        {loadError && (
+        {/* Load Error State (mutually exclusive with rendered pages) */}
+        {loadError ? (
           <div className="min-h-[400px] flex items-center justify-center p-8">
             <div className="ruled max-w-md p-6 bg-paper text-center">
               <AlertCircle className="w-8 h-8 text-alert mx-auto mb-3" aria-hidden="true" />
@@ -301,10 +329,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
               </button>
             </div>
           </div>
-        )}
-
-        {/* Rendered Document Pages */}
-        {pdfDoc && (
+        ) : pdfDoc && loadedUrl === fileUrl ? (
+          /* Rendered Document Pages */
           <div className="pdfViewer flex flex-col items-center min-w-min mx-auto pb-16">
             {pageNumbers.map((p) => (
               <PdfPage
@@ -318,7 +344,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
               />
             ))}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

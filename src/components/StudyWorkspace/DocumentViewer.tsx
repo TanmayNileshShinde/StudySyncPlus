@@ -534,6 +534,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           <div className="w-full h-full relative">
             {fileData?.url ? (
               <PdfViewer
+                key={fileData.url}
                 fileUrl={fileData.url}
                 documentTitle={activeDoc.title}
                 currentPage={viewerPage ?? 1}

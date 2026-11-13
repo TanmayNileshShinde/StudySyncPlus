@@ -157,7 +157,16 @@ export const PdfPage: React.FC<PdfPageProps> = ({
         setRendered(true);
         setRenderError(null);
       } catch (err: any) {
-        if (err?.name !== 'RenderingCancelledException' && !cancelled) {
+        const msg = String(err?.message || '');
+        const name = String(err?.name || '');
+        const isCancelled =
+          cancelled ||
+          name === 'RenderingCancelledException' ||
+          name === 'AbortException' ||
+          msg.includes('Worker was destroyed') ||
+          msg.includes('Rendering cancelled');
+
+        if (!isCancelled) {
           console.warn(`Error rendering PDF page ${pageNum}:`, err);
           setRenderError('Could not render page');
         }
