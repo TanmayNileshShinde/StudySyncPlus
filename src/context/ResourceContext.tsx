@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState
 } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type {
@@ -47,6 +48,7 @@ interface ResourceContextType {
   openSubject: (subjectId: string) => void;
   openStudyWorkspace: (documentId: string, page?: number, scope?: StudyScopeKind) => void;
   switchStudyDocument: (documentId: string, page?: number) => void;
+  openSaved: () => void;
   activeDocumentId: string | null;
   studyScope: StudyScopeKind;
   setStudyScope: (scope: StudyScopeKind) => void;
@@ -149,11 +151,134 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
+  // --- URL Router Integration -----------------------------------------------
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // --- Reactive Navigation View derived from URL ----------------------------
+  const view = useMemo<AppView>(() => {
+    const raw = location.pathname.length > 1 ? location.pathname.replace(/\/+$/, '') : location.pathname;
+
+    // 1. Study Workspace: /study/:documentId or /document/:documentId
+    const studyMatch = raw.match(/^\/(?:study|document)\/([^/]+)/);
+    if (studyMatch) {
+      const documentId = decodeURIComponent(studyMatch[1]);
+      const pageParam = searchParams.get('page');
+      const page = pageParam ? Math.max(1, parseInt(pageParam, 10)) : 1;
+      return { kind: 'study', documentId, page };
+    }
+
+    // 2. Study Assistant direct route: /assistant
+    if (raw === '/assistant') {
+      const docParam = searchParams.get('doc');
+      const subjectParam = searchParams.get('subject');
+      let targetDocId = docParam;
+      if (!targetDocId && subjectParam && resourceRows) {
+        const found = resourceRows.find((r) => r.subjectId === subjectParam);
+        if (found) targetDocId = found.id;
+      }
+      if (!targetDocId && resourceRows && resourceRows.length > 0) {
+        const mse = resourceRows.find((r) => r.title.includes('MSE Master Study Guide'));
+        targetDocId = mse ? mse.id : resourceRows[0].id;
+      }
+      if (targetDocId) {
+        return { kind: 'study', documentId: targetDocId, page: 1 };
+      }
+      return { kind: 'home' };
+    }
+
+    // 3. Individual Subject Workspace: /subject/:subjectId or /subjects/:subjectId
+    const subjectMatch = raw.match(/^\/(?:subject|subjects)\/([^/]+)/);
+    if (subjectMatch) {
+      const subjectId = decodeURIComponent(subjectMatch[1]);
+      return { kind: 'subject', subjectId };
+    }
+
+    // 4. Saved Materials: /saved or /bookmarks
+    if (raw === '/saved' || raw === '/bookmarks') {
+      return { kind: 'saved' };
+    }
+
+    // 5. Secondary academic modal routes (display over home shelf):
+    // /syllabus, /scheme, /analytics, /async-lab
+    if (['/syllabus', '/scheme', '/analytics', '/async-lab'].includes(raw)) {
+      return { kind: 'home' };
+    }
+
+    // 6. Home: / or /home or /subjects
+    if (raw === '/' || raw === '/home' || raw === '/subjects') {
+      return { kind: 'home' };
+    }
+
+    // 7. Unknown route -> Not Found
+    return { kind: 'not-found' };
+  }, [location.pathname, searchParams, resourceRows]);
+
   // --- Temporary UI state ----------------------------------------------------
-  const [view, setView] = useState<AppView>({ kind: 'home' });
   const [assistantScope, setAssistantScope] = useState<AssistantScope>({ mode: 'semester' });
-  const [studyScope, setStudyScope] = useState<StudyScopeKind>('document');
-  const [viewerPage, setViewerPage] = useState<number | null>(1);
+
+  // Derived studyScope from URL or local override
+  const [localScope, setLocalScope] = useState<StudyScopeKind | null>(null);
+
+  const studyScope = useMemo<StudyScopeKind>(() => {
+    if (localScope) return localScope;
+    const scopeParam = searchParams.get('scope') as StudyScopeKind | null;
+    if (scopeParam && ['document', 'subject', 'library'].includes(scopeParam)) {
+      return scopeParam;
+    }
+    if (location.pathname === '/assistant') return 'library';
+    return 'document';
+  }, [localScope, searchParams, location.pathname]);
+
+  const setStudyScope = useCallback(
+    (scope: StudyScopeKind) => {
+      setLocalScope(scope);
+      if (view.kind === 'study') {
+        const nextParams = new URLSearchParams(searchParams);
+        if (scope !== 'document') {
+          nextParams.set('scope', scope);
+        } else {
+          nextParams.delete('scope');
+        }
+        setSearchParams(nextParams, { replace: true });
+      }
+    },
+    [view.kind, searchParams, setSearchParams]
+  );
+
+  // Derived viewerPage from URL or local override
+  const [localPage, setLocalPage] = useState<number | null>(null);
+
+  const viewerPage = useMemo<number | null>(() => {
+    if (localPage !== null) return localPage;
+    if (view.kind === 'study' && view.page !== undefined) {
+      return view.page;
+    }
+    const pageParam = searchParams.get('page');
+    return pageParam ? Math.max(1, parseInt(pageParam, 10)) : 1;
+  }, [localPage, view, searchParams]);
+
+  const setViewerPage = useCallback(
+    (page: number | null) => {
+      setLocalPage(page);
+      if (view.kind === 'study' && page) {
+        const currentParam = searchParams.get('page');
+        const targetParam = page > 1 ? String(page) : null;
+        if (currentParam !== targetParam) {
+          const nextParams = new URLSearchParams(searchParams);
+          if (targetParam) {
+            nextParams.set('page', targetParam);
+          } else {
+            nextParams.delete('page');
+          }
+          setSearchParams(nextParams, { replace: true });
+        }
+      }
+    },
+    [view.kind, searchParams, setSearchParams]
+  );
+
   const [viewerZoom, setViewerZoom] = useState<number>(100);
   const [subjectSearch, setSubjectSearch] = useState('');
   const [uploadSubjectId, setUploadSubjectId] = useState<string | null>(null);
@@ -169,35 +294,50 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     toastTimer.current = setTimeout(() => setToastMessage(null), 3500);
   }, []);
 
-  // --- Navigation ------------------------------------------------------------
+  // --- Route-Driven Navigation Handlers --------------------------------------
   const openHome = useCallback(() => {
-    setView({ kind: 'home' });
     setSubjectSearch('');
-  }, []);
+    navigate('/');
+  }, [navigate]);
 
-  const openSubject = useCallback((subjectId: string) => {
-    setView({ kind: 'subject', subjectId });
-    setSubjectSearch('');
-  }, []);
+  const openSubject = useCallback(
+    (subjectId: string) => {
+      setSubjectSearch('');
+      navigate(`/subject/${encodeURIComponent(subjectId)}`);
+    },
+    [navigate]
+  );
 
   const openStudyWorkspace = useCallback(
     (documentId: string, page?: number, scope: StudyScopeKind = 'document') => {
-      setView({ kind: 'study', documentId, page: page ?? 1 });
-      setViewerPage(page ?? 1);
-      setStudyScope(scope);
+      setLocalScope(scope);
+      setLocalPage(page ?? 1);
       setDetailResourceOverride(null);
+      const params = new URLSearchParams();
+      if (page && page > 1) params.set('page', String(page));
+      if (scope && scope !== 'document') params.set('scope', scope);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      navigate(`/study/${encodeURIComponent(documentId)}${qs}`);
     },
-    []
+    [navigate]
   );
 
-  const switchStudyDocument = useCallback((documentId: string, page?: number) => {
-    setView((prev) =>
-      prev.kind === 'study'
-        ? { ...prev, documentId, page: page ?? 1 }
-        : { kind: 'study', documentId, page: page ?? 1 }
-    );
-    setViewerPage(page ?? 1);
-  }, []);
+  const switchStudyDocument = useCallback(
+    (documentId: string, page?: number) => {
+      setLocalPage(page ?? 1);
+      const params = new URLSearchParams();
+      if (page && page > 1) params.set('page', String(page));
+      const currentScope = searchParams.get('scope');
+      if (currentScope) params.set('scope', currentScope);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      navigate(`/study/${encodeURIComponent(documentId)}${qs}`, { replace: true });
+    },
+    [navigate, searchParams]
+  );
+
+  const openSaved = useCallback(() => {
+    navigate('/saved');
+  }, [navigate]);
 
   const activeDocumentId = view.kind === 'study' ? view.documentId : null;
 
@@ -462,18 +602,18 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (match) {
           openStudyWorkspace(match.id, undefined, 'subject');
         } else {
-          openHome();
+          navigate(`/assistant?subject=${encodeURIComponent(scope.subjectId)}`);
         }
       } else {
-        const match = resources[0];
+        const match = resources.find((r) => r.title.includes('MSE Master Study Guide')) ?? resources[0];
         if (match) {
           openStudyWorkspace(match.id, undefined, 'library');
         } else {
-          openHome();
+          navigate('/assistant');
         }
       }
     },
-    [resources, openStudyWorkspace, openHome]
+    [resources, openStudyWorkspace, navigate]
   );
 
   const detailResource = useMemo(() => {
@@ -521,6 +661,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       openSubject,
       openStudyWorkspace,
       switchStudyDocument,
+      openSaved,
       activeDocumentId,
       studyScope,
       setStudyScope,
@@ -570,9 +711,12 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       openSubject,
       openStudyWorkspace,
       switchStudyDocument,
+      openSaved,
       activeDocumentId,
       studyScope,
+      setStudyScope,
       viewerPage,
+      setViewerPage,
       viewerZoom,
       openAssistant,
       assistantScope,

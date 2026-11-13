@@ -16,29 +16,29 @@ import {
   type ResourceView,
 } from "./validators";
 
-/** Map a stored resource document to the client-facing view. */
+/** Map a stored resource document to the client-facing view with defensive fallbacks. */
 function toView(
   doc: {
     _id: unknown;
     subjectId: unknown;
-    subjectName: string;
-    courseCode: string;
+    subjectName?: string;
+    courseCode?: string;
     title: string;
     type: ResourceView["type"];
-    uploadedBy: string;
-    rollNumber: string;
-    uploadDate: string;
-    fileSizeBytes: number;
+    uploadedBy?: string;
+    rollNumber?: string;
+    uploadDate?: string;
+    fileSizeBytes?: number;
     storageId?: string;
     fileName?: string;
     fileKind?: FileKind;
-    downloadCount: number;
-    ratingSum: number;
-    ratingCount: number;
-    description: string;
-    tags: string[];
+    downloadCount?: number;
+    ratingSum?: number;
+    ratingCount?: number;
+    description?: string;
+    tags?: string[];
     ownerKey?: string;
-    isOfficial: boolean;
+    isOfficial?: boolean;
     ingestStatus?: ResourceView["ingestStatus"];
     ingestError?: string;
     ingestedAt?: number;
@@ -46,27 +46,32 @@ function toView(
   },
   semesterNumber: number,
 ): ResourceView {
-  const fileKind = doc.fileKind;
+  const fileKind = doc.fileKind ?? null;
+  const fileSizeBytes = typeof doc.fileSizeBytes === "number" && !isNaN(doc.fileSizeBytes) ? doc.fileSizeBytes : 0;
+  const ratingCount = typeof doc.ratingCount === "number" && !isNaN(doc.ratingCount) ? doc.ratingCount : 0;
+  const ratingSum = typeof doc.ratingSum === "number" && !isNaN(doc.ratingSum) ? doc.ratingSum : 0;
+  const downloadCount = typeof doc.downloadCount === "number" && !isNaN(doc.downloadCount) ? doc.downloadCount : 0;
+
   return {
     id: doc._id as ResourceView["id"],
     subjectId: doc.subjectId as ResourceView["subjectId"],
-    subjectName: doc.subjectName,
-    courseCode: doc.courseCode,
+    subjectName: doc.subjectName || "Course Resource",
+    courseCode: doc.courseCode || "CMCOR2PC203",
     title: doc.title,
     semester: semesterNumber,
     type: doc.type,
-    uploadedBy: doc.uploadedBy,
-    rollNumber: doc.rollNumber,
-    uploadDate: doc.uploadDate,
-    fileSize: formatFileSize(doc.fileSizeBytes),
-    fileSizeBytes: doc.fileSizeBytes,
-    downloadCount: doc.downloadCount,
-    rating: doc.ratingCount > 0 ? doc.ratingSum / doc.ratingCount : 0,
-    ratingCount: doc.ratingCount,
-    fileFormat: fileKindLabel(fileKind),
-    fileKind: fileKind ?? null,
-    description: doc.description,
-    tags: doc.tags,
+    uploadedBy: doc.uploadedBy || "Faculty / Contributor",
+    rollNumber: doc.rollNumber || "N/A",
+    uploadDate: doc.uploadDate || new Date().toISOString().slice(0, 10),
+    fileSize: formatFileSize(fileSizeBytes),
+    fileSizeBytes,
+    downloadCount,
+    rating: ratingCount > 0 ? ratingSum / ratingCount : 0,
+    ratingCount,
+    fileFormat: fileKindLabel(fileKind ?? undefined),
+    fileKind,
+    description: doc.description || "Course study material.",
+    tags: Array.isArray(doc.tags) ? doc.tags : [],
     isUserUploaded: !doc.isOfficial,
     ownerKey: doc.ownerKey ?? null,
     hasFile: doc.storageId !== undefined,

@@ -9,7 +9,7 @@
 
 | Layer | Choice | Notes |
 |---|---|---|
-| **Framework** | React 19.3 + TypeScript 7 (strict) | SPA, stateful view router (Home / Subject Workspace / Full-Screen Study Workspace) |
+| **Framework** | React 19.3 + React Router 7 + TypeScript 7 (strict) | Full URL-based SPA routing with persistent paths, browser back/forward history, query params, and GitHub Pages fallback |
 | **PDF Rendering Engine** | `pdfjs-dist` 5.4 + Vite Worker | Custom canvas-based PDF.js renderer with high-DPI scaling, virtualized on-demand page streaming, interactive text selection layer, and collapsible thumbnails |
 | **Backend & Database** | Convex 1.49 (Reactive Cloud) | All-TypeScript reactive database, mutations, queries, file storage |
 | **Vector Search & RAG** | Convex Vector Index (`documentChunks.by_embedding`, 1024-d) | NVIDIA Nemotron 1024-d embeddings + NVIDIA Nemotron 30B reasoning chat completion |
@@ -39,6 +39,32 @@
 | **BulkUploadModal** | Multi-file drag-and-drop: auto-cleans file titles, category selectors, real-time XHR upload progress, live indexing tracking, and palette confetti. | Shipped |
 | **BookmarksDrawer** | Right-hand slideout: reactively synchronized saved materials for exam revision with 1-click transition to the Study Workspace. | Shipped |
 | **MoreSheet** | Discreet evaluator drawer hosting secondary tools: Scheme & Credit Matrix, Syllabus Alignment Map, Visual Analytics, and Async & JS Lab. | Shipped |
+| **SavedView** (`/saved`) | Dedicated persistent screen for bookmarked revision materials with course-level filtering, search, quick study launcher, and one-click removal. | Shipped |
+| **NotFoundView** (`*`) | Clean academic 404 screen matching paper-and-ink design tokens with one-click return to subjects home. | Shipped |
+
+---
+
+## 2.5. URL Routing & Persistent Deep-Linking (React Router 7)
+
+| Route | Purpose & Behavior | Persistence |
+|---|---|---|
+| `/` | Academic Shelf Home: subject cards, omnisearch, scheme overview. | Persistent |
+| `/subject/:subjectId` | Individual Subject Workspace: course materials, syllabus map, scheme metrics. | Persistent |
+| `/study/:documentId` | Full-Screen Study Workspace: left PDF.js / deck canvas + right AI assistant. Supports `?page=N` and `?scope=document\|subject\|library`. | Persistent |
+| `/assistant` | Study Assistant direct access: opens library or subject AI assistant with full split-screen reading context. | Persistent |
+| `/saved` / `/bookmarks` | Saved Revision Materials: full listing of bookmarked documents. | Persistent |
+| `/syllabus` | Direct persistent URL for Official SAKEC Syllabus & Viva Map. | Persistent |
+| `/scheme` | Direct persistent URL for Curriculum Scheme & Credit Matrix. | Persistent |
+| `/analytics` | Direct persistent URL for Academic Library Usage Analytics. | Persistent |
+| `/async-lab` | Direct persistent URL for Async Promise & Error Lab. | Persistent |
+| `*` | Graceful academic 404 Not Found screen with return navigation. | Persistent |
+
+### Deep-Linking & History Features
+- **Page Number Synchronization**: Scrolling or navigating pages in the PDF viewer synchronizes `?page=N` in the browser address bar via `replaceState` without polluting back/forward history.
+- **Direct Shareable Links**: Copying the browser URL while studying on page 42 shares the exact document and page number.
+- **Conversation State Persistence**: Active AI chat threads are preserved in `localStorage` under `studysyncplus_active_thread_${ownerKey}` across document switching, route changes, and hard page reloads.
+- **GitHub Pages SPA Fallback**: `public/404.html` converts deep URL paths into query strings, and `index.html` restores them via `window.history.replaceState` before React mounts, ensuring zero 404 errors on GitHub Pages deployments.
+- **Graceful Error Handling**: Non-existent subject or document IDs display dedicated academic "Not Found" error cards with single-click return actions, avoiding blank crashes.
 
 ---
 

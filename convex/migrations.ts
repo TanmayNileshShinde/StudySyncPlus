@@ -25,3 +25,46 @@ export const runMarkReadyFromChunks = mutation({
     return await ctx.runMutation(internal.ingestInternal.markReadyFromExistingChunks, {});
   },
 });
+
+/** Ensure all stored resources have valid schema fields. */
+export const repairResourceFields = mutation({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx): Promise<number> => {
+    let patched = 0;
+    for await (const doc of ctx.db.query("resources")) {
+      const patch: Record<string, unknown> = {};
+      if (doc.courseCode === undefined || doc.courseCode === null) {
+        const subj = await ctx.db.get(doc.subjectId);
+        patch.courseCode = subj?.courseCode ?? "CMCOR2PC203";
+      }
+      if (doc.description === undefined || doc.description === null) {
+        patch.description = doc.title || "Academic resource material.";
+      }
+      if (doc.downloadCount === undefined || doc.downloadCount === null) {
+        patch.downloadCount = 0;
+      }
+      if (doc.fileSizeBytes === undefined || doc.fileSizeBytes === null) {
+        patch.fileSizeBytes = 1024 * 1024;
+      }
+      if (doc.ratingSum === undefined || doc.ratingSum === null) {
+        patch.ratingSum = 0;
+      }
+      if (doc.ratingCount === undefined || doc.ratingCount === null) {
+        patch.ratingCount = 0;
+      }
+      if (doc.tags === undefined || !Array.isArray(doc.tags)) {
+        patch.tags = [];
+      }
+      if (doc.fileKind === undefined) {
+        const lowerName = (doc.fileName || "").toLowerCase();
+        patch.fileKind = lowerName.endsWith(".pptx") ? "pptx" : lowerName.endsWith(".ppt") ? "ppt" : "pdf";
+      }
+      if (Object.keys(patch).length > 0) {
+        await ctx.db.patch(doc._id, patch);
+        patched++;
+      }
+    }
+    return patched;
+  },
+});

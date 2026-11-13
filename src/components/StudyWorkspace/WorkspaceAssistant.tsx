@@ -99,10 +99,33 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
   } = useResources();
 
   const ownerKey = getOwnerKey();
+  const ACTIVE_THREAD_KEY = `studysyncplus_active_thread_${ownerKey}`;
   const chatAction = useAction(api.rag.chat);
   const deleteThreadMut = useMutation(api.chat.deleteThread);
 
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [threadId, setThreadIdState] = useState<string | null>(() => {
+    try {
+      const urlThread = new URLSearchParams(window.location.search).get('thread');
+      if (urlThread) return urlThread;
+      return localStorage.getItem(ACTIVE_THREAD_KEY);
+    } catch {
+      return null;
+    }
+  });
+
+  const setThreadId = useCallback(
+    (id: string | null) => {
+      setThreadIdState(id);
+      try {
+        if (id) {
+          localStorage.setItem(ACTIVE_THREAD_KEY, id);
+        } else {
+          localStorage.removeItem(ACTIVE_THREAD_KEY);
+        }
+      } catch {}
+    },
+    [ACTIVE_THREAD_KEY]
+  );
   const [pending, setPending] = useState<{ userText: string } | null>(null);
   const [localReply, setLocalReply] = useState<{ userText: string; reply: string } | null>(null);
   const [draft, setDraft] = useState('');
@@ -248,7 +271,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
         setPending(null);
       }
     },
-    [pending, threadId, ownerKey, studyScope, activeDocument, semester, chatAction]
+    [pending, threadId, ownerKey, studyScope, activeDocument, semester, chatAction, setThreadId]
   );
 
   const startNewChat = () => {

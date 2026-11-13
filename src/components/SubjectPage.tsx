@@ -182,6 +182,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId, onOpenSheet
     subjects,
     resources,
     schemeCourses,
+    isLibraryLoading,
     openHome,
     openAssistant,
     openUploadModal,
@@ -233,14 +234,34 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId, onOpenSheet
 
   const activeModule = SYLLABUS_MODULES.find((m) => m.moduleNumber === activeModuleNumber) ?? SYLLABUS_MODULES[0];
 
+  if (isLibraryLoading) {
+    return (
+      <div className="flex-1 flex flex-col p-6 sm:p-8 space-y-6 animate-pulse">
+        <div className="h-8 bg-paper-sunk w-64 border border-rule" />
+        <div className="h-4 bg-paper-sunk w-96 border border-rule" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-40 bg-paper-sunk border border-rule" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (!subject) {
     return (
-      <div className="px-4 sm:px-8 py-16 text-center">
-        <p className="text-sm text-ink-2 mb-4">That subject is no longer in the active curriculum.</p>
-        <button onClick={openHome} className="btn btn-secondary">
-          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-          <span>Back to All Subjects</span>
-        </button>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[60vh] bg-paper">
+        <div className="border border-ink bg-paper p-8 max-w-md w-full shadow-xs">
+          <span className="stamp stamp-alert font-mono mb-3 inline-block">Subject Not Found</span>
+          <h2 className="text-base font-bold text-ink mb-1.5">Course not in active curriculum</h2>
+          <p className="text-xs text-ink-2 mb-6 leading-relaxed">
+            The subject identifier <code className="bg-paper-sunk px-1.5 py-0.5 font-mono text-[11px] text-ink">{subjectId}</code> does not match any course in the current semester scheme. It may have been archived or removed.
+          </p>
+          <button onClick={openHome} className="btn btn-secondary w-full justify-center">
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+            <span>Return to All Subjects</span>
+          </button>
+        </div>
       </div>
     );
   }

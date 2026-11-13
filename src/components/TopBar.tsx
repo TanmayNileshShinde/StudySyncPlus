@@ -149,7 +149,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet }) 
   }, [view, resources]);
 
   const handleBack = () => {
-    if (activeStudyDoc?.subjectId) {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else if (activeStudyDoc?.subjectId) {
       openSubject(activeStudyDoc.subjectId);
     } else {
       openHome();
@@ -305,7 +307,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onOpenBookmarks, onOpenShe
           </span>
         </button>
 
-        <button onClick={onOpenBookmarks} className={itemClass(false)} aria-label={`Saved resources: ${bookmarkCount}`}>
+        <button onClick={onOpenBookmarks} className={itemClass(view.kind === 'saved')} aria-current={view.kind === 'saved' ? 'page' : undefined} aria-label={`Saved resources: ${bookmarkCount}`}>
           <span className="relative">
             <Bookmark className="w-5 h-5" aria-hidden="true" />
             {bookmarkCount > 0 && (

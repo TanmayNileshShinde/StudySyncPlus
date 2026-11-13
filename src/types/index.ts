@@ -83,7 +83,9 @@ export interface SemesterInfo {
 export type AppView =
   | { kind: 'home' }
   | { kind: 'subject'; subjectId: string }
-  | { kind: 'study'; documentId: string; page?: number };
+  | { kind: 'study'; documentId: string; page?: number }
+  | { kind: 'saved' }
+  | { kind: 'not-found' };
 
 /** The 3-way context selector for the AI Assistant within the Study Workspace. */
 export type StudyScopeKind = 'document' | 'subject' | 'library';

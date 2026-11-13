@@ -6,7 +6,8 @@ import {
   Sparkles,
   FileText,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 
 interface StudyWorkspaceProps {
@@ -24,6 +25,8 @@ export const StudyWorkspace: React.FC<StudyWorkspaceProps> = ({
 }) => {
   const {
     resources,
+    isLibraryLoading,
+    openHome,
     switchStudyDocument,
     setViewerPage
   } = useResources();
@@ -107,6 +110,36 @@ export const StudyWorkspace: React.FC<StudyWorkspaceProps> = ({
     },
     [documentId, switchStudyDocument, setViewerPage]
   );
+
+  if (isLibraryLoading) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-3.5rem)] w-full overflow-hidden bg-paper p-6 animate-pulse">
+        <div className="h-10 bg-paper-sunk border border-rule mb-4 flex items-center px-4" />
+        <div className="flex-1 flex gap-4 min-h-0">
+          <div className="flex-1 bg-paper-sunk border border-rule" />
+          <div className="w-80 bg-paper-sunk border border-rule hidden md:block" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeDocument) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[70vh] bg-paper">
+        <div className="border border-ink bg-paper p-8 max-w-md w-full shadow-overlay">
+          <span className="stamp stamp-alert font-mono mb-3 inline-block">Material Not Found</span>
+          <h2 className="text-base font-bold text-ink mb-1.5">Document is unavailable</h2>
+          <p className="text-xs text-ink-2 mb-6 leading-relaxed">
+            The study material <code className="bg-paper-sunk px-1.5 py-0.5 font-mono text-[11px] text-ink">{documentId}</code> could not be located. It may have been deleted or the link may be mistyped.
+          </p>
+          <button onClick={openHome} className="btn btn-primary w-full justify-center">
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+            <span>Return to Course Library</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] w-full overflow-hidden bg-paper">
