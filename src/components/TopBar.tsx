@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useResources } from '../context/ResourceContext';
 import type { MoreSheetKind } from '../types';
 import {
@@ -11,10 +11,11 @@ import {
   TableProperties,
   Award,
   RefreshCw,
-  Library
+  Library,
+  ArrowLeft
 } from 'lucide-react';
 
-export const MORE_SHEET_ITEMS: Array<{
+const MORE_SHEET_ITEMS: Array<{
   kind: MoreSheetKind;
   label: string;
   description: string;
@@ -139,8 +140,21 @@ interface TopBarProps {
 
 /** Global top bar: identity + primary actions. Subject switching lives in the rail. */
 export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet }) => {
-  const { view, openHome, openAssistant, openUploadModal, bookmarkCount, semester } = useResources();
+  const { view, openHome, openSubject, openAssistant, openUploadModal, bookmarkCount, semester, resources } = useResources();
   const [moreOpen, setMoreOpen] = useState(false);
+
+  const activeStudyDoc = useMemo(() => {
+    if (view.kind !== 'study') return null;
+    return resources.find((r) => r.id === view.documentId) ?? null;
+  }, [view, resources]);
+
+  const handleBack = () => {
+    if (activeStudyDoc?.subjectId) {
+      openSubject(activeStudyDoc.subjectId);
+    } else {
+      openHome();
+    }
+  };
 
   const askAi = () => {
     openAssistant(view.kind === 'subject' ? { mode: 'subject', subjectId: view.subjectId } : { mode: 'semester' });
@@ -153,33 +167,59 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet }) 
   return (
     <header className="sticky top-0 z-40 bg-paper border-b border-ink">
       <div className="max-w-[1400px] mx-auto pl-4 pr-2 sm:pl-6 sm:pr-3 h-14 flex items-center justify-between gap-3">
-        {/* Identity */}
-        <button onClick={openHome} className="flex items-center gap-3 min-w-0 text-left group" aria-label="Go to subjects home">
-          <span className="w-9 h-9 bg-ink flex items-center justify-center shrink-0" aria-hidden="true">
-            <span className="w-[18px] h-1.5 bg-lime block" />
-          </span>
-          <span className="min-w-0">
-            <span className="font-extrabold text-[17px] tracking-tight text-ink leading-none whitespace-nowrap">
-              StudySyncPlus
+        {/* Left: Identity or Back Button when in Study Mode */}
+        {view.kind === 'study' ? (
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 border border-ink bg-paper hover:bg-lime text-ink text-xs font-mono font-semibold transition-colors shrink-0"
+              title="Return to course catalog"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Back</span>
+            </button>
+            {activeStudyDoc && (
+              <div className="hidden sm:flex items-center gap-2 min-w-0">
+                <span className="stamp stamp-ink font-mono shrink-0">{activeStudyDoc.courseCode}</span>
+                <span className="font-bold text-xs truncate text-ink max-w-[240px] lg:max-w-md">
+                  {activeStudyDoc.title}
+                </span>
+                <span className="stamp stamp-outline font-mono shrink-0">{activeStudyDoc.fileFormat}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button onClick={openHome} className="flex items-center gap-3 min-w-0 text-left group" aria-label="Go to subjects home">
+            <span className="w-9 h-9 bg-ink flex items-center justify-center shrink-0" aria-hidden="true">
+              <span className="w-[18px] h-1.5 bg-lime block" />
             </span>
-            <span className="text-[10.5px] text-ink-3 font-medium truncate block mt-0.5 font-mono">
-              {semester ? semester.label.toUpperCase() : 'SAKEC'} · COURSE FILE
+            <span className="min-w-0">
+              <span className="font-extrabold text-[17px] tracking-tight text-ink leading-none whitespace-nowrap">
+                StudySyncPlus
+              </span>
+              <span className="text-[10.5px] text-ink-3 font-medium truncate block mt-0.5 font-mono">
+                {semester ? semester.label.toUpperCase() : 'SAKEC'} · COURSE FILE
+              </span>
             </span>
-          </span>
-        </button>
+          </button>
+        )}
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <button onClick={askAi} className="btn btn-secondary" title="Ask the Study Assistant">
-            <Sparkles className="w-4 h-4 text-lime-deep" aria-hidden="true" />
-            <span className="hidden sm:inline">Ask AI</span>
-          </button>
+          {view.kind !== 'study' && (
+            <>
+              <button onClick={askAi} className="btn btn-secondary" title="Ask the Study Assistant">
+                <Sparkles className="w-4 h-4 text-lime-deep" aria-hidden="true" />
+                <span className="hidden sm:inline">Ask AI</span>
+              </button>
 
-          <button onClick={addMaterials} className="btn btn-primary" title="Add materials to a subject">
-            <PlusCircle className="w-4 h-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Add materials</span>
-            <span className="sm:hidden">Add</span>
-          </button>
+              <button onClick={addMaterials} className="btn btn-primary" title="Add materials to a subject">
+                <PlusCircle className="w-4 h-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Add materials</span>
+                <span className="sm:hidden">Add</span>
+              </button>
+            </>
+          )}
 
           <button
             onClick={onOpenBookmarks}
@@ -250,8 +290,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onOpenBookmarks, onOpenShe
           <span>Home</span>
         </button>
 
-        <button onClick={askAi} className={itemClass(view.kind === 'assistant')} aria-current={view.kind === 'assistant' ? 'page' : undefined}>
-          <Sparkles className={`w-5 h-5 ${view.kind === 'assistant' ? 'text-lime-deep' : ''}`} aria-hidden="true" />
+        <button onClick={askAi} className={itemClass(view.kind === 'study')} aria-current={view.kind === 'study' ? 'page' : undefined}>
+          <Sparkles className={`w-5 h-5 ${view.kind === 'study' ? 'text-lime-deep' : ''}`} aria-hidden="true" />
           <span>Ask AI</span>
         </button>
 

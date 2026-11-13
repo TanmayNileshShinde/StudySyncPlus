@@ -136,6 +136,29 @@ export const fileUrl = query({
   },
 });
 
+/** Return indexed document chunks (used for slide deck outline and slide viewer). */
+export const getChunks = query({
+  args: { id: v.id("resources") },
+  returns: v.array(
+    v.object({
+      seq: v.number(),
+      page: v.union(v.number(), v.null()),
+      text: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const chunks = await ctx.db
+      .query("documentChunks")
+      .withIndex("by_resource", (q) => q.eq("resourceId", args.id))
+      .collect();
+    return chunks.map((c) => ({
+      seq: c.seq,
+      page: c.page ?? null,
+      text: c.text,
+    }));
+  },
+});
+
 /** Step 1 of the upload pipeline: a short-lived direct-to-storage POST URL. */
 export const generateUploadUrl = mutation({
   args: {},

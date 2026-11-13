@@ -502,7 +502,7 @@ ${userText}`;
             model: "minimaxai/minimax-m3.1-flash",
             messages,
             temperature: 0.2,
-            max_tokens: 1800,
+            max_tokens: 4024,
           }),
         });
         if (fbResponse.ok) {

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useResources } from '../context/ResourceContext';
 import { useOverlayBehavior } from '../hooks/useOverlayBehavior';
-import type { ResourceType, FormErrors } from '../types';
+import type { ResourceType, FormErrors, StudyResource } from '../types';
 import { X, Pencil, AlertCircle, FileText } from 'lucide-react';
 
 const RESOURCE_TYPES: ResourceType[] = [
@@ -22,43 +22,30 @@ const FieldError: React.FC<{ message?: string; id?: string }> = ({ message, id }
     </p>
   ) : null;
 
-export const ResourceEditModal: React.FC = () => {
-  const { editResource, closeEdit, subjects, updateResource, showToast } = useResources();
-  const isOpen = editResource !== null;
-  const panelRef = useOverlayBehavior(isOpen, closeEdit);
+interface ResourceEditFormProps {
+  resource: StudyResource;
+  onClose: () => void;
+}
 
-  const [title, setTitle] = useState('');
-  const [subjectId, setSubjectId] = useState<string>('');
-  const [type, setType] = useState<ResourceType>('Lecture Notes');
-  const [uploadedBy, setUploadedBy] = useState('');
-  const [rollNumber, setRollNumber] = useState('');
-  const [description, setDescription] = useState('');
-  const [tagsInput, setTagsInput] = useState('');
+const ResourceEditForm: React.FC<ResourceEditFormProps> = ({ resource, onClose }) => {
+  const { subjects, updateResource, showToast } = useResources();
+  const panelRef = useOverlayBehavior(true, onClose);
+
+  const [title, setTitle] = useState(resource.title);
+  const [subjectId, setSubjectId] = useState(resource.subjectId);
+  const [type, setType] = useState<ResourceType>(resource.type);
+  const [uploadedBy, setUploadedBy] = useState(resource.uploadedBy);
+  const [rollNumber, setRollNumber] = useState(resource.rollNumber);
+  const [description, setDescription] = useState(resource.description);
+  const [tagsInput, setTagsInput] = useState(resource.tags.join(', '));
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [saving, setSaving] = useState(false);
 
-  // Reset the form each time the modal opens for a resource.
-  useEffect(() => {
-    if (!editResource) return;
-    setTitle(editResource.title);
-    setSubjectId(editResource.subjectId);
-    setType(editResource.type);
-    setUploadedBy(editResource.uploadedBy);
-    setRollNumber(editResource.rollNumber);
-    setDescription(editResource.description);
-    setTagsInput(editResource.tags.join(', '));
-    setFile(null);
-    setErrors({});
-    setSaving(false);
-  }, [editResource]);
-
-  if (!editResource) return null;
-
   // Ensure the select has a valid option (including an archived subject kept on edit).
-  const subjectChoices = subjects.some((s) => s.id === editResource.subjectId)
+  const subjectChoices = subjects.some((s) => s.id === resource.subjectId)
     ? subjects
-    : [{ id: editResource.subjectId, name: editResource.subjectName, courseCode: editResource.courseCode }, ...subjects];
+    : [{ id: resource.subjectId, name: resource.subjectName, courseCode: resource.courseCode }, ...subjects];
 
   const selectedSubject = subjectChoices.find((s) => s.id === subjectId);
 
@@ -121,7 +108,7 @@ export const ResourceEditModal: React.FC = () => {
 
     setSaving(true);
     try {
-      await updateResource(editResource.id, {
+      await updateResource(resource.id, {
         title: title.trim(),
         subjectId,
         type,
@@ -131,7 +118,7 @@ export const ResourceEditModal: React.FC = () => {
         tags,
         replaceFile: file ?? undefined
       });
-      closeEdit();
+      onClose();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Saving failed. Please try again.');
       setSaving(false);
@@ -142,7 +129,7 @@ export const ResourceEditModal: React.FC = () => {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-fadeIn"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !saving) closeEdit();
+        if (e.target === e.currentTarget && !saving) onClose();
       }}
     >
       <div
@@ -160,10 +147,10 @@ export const ResourceEditModal: React.FC = () => {
               Edit material
             </h2>
             <p className="text-xs text-ink-2 mt-0.5 truncate">
-              {editResource.title} — attach a file only to replace the stored copy.
+              {resource.title} — attach a file only to replace the stored copy.
             </p>
           </div>
-          <button onClick={closeEdit} className="btn btn-ghost px-2 shrink-0" aria-label="Close edit form" disabled={saving}>
+          <button onClick={onClose} className="btn btn-ghost px-2 shrink-0" aria-label="Close edit form" disabled={saving}>
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
@@ -331,7 +318,7 @@ export const ResourceEditModal: React.FC = () => {
                 </span>
               ) : selectedSubject ? (
                 <span>
-                  Keeping the current stored file ({editResource.fileSize}) — the index refreshes on replace.
+                  Keeping the current stored file ({resource.fileSize}) — the index refreshes on replace.
                 </span>
               ) : null}
             </p>
@@ -339,7 +326,7 @@ export const ResourceEditModal: React.FC = () => {
 
           {/* Actions */}
           <div className="pt-4 border-t border-rule flex items-center justify-end gap-3">
-            <button type="button" onClick={closeEdit} className="btn btn-ghost px-5" disabled={saving}>
+            <button type="button" onClick={onClose} className="btn btn-ghost px-5" disabled={saving}>
               Cancel
             </button>
             <button type="submit" disabled={saving} className="btn btn-primary px-6">
@@ -351,4 +338,10 @@ export const ResourceEditModal: React.FC = () => {
       </div>
     </div>
   );
+};
+
+export const ResourceEditModal: React.FC = () => {
+  const { editResource, closeEdit } = useResources();
+  if (!editResource) return null;
+  return <ResourceEditForm key={editResource.id} resource={editResource} onClose={closeEdit} />;
 };

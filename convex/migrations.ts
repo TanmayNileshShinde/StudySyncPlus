@@ -12,7 +12,7 @@ import { v } from "convex/values";
 export const runChunkSubjectBackfill = mutation({
   args: {},
   returns: v.number(),
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<number> => {
     return await ctx.runMutation(internal.ingestInternal.backfillChunkSubjects, {});
   },
 });
@@ -21,7 +21,7 @@ export const runChunkSubjectBackfill = mutation({
 export const runMarkReadyFromChunks = mutation({
   args: {},
   returns: v.number(),
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<number> => {
     return await ctx.runMutation(internal.ingestInternal.markReadyFromExistingChunks, {});
   },
 });

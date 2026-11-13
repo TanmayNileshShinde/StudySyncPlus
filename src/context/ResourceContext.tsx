@@ -15,6 +15,7 @@ import type {
   SchemeCourse,
   AppView,
   AssistantScope,
+  StudyScopeKind,
   BulkUploadInput,
   ResourceEditInput,
   NewSubjectInput,
@@ -40,10 +41,19 @@ interface ResourceContextType {
   bookmarkIds: string[];
   bookmarkCount: number;
 
-  // Navigation (subject-centric IA)
+  // Navigation (subject-centric IA & Study Workspace)
   view: AppView;
   openHome: () => void;
   openSubject: (subjectId: string) => void;
+  openStudyWorkspace: (documentId: string, page?: number, scope?: StudyScopeKind) => void;
+  switchStudyDocument: (documentId: string, page?: number) => void;
+  activeDocumentId: string | null;
+  studyScope: StudyScopeKind;
+  setStudyScope: (scope: StudyScopeKind) => void;
+  viewerPage: number | null;
+  setViewerPage: (page: number | null) => void;
+  viewerZoom: number;
+  setViewerZoom: (zoom: number) => void;
   openAssistant: (scope: AssistantScope) => void;
   assistantScope: AssistantScope;
 
@@ -56,7 +66,8 @@ interface ResourceContextType {
   openUploadModal: (subjectId?: string) => void;
   closeUploadModal: () => void;
   detailResource: StudyResource | null;
-  openDetail: (resource: StudyResource) => void;
+  detailPage: number | null;
+  openDetail: (resource: StudyResource, page?: number) => void;
   closeDetail: () => void;
   editResource: StudyResource | null;
   openEdit: (resource: StudyResource) => void;
@@ -141,9 +152,13 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // --- Temporary UI state ----------------------------------------------------
   const [view, setView] = useState<AppView>({ kind: 'home' });
   const [assistantScope, setAssistantScope] = useState<AssistantScope>({ mode: 'semester' });
+  const [studyScope, setStudyScope] = useState<StudyScopeKind>('document');
+  const [viewerPage, setViewerPage] = useState<number | null>(1);
+  const [viewerZoom, setViewerZoom] = useState<number>(100);
   const [subjectSearch, setSubjectSearch] = useState('');
   const [uploadSubjectId, setUploadSubjectId] = useState<string | null>(null);
-  const [detailResource, setDetailResource] = useState<StudyResource | null>(null);
+  const [detailResourceOverride, setDetailResourceOverride] = useState<StudyResource | null>(null);
+  const [detailPage, setDetailPage] = useState<number | null>(null);
   const [editResource, setEditResource] = useState<StudyResource | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -165,10 +180,26 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSubjectSearch('');
   }, []);
 
-  const openAssistant = useCallback((scope: AssistantScope) => {
-    setAssistantScope(scope);
-    setView({ kind: 'assistant' });
+  const openStudyWorkspace = useCallback(
+    (documentId: string, page?: number, scope: StudyScopeKind = 'document') => {
+      setView({ kind: 'study', documentId, page: page ?? 1 });
+      setViewerPage(page ?? 1);
+      setStudyScope(scope);
+      setDetailResourceOverride(null);
+    },
+    []
+  );
+
+  const switchStudyDocument = useCallback((documentId: string, page?: number) => {
+    setView((prev) =>
+      prev.kind === 'study'
+        ? { ...prev, documentId, page: page ?? 1 }
+        : { kind: 'study', documentId, page: page ?? 1 }
+    );
+    setViewerPage(page ?? 1);
   }, []);
+
+  const activeDocumentId = view.kind === 'study' ? view.documentId : null;
 
   // --- Derived data ----------------------------------------------------------
   const resources: StudyResource[] = useMemo(() => resourceRows ?? [], [resourceRows]);
@@ -415,13 +446,64 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [setSubjectArchivedMut, showToast]
   );
 
-  // --- Overlays --------------------------------------------------------------
+  // --- Overlays & Study Navigation ------------------------------------------
   const openUploadModal = useCallback((subjectId?: string) => {
     setUploadSubjectId(subjectId ?? null);
   }, []);
   const closeUploadModal = useCallback(() => setUploadSubjectId(null), []);
-  const openDetail = useCallback((resource: StudyResource) => setDetailResource(resource), []);
-  const closeDetail = useCallback(() => setDetailResource(null), []);
+
+  const openAssistant = useCallback(
+    (scope: AssistantScope) => {
+      setAssistantScope(scope);
+      if (scope.mode === 'resource') {
+        openStudyWorkspace(scope.resourceId, undefined, 'document');
+      } else if (scope.mode === 'subject') {
+        const match = resources.find((r) => r.subjectId === scope.subjectId) ?? resources[0];
+        if (match) {
+          openStudyWorkspace(match.id, undefined, 'subject');
+        } else {
+          openHome();
+        }
+      } else {
+        const match = resources[0];
+        if (match) {
+          openStudyWorkspace(match.id, undefined, 'library');
+        } else {
+          openHome();
+        }
+      }
+    },
+    [resources, openStudyWorkspace, openHome]
+  );
+
+  const detailResource = useMemo(() => {
+    if (detailResourceOverride) return detailResourceOverride;
+    if (view.kind === 'study') {
+      return resources.find((r) => r.id === view.documentId) ?? null;
+    }
+    return null;
+  }, [detailResourceOverride, view, resources]);
+
+  const openDetail = useCallback(
+    (resource: StudyResource, page?: number) => {
+      openStudyWorkspace(resource.id, page, 'document');
+    },
+    [openStudyWorkspace]
+  );
+
+  const closeDetail = useCallback(() => {
+    setDetailResourceOverride(null);
+    setDetailPage(null);
+    if (view.kind === 'study') {
+      const activeRes = resources.find((r) => r.id === view.documentId);
+      if (activeRes) {
+        openSubject(activeRes.subjectId);
+      } else {
+        openHome();
+      }
+    }
+  }, [view, resources, openSubject, openHome]);
+
   const openEdit = useCallback((resource: StudyResource) => setEditResource(resource), []);
   const closeEdit = useCallback(() => setEditResource(null), []);
 
@@ -437,6 +519,15 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       view,
       openHome,
       openSubject,
+      openStudyWorkspace,
+      switchStudyDocument,
+      activeDocumentId,
+      studyScope,
+      setStudyScope,
+      viewerPage,
+      setViewerPage,
+      viewerZoom,
+      setViewerZoom,
       openAssistant,
       assistantScope,
       subjectSearch,
@@ -445,6 +536,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       openUploadModal,
       closeUploadModal,
       detailResource,
+      detailPage,
       openDetail,
       closeDetail,
       editResource,
@@ -476,6 +568,12 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       view,
       openHome,
       openSubject,
+      openStudyWorkspace,
+      switchStudyDocument,
+      activeDocumentId,
+      studyScope,
+      viewerPage,
+      viewerZoom,
       openAssistant,
       assistantScope,
       subjectSearch,
@@ -483,6 +581,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       openUploadModal,
       closeUploadModal,
       detailResource,
+      detailPage,
       openDetail,
       closeDetail,
       editResource,

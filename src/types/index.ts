@@ -73,18 +73,24 @@ export interface SemesterInfo {
 }
 
 // ---------------------------------------------------------------------------
-// Navigation — subject-centric information architecture
+// Navigation — subject-centric information architecture & Study Workspace
 // ---------------------------------------------------------------------------
 
 /**
- * The three primary destinations. A subject is the workspace; the assistant
- * is reachable from anywhere and inherits context from the current view.
+ * The three primary destinations. A subject is the catalog workspace;
+ * the study workspace provides full-screen document viewing + integrated AI.
  */
-export type AppView = { kind: 'home' } | { kind: 'subject'; subjectId: string } | { kind: 'assistant' };
+export type AppView =
+  | { kind: 'home' }
+  | { kind: 'subject'; subjectId: string }
+  | { kind: 'study'; documentId: string; page?: number };
+
+/** The 3-way context selector for the AI Assistant within the Study Workspace. */
+export type StudyScopeKind = 'document' | 'subject' | 'library';
 
 /**
  * Retrieval scope for the Study Assistant. The panel derives this from the
- * current view (resource > subject > semester) — never shown as a "mode".
+ * current view or context selector — never shown as a technical mode.
  */
 export type AssistantScope =
   | { mode: 'semester' }

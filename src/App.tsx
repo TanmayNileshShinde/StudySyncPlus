@@ -5,10 +5,9 @@ import { TopBar, BottomNav } from './components/TopBar';
 import { SubjectRail } from './components/SubjectRail';
 import { SubjectsHome } from './components/SubjectsHome';
 import { SubjectPage } from './components/SubjectPage';
-import { AssistantPanel } from './components/AssistantPanel';
+import { StudyWorkspace } from './components/StudyWorkspace/StudyWorkspace';
 import { BulkUploadModal } from './components/BulkUploadModal';
 import { ResourceEditModal } from './components/ResourceEditModal';
-import { ResourceDetailModal } from './components/ResourceDetailModal';
 import { BookmarksDrawer } from './components/BookmarksDrawer';
 import { MoreSheet } from './components/MoreSheet';
 import { CurriculumSchemeModal } from './components/CurriculumSchemeModal';
@@ -58,44 +57,54 @@ const Toast: React.FC<{ message: string | null }> = ({ message }) => {
 
 /** The subject-centric shell: top bar + (rail | main) + bottom bar + overlays. */
 function Shell() {
-  const { view, toastMessage, uploadSubjectId, closeUploadModal, detailResource, closeDetail, openSubject } =
-    useResources();
+  const {
+    view,
+    toastMessage,
+    uploadSubjectId,
+    closeUploadModal,
+    openStudyWorkspace,
+    openSubject
+  } = useResources();
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
   const [sheet, setSheet] = useState<MoreSheetKind | null>(null);
 
   const openSheetResource = (resource: StudyResource) => {
     setSheet(null);
-    closeDetail();
-    openSubject(resource.subjectId);
+    openStudyWorkspace(resource.id);
   };
 
   return (
-    <div className="min-h-screen bg-paper text-ink">
+    <div className="min-h-screen bg-paper text-ink flex flex-col">
       <TopBar onOpenBookmarks={() => setBookmarksOpen(true)} onOpenSheet={setSheet} />
 
-      <div className="flex">
+      <div className="flex flex-1 min-h-0">
         {view.kind === 'subject' && (
           <SubjectRail activeSubjectId={view.subjectId} onOpenSheet={setSheet} />
         )}
 
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 flex flex-col">
           {view.kind === 'home' && (
             <>
               <SubjectsHome />
               <Footer />
             </>
           )}
-          {view.kind === 'subject' && <SubjectPage subjectId={view.subjectId} onOpenSheet={setSheet} />}
-          {view.kind === 'assistant' && <AssistantPanel />}
+          {view.kind === 'subject' && (
+            <SubjectPage subjectId={view.subjectId} onOpenSheet={setSheet} />
+          )}
+          {view.kind === 'study' && (
+            <StudyWorkspace documentId={view.documentId} initialPage={view.page} />
+          )}
         </main>
       </div>
 
-      <BottomNav onOpenBookmarks={() => setBookmarksOpen(true)} onOpenSheet={setSheet} />
+      {view.kind !== 'study' && (
+        <BottomNav onOpenBookmarks={() => setBookmarksOpen(true)} onOpenSheet={setSheet} />
+      )}
 
       {/* Overlays */}
       <BulkUploadModal isOpen={uploadSubjectId !== null} onClose={closeUploadModal} subjectId={uploadSubjectId} />
       <ResourceEditModal />
-      <ResourceDetailModal resource={detailResource} onClose={closeDetail} />
       <BookmarksDrawer
         isOpen={bookmarksOpen}
         onClose={() => setBookmarksOpen(false)}
