@@ -189,7 +189,7 @@ const ResourceEditForm: React.FC<ResourceEditFormProps> = ({ resource, onClose }
                   setSubjectId(e.target.value);
                   if (errors.subject) setErrors((prev) => ({ ...prev, subject: undefined }));
                 }}
-                className="field w-full px-3 py-2.5"
+                className="field w-full pl-3 pr-8 py-2.5"
               >
                 {subjectChoices.map((sub) => (
                   <option key={sub.id} value={sub.id}>
@@ -207,7 +207,7 @@ const ResourceEditForm: React.FC<ResourceEditFormProps> = ({ resource, onClose }
                 id="edit-type"
                 value={type}
                 onChange={(e) => setType(e.target.value as ResourceType)}
-                className="field w-full px-3 py-2.5"
+                className="field w-full pl-3 pr-8 py-2.5"
               >
                 {RESOURCE_TYPES.map((t) => (
                   <option key={t} value={t}>

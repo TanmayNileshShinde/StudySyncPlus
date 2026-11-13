@@ -63,6 +63,7 @@ function Shell() {
     view,
     toastMessage,
     uploadSubjectId,
+    uploadFolderId,
     closeUploadModal,
     openSubject
   } = useResources();
@@ -141,7 +142,7 @@ function Shell() {
       )}
 
       {/* Overlays */}
-      <BulkUploadModal isOpen={uploadSubjectId !== null} onClose={closeUploadModal} subjectId={uploadSubjectId} />
+      <BulkUploadModal isOpen={uploadSubjectId !== null} onClose={closeUploadModal} subjectId={uploadSubjectId} folderId={uploadFolderId} />
       <ResourceEditModal />
 
       {sheet && (

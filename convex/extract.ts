@@ -41,10 +41,10 @@ function textFromSlideXml(xml: string): string {
   const paragraphs = xml.split("</a:p>");
   const lines: string[] = [];
   for (const paragraph of paragraphs) {
-    const runs = paragraph.match(/<a:t>([\s\S]*?)<\/a:t>/g);
+    const runs = paragraph.match(/<a:t[^>]*>([\s\S]*?)<\/a:t>/g);
     if (!runs) continue;
     const text = runs
-      .map((run) => run.replace(/^<a:t>/, "").replace(/<\/a:t>$/, ""))
+      .map((run) => run.replace(/^<a:t[^>]*>/, "").replace(/<\/a:t>$/, ""))
       .join("")
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
@@ -66,6 +66,9 @@ function slideNumberFromKey(key: string, prefix: string): number {
 export async function extractPptxSlides(bytes: Uint8Array): Promise<ExtractedUnit[]> {
   const files = unzipSync(bytes);
   const slideKeys = Object.keys(files).filter((k) => /^ppt\/slides\/slide\d+\.xml$/.test(k));
+  // Guarantee sequential slide order (Slide 1, Slide 2, ..., Slide N)
+  slideKeys.sort((a, b) => slideNumberFromKey(a, "slide") - slideNumberFromKey(b, "slide"));
+
   const noteKeys = new Map<string, string>();
   for (const key of Object.keys(files)) {
     const match = key.match(/^ppt\/notesSlides\/notesSlide(\d+)\.xml$/);

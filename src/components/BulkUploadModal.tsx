@@ -128,9 +128,10 @@ interface BulkUploadModalProps {
   onClose: () => void;
   /** Subject preselected when opened from inside a subject. */
   subjectId: string | null;
+  folderId?: string | null;
 }
 
-export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, subjectId }) => {
+export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, subjectId, folderId }) => {
   const { subjects, createResource, reindexResource, showToast, resources } = useResources();
   const panelRef = useOverlayBehavior(isOpen, onClose);
 
@@ -161,7 +162,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
     setUploaderName(saved.name);
     setUploaderRoll(saved.roll);
     setSelectedSubjectId(subjectId ?? subjects[0]?.id ?? '');
-    setSelectedFolderId('');
+    setSelectedFolderId(folderId ?? '');
     setItems([]);
     setRunning(false);
     setConfettiDone(false);
@@ -427,7 +428,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                   setSelectedFolderId('');
                 }}
                 disabled={isActivelyUploading}
-                className="field w-full px-3 py-2.5"
+                className="field w-full pl-3 pr-8 py-2.5"
               >
                 {subjects.length === 0 && <option value="">No subjects available</option>}
                 {subjects.map((s) => (
@@ -448,7 +449,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                 value={selectedFolderId}
                 onChange={(e) => setSelectedFolderId(e.target.value)}
                 disabled={isActivelyUploading}
-                className="field w-full px-3 py-2.5"
+                className="field w-full pl-3 pr-8 py-2.5"
               >
                 <option value="">Unorganized (Subject root)</option>
                 {subjectFolders.map((f) => (
@@ -549,7 +550,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                       onChange={(e) => updateItem(item.uid, { type: e.target.value as ResourceType })}
                       disabled={item.uploadStatus !== 'queued' && item.uploadStatus !== 'failed'}
                       aria-label={`Category for ${item.file.name}`}
-                      className="field w-full sm:w-[130px] px-2 py-1.5 text-[12px]"
+                      className="field w-full sm:w-[130px] pl-2.5 pr-8 py-1.5 text-[12px]"
                     >
                       {RESOURCE_TYPES.map((t) => (
                         <option key={t} value={t}>

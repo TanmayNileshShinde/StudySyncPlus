@@ -65,7 +65,8 @@ interface ResourceContextType {
 
   // Overlays
   uploadSubjectId: string | null; // non-null = bulk-upload modal open
-  openUploadModal: (subjectId?: string) => void;
+  uploadFolderId: string | null;
+  openUploadModal: (subjectId?: string, folderId?: string) => void;
   closeUploadModal: () => void;
   detailResource: StudyResource | null;
   detailPage: number | null;
@@ -302,6 +303,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [viewerZoom, setViewerZoom] = useState<number>(100);
   const [subjectSearch, setSubjectSearch] = useState('');
   const [uploadSubjectId, setUploadSubjectId] = useState<string | null>(null);
+  const [uploadFolderId, setUploadFolderId] = useState<string | null>(null);
   const [detailResourceOverride, setDetailResourceOverride] = useState<StudyResource | null>(null);
   const [detailPage, setDetailPage] = useState<number | null>(null);
   const [editResource, setEditResource] = useState<StudyResource | null>(null);
@@ -721,10 +723,14 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   // --- Overlays & Study Navigation ------------------------------------------
-  const openUploadModal = useCallback((subjectId?: string) => {
+  const openUploadModal = useCallback((subjectId?: string, folderId?: string) => {
     setUploadSubjectId(subjectId ?? null);
+    setUploadFolderId(folderId ?? null);
   }, []);
-  const closeUploadModal = useCallback(() => setUploadSubjectId(null), []);
+  const closeUploadModal = useCallback(() => {
+    setUploadSubjectId(null);
+    setUploadFolderId(null);
+  }, []);
 
   const openAssistant = useCallback(
     (scope: AssistantScope) => {
@@ -822,6 +828,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       subjectSearch,
       setSubjectSearch,
       uploadSubjectId,
+      uploadFolderId,
       openUploadModal,
       closeUploadModal,
       detailResource,
@@ -878,6 +885,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       assistantScope,
       subjectSearch,
       uploadSubjectId,
+      uploadFolderId,
       openUploadModal,
       closeUploadModal,
       detailResource,

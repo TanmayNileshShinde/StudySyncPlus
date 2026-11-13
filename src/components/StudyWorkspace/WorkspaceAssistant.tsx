@@ -256,6 +256,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
 
   const transcriptRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const isSendingRef = useRef(false);
 
   const persisted = useQuery(
     api.chat.listMessages,
@@ -291,7 +292,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
 
   // Turns list: persisted messages + optimistic pairs without duplicates
   const turns: Turn[] = useMemo(() => {
-    const base: Turn[] = (persisted ?? []).map((m) => ({
+    const rawList: Turn[] = (persisted ?? []).map((m) => ({
       role: m.role,
       content: m.content,
       citations: m.citations?.map((c) => ({
@@ -302,6 +303,21 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
         score: c.score
       }))
     }));
+
+    // Deduplicate any consecutive identical messages (prevents double bubbles from rapid submits)
+    const base: Turn[] = [];
+    for (let i = 0; i < rawList.length; i++) {
+      const cur = rawList[i];
+      const prev = base[base.length - 1];
+      if (
+        prev &&
+        prev.role === cur.role &&
+        prev.content.trim() === cur.content.trim()
+      ) {
+        continue;
+      }
+      base.push(cur);
+    }
 
     if (pending) {
       // Check if the pending user message is already in base (synced in realtime via Convex WebSocket)
@@ -375,8 +391,9 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
   const send = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || pending) return;
+      if (!trimmed || isSendingRef.current || pending) return;
 
+      isSendingRef.current = true;
       setError(null);
       setDraft('');
       setLocalReply(null);
@@ -419,6 +436,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
       } catch (e) {
         setError(e instanceof Error ? e.message : 'The assistant could not be reached. Please check your connection.');
       } finally {
+        isSendingRef.current = false;
         setPending(null);
       }
     },
@@ -448,7 +466,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
   };
 
   const handleComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !e.repeat) {
       e.preventDefault();
       void send(draft);
     }

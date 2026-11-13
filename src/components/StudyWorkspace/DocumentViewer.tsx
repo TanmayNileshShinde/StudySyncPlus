@@ -435,55 +435,53 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
             </button>
           </div>
 
-          {/* Zoom Controls (Active in PDF mode) */}
-          {!isDeck && (
-            <div className="hidden 2xl:flex items-center border border-rule bg-paper h-8 shrink-0">
-              <button
-                onClick={handleZoomOut}
-                className="px-1.5 h-full text-ink-2 hover:text-ink hover:bg-paper-sunk transition-colors border-r border-rule"
-                title="Zoom Out (Cmd -)"
-                aria-label="Zoom Out"
-              >
-                <ZoomOut className="w-3.5 h-3.5" aria-hidden="true" />
-              </button>
-              <button
-                onClick={handleZoomReset}
-                className="px-2 h-full text-[10.5px] font-mono font-semibold text-ink hover:bg-paper-sunk transition-colors tabular"
-                title="Reset Zoom to 100%"
-              >
-                {fitMode === 'width' ? 'Fit W' : fitMode === 'page' ? 'Fit P' : `${viewerZoom ?? 100}%`}
-              </button>
-              <button
-                onClick={handleZoomIn}
-                className="px-1.5 h-full text-ink-2 hover:text-ink hover:bg-paper-sunk transition-colors border-l border-rule"
-                title="Zoom In (Cmd +)"
-                aria-label="Zoom In"
-              >
-                <ZoomIn className="w-3.5 h-3.5" aria-hidden="true" />
-              </button>
-              <button
-                onClick={handleFitWidth}
-                className={`px-1.5 h-full text-[10px] font-mono border-l border-rule transition-colors ${
-                  fitMode === 'width' ? 'bg-lime/20 font-bold text-ink' : 'text-ink-2 hover:bg-paper-sunk'
-                }`}
-                title="Fit to Width"
-              >
-                Fit
-              </button>
-            </div>
-          )}
+          {/* Zoom Controls (Active in PDF and Presentation mode) */}
+          <div className="hidden 2xl:flex items-center border border-rule bg-paper h-8 shrink-0">
+            <button
+              onClick={handleZoomOut}
+              className="px-1.5 h-full text-ink-2 hover:text-ink hover:bg-paper-sunk transition-colors border-r border-rule"
+              title="Zoom Out (Cmd -)"
+              aria-label="Zoom Out"
+            >
+              <ZoomOut className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+            <button
+              onClick={handleZoomReset}
+              className="px-2 h-full text-[10.5px] font-mono font-semibold text-ink hover:bg-paper-sunk transition-colors tabular"
+              title="Reset Zoom to 100%"
+            >
+              {fitMode === 'width' ? 'Fit W' : fitMode === 'page' ? 'Fit P' : `${viewerZoom ?? 100}%`}
+            </button>
+            <button
+              onClick={handleZoomIn}
+              className="px-1.5 h-full text-ink-2 hover:text-ink hover:bg-paper-sunk transition-colors border-l border-rule"
+              title="Zoom In (Cmd +)"
+              aria-label="Zoom In"
+            >
+              <ZoomIn className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+            <button
+              onClick={handleFitWidth}
+              className={`px-1.5 h-full text-[10px] font-mono border-l border-rule transition-colors ${
+                fitMode === 'width' ? 'bg-lime/20 font-bold text-ink' : 'text-ink-2 hover:bg-paper-sunk'
+              }`}
+              title="Fit to Width"
+            >
+              Fit
+            </button>
+          </div>
         </div>
 
         {/* Right: Actions (Print, Download, Rate, Bookmark, Fullscreen, Info) */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <div className="hidden 2xl:block">
             <RatingWidget resourceId={activeDoc.id} />
           </div>
 
-          {/* Print Button */}
+          {/* Print Button (Hidden on compact screens to give breathing room) */}
           <button
             onClick={handlePrint}
-            className="btn btn-ghost p-1.5"
+            className="btn btn-ghost p-1.5 hidden lg:inline-flex"
             title="Print Document"
             aria-label="Print Document"
           >
@@ -503,17 +501,17 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           {/* Download Button */}
           <button
             onClick={handleDownload}
-            className="btn btn-primary px-2.5 py-1 text-xs"
+            className="btn btn-primary px-2 sm:px-2.5 py-1 text-xs"
             title={`Download ${activeDoc.title}`}
           >
             <Download className="w-3.5 h-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">Download</span>
+            <span className="hidden md:inline">Download</span>
           </button>
 
           {/* Fullscreen Button */}
           <button
             onClick={toggleFullscreen}
-            className="btn btn-ghost p-1.5"
+            className="btn btn-ghost p-1.5 hidden sm:inline-flex"
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Reading Mode'}
             aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Reading Mode'}
           >
@@ -588,10 +586,15 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
         {isDeck && activeDoc.hasFile && (
           <PresentationViewer
             document={activeDoc}
+            fileUrl={fileData?.url ?? null}
             currentSlide={viewerPage ?? 1}
             onSlideChange={(s) => setViewerPage(s)}
+            zoom={viewerZoom ?? 100}
+            fitMode={fitMode}
             thumbnailsOpen={thumbnailsOpen}
             onCloseThumbnails={() => setThumbnailsOpen(false)}
+            highlightedCitationPage={highlightedCitationPage}
+            onClearCitationHighlight={onClearCitationHighlight}
             onAskAiAboutSlide={(_slideNum) => {
               openAssistant({ mode: 'resource', resourceId: activeDoc.id });
             }}

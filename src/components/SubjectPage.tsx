@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'convex/react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../convex/_generated/api';
 import { useResources } from '../context/ResourceContext';
 import { downloadResourcesAsZip } from '../lib/zipDownload';
@@ -9,6 +10,7 @@ import { getOwnerKey } from '../lib/owner';
 import type { StudyResource, MoreSheetKind, ResourceType, Folder } from '../types';
 import {
   ArrowLeft,
+  ArrowUp,
   Download,
   FileText,
   Presentation,
@@ -18,7 +20,6 @@ import {
   PlusCircle,
   Layers,
   LoaderCircle,
-  Star,
   Folder as FolderIcon,
   FolderPlus,
   FolderOpen,
@@ -31,7 +32,13 @@ import {
   CheckSquare,
   Square,
   ChevronRight,
-  Search
+  Search,
+  MoreVertical,
+  LayoutList,
+  LayoutGrid,
+  ChevronDown,
+  ChevronUp,
+  File
 } from 'lucide-react';
 
 const CATEGORIES: Array<{ label: string; type: ResourceType | 'ALL' }> = [
@@ -79,193 +86,46 @@ const IngestMark: React.FC<{ resource: StudyResource }> = ({ resource }) => {
   );
 };
 
-interface ResourceRowProps {
-  resource: StudyResource;
-  isSelected: boolean;
-  onToggleSelect: (id: string) => void;
-  onAsk: (resource: StudyResource) => void;
-  onQuickMove: (resource: StudyResource) => void;
-  folderName: string;
-  showFolderBadge: boolean;
-  onFolderClick: (folderId: string | null) => void;
+interface FolderTreeNode {
+  folder: Folder;
+  depth: number;
 }
 
-const ResourceRow: React.FC<ResourceRowProps> = ({
-  resource,
-  isSelected,
-  onToggleSelect,
-  onAsk,
-  onQuickMove,
-  folderName,
-  showFolderBadge,
-  onFolderClick
-}) => {
-  const { openDetail, toggleBookmark, isBookmarked, downloadResource, reindexResource, showToast } = useResources();
-  const bookmarked = isBookmarked(resource.id);
-
-  const handleRetry = async () => {
-    try {
-      showToast('Rebuilding vector index…');
-      const result = await reindexResource(resource.id);
-      showToast(result.message);
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Re-index failed. Please try again.');
-    }
-  };
-
-  const isDeck = resource.fileKind === 'pptx' || resource.fileKind === 'ppt';
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      draggable={true}
-      onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', resource.id);
-        e.dataTransfer.setData('application/x-resource-id', resource.id);
-        e.dataTransfer.effectAllowed = 'move';
-      }}
-      aria-label={`Open study view for ${resource.title}`}
-      onClick={() => openDetail(resource)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openDetail(resource);
-        }
-      }}
-      className={`group flex items-center justify-between gap-3 px-4 py-3 transition-colors cursor-pointer border-b border-rule last:border-b-0 ${
-        isSelected ? 'bg-lime-wash' : 'bg-paper hover:bg-paper-sunk'
-      }`}
-    >
-      {/* Left: Checkbox + Icon + Title + Tags */}
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSelect(resource.id);
-          }}
-          className="text-ink-3 hover:text-ink transition-colors p-0.5 shrink-0"
-          aria-label={isSelected ? `Deselect ${resource.title}` : `Select ${resource.title}`}
-        >
-          {isSelected ? (
-            <CheckSquare className="w-4 h-4 text-ink fill-lime/30" aria-hidden="true" />
-          ) : (
-            <Square className="w-4 h-4 text-ink-3 group-hover:text-ink" aria-hidden="true" />
-          )}
-        </button>
-
-        <div className="shrink-0 text-ink-3 group-hover:text-ink transition-colors">
-          {isDeck ? (
-            <Presentation className="w-4 h-4" aria-hidden="true" />
-          ) : (
-            <FileText className="w-4 h-4" aria-hidden="true" />
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0">
-            <span className="text-[13.5px] font-bold text-ink truncate group-hover:text-ink-2">
-              {resource.title}
-            </span>
-
-            {/* Folder Location badge (shown in flat/unorganized views) */}
-            {showFolderBadge && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onFolderClick(resource.folderId ?? null);
-                }}
-                className="inline-flex items-center gap-1 font-mono text-[9.5px] px-1.5 py-0.2 bg-paper-sunk border border-rule text-ink-3 hover:text-ink hover:border-ink transition-colors shrink-0"
-                title={`Filed in ${folderName}. Click to open folder.`}
-              >
-                <FolderIcon className="w-2.5 h-2.5" aria-hidden="true" />
-                <span className="truncate max-w-[120px]">{folderName}</span>
-              </button>
-            )}
-
-            <span className="stamp stamp-outline text-[9px] py-0 px-1 font-mono shrink-0 hidden md:inline-flex">
-              {resource.type}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 font-mono text-[11px] text-ink-3 mt-0.5">
-            <span>{resource.fileSize}</span>
-            <span>·</span>
-            <span className="truncate">{resource.uploadedBy}</span>
-            <span className="hidden sm:inline">· {resource.uploadDate}</span>
-            {resource.rating > 0 && (
-              <>
-                <span className="hidden sm:inline">·</span>
-                <span className="hidden sm:inline-flex items-center gap-0.5">
-                  <Star className="w-3 h-3 fill-lime text-lime-deep" aria-hidden="true" />
-                  <span>{resource.rating.toFixed(1)}</span>
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Middle: AI Ingestion Mark */}
-      <div className="hidden sm:block shrink-0 px-2">
-        <IngestMark resource={resource} />
-      </div>
-
-      {/* Right: Actions */}
-      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-        <button
-          onClick={() => void downloadResource(resource)}
-          className="p-1.5 text-ink-3 hover:text-ink hover:bg-paper transition-colors"
-          aria-label={`Download ${resource.title}`}
-          title="Download file"
-        >
-          <Download className="w-4 h-4" aria-hidden="true" />
-        </button>
-
-        <button
-          onClick={() => void toggleBookmark(resource.id)}
-          className="p-1.5 text-ink-3 hover:text-ink hover:bg-paper transition-colors"
-          aria-label={bookmarked ? `Remove ${resource.title} from saved` : `Save ${resource.title}`}
-          aria-pressed={bookmarked}
-          title={bookmarked ? 'Saved for revision' : 'Save for revision'}
-        >
-          <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-lime-deep text-lime-deep' : ''}`} aria-hidden="true" />
-        </button>
-
-        <button
-          onClick={() => onAsk(resource)}
-          className="p-1.5 text-ink-3 hover:text-ink hover:bg-paper transition-colors"
-          aria-label={`Ask Study Assistant about ${resource.title}`}
-          title="Ask AI about this document"
-        >
-          <Sparkles className="w-4 h-4 text-lime-deep" aria-hidden="true" />
-        </button>
-
-        <button
-          onClick={() => onQuickMove(resource)}
-          className="p-1.5 text-ink-3 hover:text-ink hover:bg-paper transition-colors hidden sm:inline-flex"
-          aria-label={`Move ${resource.title} to folder`}
-          title="Move to folder…"
-        >
-          <FolderInput className="w-4 h-4" aria-hidden="true" />
-        </button>
-
-        {resource.ingestStatus === 'failed' && (
-          <button
-            onClick={() => void handleRetry()}
-            className="p-1.5 text-alert hover:bg-paper transition-colors"
-            aria-label={`Retry vector indexing for ${resource.title}`}
-            title="Retry vector indexing"
-          >
-            <RotateCcw className="w-4 h-4" aria-hidden="true" />
-          </button>
-        )}
-      </div>
-    </div>
-  );
+/** Recursively build an indented tree of folders */
+const buildFolderTree = (
+  allFolders: Folder[],
+  parentId: string | null = null,
+  depth = 0,
+  excludeIds = new Set<string>()
+): FolderTreeNode[] => {
+  const result: FolderTreeNode[] = [];
+  const children = allFolders.filter((f) => (f.parentId ?? null) === parentId);
+  for (const child of children) {
+    if (excludeIds.has(child.id)) continue;
+    result.push({ folder: child, depth });
+    result.push(...buildFolderTree(allFolders, child.id, depth + 1, excludeIds));
+  }
+  return result;
 };
+
+/** Get all descendant IDs of a folder to avoid circular nesting */
+const getDescendantFolderIds = (folderId: string, allFolders: Folder[]): Set<string> => {
+  const descendants = new Set<string>();
+  const queue = [folderId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    descendants.add(current);
+    for (const f of allFolders) {
+      if (f.parentId === current && !descendants.has(f.id)) {
+        queue.push(f.id);
+      }
+    }
+  }
+  return descendants;
+};
+
+type SortField = 'name' | 'type' | 'size' | 'date';
+type SortDirection = 'asc' | 'desc';
 
 interface SubjectPageProps {
   subjectId: string;
@@ -280,12 +140,18 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
     isLibraryLoading,
     openHome,
     openAssistant,
+    openDetail,
     openUploadModal,
-    subjectSearch,
-    setSubjectSearch,
     collectDownloadArtifact,
+    downloadResource,
+    toggleBookmark,
+    isBookmarked,
+    reindexResource,
+    updateResource,
+    deleteResource,
     createFolder,
     renameFolder,
+    moveFolder,
     removeFolder,
     moveToFolder,
     bulkMoveToFolder,
@@ -294,6 +160,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
   } = useResources();
 
   const ownerKey = getOwnerKey();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Queries
   const rawFolders = useQuery(
@@ -302,29 +169,186 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
   );
   const folders = useMemo(() => (rawFolders ?? []) as Folder[], [rawFolders]);
 
-  // View state
+  // Map of folder id -> folder
+  const folderMap = useMemo(() => {
+    const map = new Map<string, Folder>();
+    for (const f of folders) map.set(f.id, f);
+    return map;
+  }, [folders]);
+
+  // Current Directory Location from URL (enables natural Back/Forward history & sharing)
+  const currentFolderId = useMemo(() => {
+    const f = searchParams.get('folder');
+    if (!f || f === 'unorganized' || f === 'root') return null;
+    return f;
+  }, [searchParams]);
+
+  const isUnorganizedView = useMemo(() => {
+    return searchParams.get('folder') === 'unorganized';
+  }, [searchParams]);
+
+  const activeFolder = useMemo(() => {
+    if (!currentFolderId) return null;
+    return folderMap.get(currentFolderId) ?? null;
+  }, [folderMap, currentFolderId]);
+
+  // Navigation handlers
+  const navigateToFolder = useCallback(
+    (folderId: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('folder', folderId);
+        return next;
+      });
+    },
+    [setSearchParams]
+  );
+
+  const navigateToUnorganized = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('folder', 'unorganized');
+      return next;
+    });
+  }, [setSearchParams]);
+
+  const navigateToRoot = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('folder');
+      return next;
+    });
+  }, [setSearchParams]);
+
+  // Step Up one level to parent directory
+  const navigateToParent = useCallback(() => {
+    if (isUnorganizedView) {
+      navigateToRoot();
+      return;
+    }
+    if (!currentFolderId) return;
+    const cur = folderMap.get(currentFolderId);
+    if (cur?.parentId) {
+      navigateToFolder(cur.parentId);
+    } else {
+      navigateToRoot();
+    }
+  }, [isUnorganizedView, currentFolderId, folderMap, navigateToFolder, navigateToRoot]);
+
+  // Breadcrumbs calculation from root down to active folder
+  const breadcrumbs = useMemo(() => {
+    if (!currentFolderId) return [];
+    const crumbs: Folder[] = [];
+    let curId: string | null = currentFolderId;
+    const seen = new Set<string>();
+    while (curId && !seen.has(curId)) {
+      seen.add(curId);
+      const f = folderMap.get(curId);
+      if (!f) break;
+      crumbs.unshift(f);
+      curId = f.parentId ?? null;
+    }
+    return crumbs;
+  }, [currentFolderId, folderMap]);
+
+  // Redirect if invalid folder ID in URL
+  useEffect(() => {
+    if (currentFolderId && rawFolders !== undefined) {
+      const exists = folders.some((f) => f.id === currentFolderId);
+      if (!exists) {
+        navigateToRoot();
+      }
+    }
+  }, [currentFolderId, folders, rawFolders, navigateToRoot]);
+
+  // View state: 'materials' | 'syllabus' | 'scheme'
   const [activeTab, setActiveTab] = useState<'materials' | 'syllabus' | 'scheme'>('materials');
-  const [selectedFolderId, setSelectedFolderId] = useState<string | 'ALL' | 'UNORGANIZED'>('ALL');
+
+  // File Manager View Options: List vs Grid (persisted in localStorage)
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
+    try {
+      return (localStorage.getItem('studysyncplus_file_view_mode') as 'list' | 'grid') || 'list';
+    } catch {
+      return 'list';
+    }
+  });
+
+  const handleSetViewMode = (mode: 'list' | 'grid') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('studysyncplus_file_view_mode', mode);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Search & Filter state
+  const [subjectSearch, setSubjectSearch] = useState('');
+  const [searchScope, setSearchScope] = useState<'current' | 'subject'>('current');
   const [selectedCategory, setSelectedCategory] = useState<ResourceType | 'ALL'>('ALL');
   const [selectedFormat, setSelectedFormat] = useState<'ALL' | 'pdf' | 'ppt'>('ALL');
   const [selectedIndexStatus, setSelectedIndexStatus] = useState<'ALL' | 'ready' | 'processing' | 'failed'>('ALL');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showTagBar, setShowTagBar] = useState(false);
+
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleToggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Multi-selection state
   const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(new Set());
-  const [activeModuleNumber, setActiveModuleNumber] = useState(SYLLABUS_MODULES[0].moduleNumber);
 
   // Drag and drop state
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
 
-  // Modals & Popovers
+  // Context Menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    type: 'folder' | 'resource';
+    folder?: Folder;
+    resource?: StudyResource;
+  } | null>(null);
+
+  // Close context menu on outside click or escape
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setContextMenu(null);
+    };
+    window.addEventListener('click', handleClick);
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('click', handleClick);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, []);
+
+  // Modals
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderParentId, setNewFolderParentId] = useState('');
   const [renamingFolder, setRenamingFolder] = useState<Folder | null>(null);
-  const [renamingName, setRenamingName] = useState('');
+  const [renamingFolderName, setRenamingFolderName] = useState('');
+  const [movingFolder, setMovingFolder] = useState<Folder | null>(null);
+  const [movingFolderTargetId, setMovingFolderTargetId] = useState('');
   const [deleteConfirmFolder, setDeleteConfirmFolder] = useState<Folder | null>(null);
+  const [deleteFolderMode, setDeleteFolderMode] = useState<'move' | 'deleteFiles'>('move');
+  const [renamingResource, setRenamingResource] = useState<StudyResource | null>(null);
+  const [renamingResourceTitle, setRenamingResourceTitle] = useState('');
   const [quickMoveResource, setQuickMoveResource] = useState<StudyResource | null>(null);
+  const [deleteConfirmResource, setDeleteConfirmResource] = useState<StudyResource | null>(null);
   const [bulkTargetFolderId, setBulkTargetFolderId] = useState('');
+  const [activeModuleNumber, setActiveModuleNumber] = useState(SYLLABUS_MODULES[0].moduleNumber);
 
   // Bulk ZIP state
   const [zipState, setZipState] = useState<{ busy: boolean; done: number; total: number }>({
@@ -337,52 +361,120 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
   const own = useMemo(() => resources.filter((r) => r.subjectId === subjectId), [resources, subjectId]);
   const scheme = schemeCourses.find((c) => c.id === subjectId);
 
-  // Map of folder id -> folder
-  const folderMap = useMemo(() => {
-    const map = new Map<string, Folder>();
-    for (const f of folders) map.set(f.id, f);
-    return map;
+  // Unorganized resources count
+  const unorganizedCount = useMemo(() => {
+    return own.filter((r) => !r.folderId).length;
+  }, [own]);
+
+  // Indented folder tree for modals
+  const folderTree = useMemo(() => {
+    return buildFolderTree(folders, null, 0);
   }, [folders]);
 
-  // Map of folder id -> folder name
-  const folderNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const f of folders) map.set(f.id, f.name);
-    return map;
-  }, [folders]);
+  // Invalid targets when moving a folder
+  const invalidMoveTargets = useMemo(() => {
+    if (!movingFolder) return new Set<string>();
+    return getDescendantFolderIds(movingFolder.id, folders);
+  }, [movingFolder, folders]);
 
-  // Current active folder
-  const activeFolder = useMemo(() => {
-    if (selectedFolderId === 'ALL' || selectedFolderId === 'UNORGANIZED') return null;
-    return folderMap.get(selectedFolderId) ?? null;
-  }, [folderMap, selectedFolderId]);
-
-  // Subfolders of current folder (or root folders when at root)
-  const currentSubfolders = useMemo(() => {
-    if (selectedFolderId === 'ALL') {
+  // 1. Folders in current directory view
+  const directoryFolders = useMemo(() => {
+    if (isUnorganizedView) return [];
+    if (searchScope === 'subject' && subjectSearch.trim()) {
+      const q = subjectSearch.trim().toLowerCase();
+      return folders.filter((f) => f.name.toLowerCase().includes(q));
+    }
+    if (!currentFolderId) {
       return folders.filter((f) => !f.parentId);
     }
-    if (selectedFolderId === 'UNORGANIZED') {
-      return [];
-    }
-    return folders.filter((f) => f.parentId === selectedFolderId);
-  }, [folders, selectedFolderId]);
+    return folders.filter((f) => f.parentId === currentFolderId);
+  }, [folders, currentFolderId, isUnorganizedView, searchScope, subjectSearch]);
 
-  // Breadcrumbs calculation for nested folders
-  const breadcrumbs = useMemo(() => {
-    if (selectedFolderId === 'ALL' || selectedFolderId === 'UNORGANIZED') return [];
-    const crumbs: Folder[] = [];
-    let curId: string | null = selectedFolderId;
-    const seen = new Set<string>();
-    while (curId && !seen.has(curId)) {
-      seen.add(curId);
-      const f = folderMap.get(curId);
-      if (!f) break;
-      crumbs.unshift(f);
-      curId = f.parentId ?? null;
+  // 2. Files in current directory view (STRICT DIRECTORY CONTENTS - NO DUPLICATE ALL-MATERIALS LIST)
+  const directoryResources = useMemo(() => {
+    let list: StudyResource[] = [];
+
+    if (searchScope === 'subject' && subjectSearch.trim()) {
+      // Searching across entire course
+      const q = subjectSearch.trim().toLowerCase();
+      list = own.filter(
+        (r) =>
+          r.title.toLowerCase().includes(q) ||
+          r.description.toLowerCase().includes(q) ||
+          r.uploadedBy.toLowerCase().includes(q) ||
+          r.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    } else {
+      // Local directory scope
+      if (isUnorganizedView) {
+        list = own.filter((r) => !r.folderId);
+      } else if (currentFolderId) {
+        list = own.filter((r) => r.folderId === currentFolderId);
+      } else {
+        // AT ROOT: Show ONLY loose files (files without a folder)!
+        list = own.filter((r) => !r.folderId);
+      }
+
+      // Filter within directory by search query if present
+      const q = subjectSearch.trim().toLowerCase();
+      if (q) {
+        list = list.filter(
+          (r) =>
+            r.title.toLowerCase().includes(q) ||
+            r.description.toLowerCase().includes(q) ||
+            r.uploadedBy.toLowerCase().includes(q) ||
+            r.tags.some((t) => t.toLowerCase().includes(q))
+        );
+      }
     }
-    return crumbs;
-  }, [selectedFolderId, folderMap]);
+
+    // Apply category, format, indexing status, tags
+    if (selectedCategory !== 'ALL') {
+      list = list.filter((r) => r.type === selectedCategory);
+    }
+    if (selectedFormat === 'pdf') {
+      list = list.filter((r) => r.fileKind === 'pdf');
+    } else if (selectedFormat === 'ppt') {
+      list = list.filter((r) => r.fileKind === 'ppt' || r.fileKind === 'pptx');
+    }
+    if (selectedIndexStatus === 'ready') {
+      list = list.filter((r) => r.ingestStatus === 'ready');
+    } else if (selectedIndexStatus === 'processing') {
+      list = list.filter((r) => r.ingestStatus === 'processing' || r.ingestStatus === 'pending');
+    } else if (selectedIndexStatus === 'failed') {
+      list = list.filter((r) => r.ingestStatus === 'failed');
+    }
+    if (selectedTags.length > 0) {
+      list = list.filter((r) => selectedTags.every((t) => r.tags.includes(t)));
+    }
+
+    // Sort files
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === 'name') {
+        cmp = a.title.localeCompare(b.title);
+      } else if (sortField === 'date') {
+        cmp = (b.uploadDate || '').localeCompare(a.uploadDate || '');
+      } else if (sortField === 'size') {
+        cmp = (a.fileSizeBytes || 0) - (b.fileSizeBytes || 0);
+      } else if (sortField === 'type') {
+        cmp = a.type.localeCompare(b.type);
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [
+    own,
+    currentFolderId,
+    isUnorganizedView,
+    searchScope,
+    subjectSearch,
+    selectedCategory,
+    selectedFormat,
+    selectedIndexStatus,
+    selectedTags,
+    sortField,
+    sortDirection
+  ]);
 
   // Unique tags across subject
   const availableTags = useMemo(() => {
@@ -396,62 +488,6 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
     }
     return Array.from(tagSet).sort();
   }, [own]);
-
-  const unorganizedCount = useMemo(() => {
-    return own.filter((r) => !r.folderId).length;
-  }, [own]);
-
-  // Filtered resources
-  const filtered = useMemo(() => {
-    let result = own;
-
-    // 1. Folder filter
-    if (selectedFolderId === 'UNORGANIZED') {
-      result = result.filter((r) => !r.folderId);
-    } else if (selectedFolderId !== 'ALL') {
-      result = result.filter((r) => r.folderId === selectedFolderId);
-    }
-
-    // 2. Category
-    if (selectedCategory !== 'ALL') {
-      result = result.filter((r) => r.type === selectedCategory);
-    }
-
-    // 3. Format
-    if (selectedFormat === 'pdf') {
-      result = result.filter((r) => r.fileKind === 'pdf');
-    } else if (selectedFormat === 'ppt') {
-      result = result.filter((r) => r.fileKind === 'ppt' || r.fileKind === 'pptx');
-    }
-
-    // 4. Indexing status
-    if (selectedIndexStatus === 'ready') {
-      result = result.filter((r) => r.ingestStatus === 'ready');
-    } else if (selectedIndexStatus === 'processing') {
-      result = result.filter((r) => r.ingestStatus === 'processing' || r.ingestStatus === 'pending');
-    } else if (selectedIndexStatus === 'failed') {
-      result = result.filter((r) => r.ingestStatus === 'failed');
-    }
-
-    // 5. Tags
-    if (selectedTags.length > 0) {
-      result = result.filter((r) => selectedTags.every((t) => r.tags.includes(t)));
-    }
-
-    // 6. Search
-    const q = subjectSearch.trim().toLowerCase();
-    if (q) {
-      result = result.filter(
-        (r) =>
-          r.title.toLowerCase().includes(q) ||
-          r.description.toLowerCase().includes(q) ||
-          r.uploadedBy.toLowerCase().includes(q) ||
-          r.tags.some((t) => t.toLowerCase().includes(q))
-      );
-    }
-
-    return result;
-  }, [own, selectedFolderId, selectedCategory, selectedFormat, selectedIndexStatus, selectedTags, subjectSearch]);
 
   // User uploaded resources in selection
   const userUploadedSelectedIds = useMemo(() => {
@@ -472,10 +508,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
   };
 
   const handleToggleSelectAll = () => {
-    if (selectedResourceIds.size === filtered.length && filtered.length > 0) {
+    if (selectedResourceIds.size === directoryResources.length && directoryResources.length > 0) {
       setSelectedResourceIds(new Set());
     } else {
-      setSelectedResourceIds(new Set(filtered.map((r) => r.id)));
+      setSelectedResourceIds(new Set(directoryResources.map((r) => r.id)));
     }
   };
 
@@ -483,6 +519,23 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
+  };
+
+  // Open Context Menu handler
+  const handleOpenContextMenu = (
+    e: React.MouseEvent,
+    type: 'folder' | 'resource',
+    item: Folder | StudyResource
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const x = Math.min(e.clientX, window.innerWidth - 220);
+    const y = Math.min(e.clientY, window.innerHeight - 280);
+    if (type === 'folder') {
+      setContextMenu({ x, y, type: 'folder', folder: item as Folder });
+    } else {
+      setContextMenu({ x, y, type: 'resource', resource: item as StudyResource });
+    }
   };
 
   // Folder Actions
@@ -498,7 +551,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       setNewFolderName('');
       setNewFolderParentId('');
       setNewFolderOpen(false);
-      setSelectedFolderId(newId);
+      navigateToFolder(newId);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not create folder.');
     }
@@ -506,22 +559,48 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
 
   const handleSaveRenameFolder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!renamingFolder || !renamingName.trim()) return;
+    if (!renamingFolder || !renamingFolderName.trim()) return;
     try {
-      await renameFolder(renamingFolder.id, renamingName.trim());
+      await renameFolder(renamingFolder.id, renamingFolderName.trim());
       setRenamingFolder(null);
-      setRenamingName('');
+      setRenamingFolderName('');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not rename folder.');
+    }
+  };
+
+  const handlePerformMoveFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!movingFolder) return;
+    try {
+      const target = movingFolderTargetId === '' ? null : movingFolderTargetId;
+      await moveFolder(movingFolder.id, target);
+      setMovingFolder(null);
+      setMovingFolderTargetId('');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not move folder.');
     }
   };
 
   const handleConfirmDeleteFolder = async () => {
     if (!deleteConfirmFolder) return;
     try {
+      if (deleteFolderMode === 'deleteFiles') {
+        const filesToDelete = own
+          .filter(
+            (r) =>
+              r.folderId === deleteConfirmFolder.id &&
+              r.isUserUploaded &&
+              r.ownerKey === ownerKey
+          )
+          .map((r) => r.id);
+        if (filesToDelete.length > 0) {
+          await bulkDelete(filesToDelete);
+        }
+      }
       await removeFolder(deleteConfirmFolder.id);
-      if (selectedFolderId === deleteConfirmFolder.id) {
-        setSelectedFolderId('ALL');
+      if (currentFolderId === deleteConfirmFolder.id) {
+        navigateToParent();
       }
       setDeleteConfirmFolder(null);
     } catch (err) {
@@ -529,22 +608,56 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
     }
   };
 
-  // Move single resource
-  const handlePerformQuickMove = async (targetFolderId: string | null) => {
-    if (!quickMoveResource) return;
-    await moveToFolder(quickMoveResource.id, targetFolderId);
-    setQuickMoveResource(null);
+  // File Actions
+  const handleSaveRenameResource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renamingResource || !renamingResourceTitle.trim()) return;
+    try {
+      await updateResource(renamingResource.id, {
+        title: renamingResourceTitle.trim()
+      });
+      setRenamingResource(null);
+      setRenamingResourceTitle('');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not rename file.');
+    }
   };
 
-  // Bulk ZIP download
+  const handlePerformQuickMove = async (targetFolderId: string | null) => {
+    if (!quickMoveResource) return;
+    try {
+      await moveToFolder(quickMoveResource.id, targetFolderId);
+      setQuickMoveResource(null);
+      showToast('File moved');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not move file.');
+    }
+  };
+
+  const handleConfirmDeleteResource = async () => {
+    if (!deleteConfirmResource) return;
+    try {
+      await deleteResource(deleteConfirmResource.id);
+      setSelectedResourceIds((prev) => {
+        const next = new Set(prev);
+        next.delete(deleteConfirmResource.id);
+        return next;
+      });
+      setDeleteConfirmResource(null);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not delete file.');
+    }
+  };
+
+  // Selected ZIP Download
   const handleDownloadSelectedZip = async () => {
+    if (selectedResourceIds.size === 0 || zipState.busy || !subject) return;
     const selectedItems = own.filter((r) => selectedResourceIds.has(r.id));
-    if (selectedItems.length === 0 || !subject) return;
     setZipState({ busy: true, done: 0, total: selectedItems.length });
     try {
       await downloadResourcesAsZip(
-        subject.name,
-        `${subject.courseCode}-selected`,
+        `${subject.name}_Selected`,
+        subject.courseCode,
         selectedItems,
         collectDownloadArtifact,
         (done, total) => setZipState({ busy: true, done, total })
@@ -648,7 +761,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
         <span>All Subjects</span>
       </button>
 
-      {/* Subject Header (Official Course File Jacket) */}
+      {/* Subject Header */}
       <header className="pt-6 sm:pt-8 pb-6 border-b border-ink">
         <div className="flex flex-wrap items-center gap-2 mb-2.5">
           <span className="stamp stamp-ink font-mono text-[11px]">{subject.courseCode}</span>
@@ -679,9 +792,12 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
 
           {/* Action Toolbar */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button onClick={() => openUploadModal(subjectId)} className="btn btn-primary px-4">
+            <button
+              onClick={() => openUploadModal(subjectId, currentFolderId ?? undefined)}
+              className="btn btn-primary px-4"
+            >
               <PlusCircle className="w-4 h-4" aria-hidden="true" />
-              <span>Add Materials</span>
+              <span>Upload Material</span>
             </button>
 
             <button
@@ -720,7 +836,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 : 'border-transparent text-ink-3 hover:text-ink'
             }`}
           >
-            Study Materials ({own.length})
+            File Manager ({own.length})
           </button>
           <button
             onClick={() => setActiveTab('syllabus')}
@@ -747,214 +863,221 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
         </div>
       </header>
 
-      {/* Main Study Materials View */}
+      {/* Main Study Materials File Manager View */}
       {activeTab === 'materials' && (
         <section className="pt-6 space-y-4">
-          {/* 1. Compact Folder Navigation & Breadcrumbs Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-rule">
-            {/* Breadcrumb Trail / Location */}
-            <div className="flex items-center gap-2 flex-wrap text-xs">
+          {/* 1. Breadcrumbs & Directory Header Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-paper border border-rule">
+            {/* Interactive Breadcrumb Trail with Drop Targets & Up Button */}
+            <div className="flex items-center gap-1.5 flex-wrap text-xs">
+              {/* Up to Parent Button (Active when not at root) */}
+              {(currentFolderId || isUnorganizedView) && (
+                <button
+                  type="button"
+                  onClick={navigateToParent}
+                  className="btn btn-secondary px-2 py-1 text-xs font-mono mr-1 flex items-center gap-1"
+                  title="Go up to parent folder"
+                >
+                  <ArrowUp className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Up</span>
+                </button>
+              )}
+
+              {/* Course Root Crumb */}
               <button
                 type="button"
-                onClick={() => setSelectedFolderId('ALL')}
-                className={`font-mono text-xs font-bold transition-colors flex items-center gap-1.5 ${
-                  selectedFolderId === 'ALL'
-                    ? 'text-ink'
-                    : 'text-ink-3 hover:text-ink'
+                onClick={navigateToRoot}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  setDragOverFolderId('CRUMB_ROOT');
+                }}
+                onDragLeave={() => setDragOverFolderId(null)}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  setDragOverFolderId(null);
+                  const resId =
+                    e.dataTransfer.getData('application/x-resource-id') ||
+                    e.dataTransfer.getData('text/plain');
+                  if (resId) {
+                    await moveToFolder(resId, null);
+                    showToast('Moved file to Subject Root (Unorganized)');
+                  }
+                }}
+                className={`font-mono text-xs transition-colors flex items-center gap-1.5 px-2 py-1 ${
+                  dragOverFolderId === 'CRUMB_ROOT'
+                    ? 'border-2 border-lime bg-lime-wash text-ink font-bold'
+                    : !currentFolderId && !isUnorganizedView
+                    ? 'font-bold text-ink bg-paper-sunk border border-rule'
+                    : 'text-ink-2 hover:text-ink hover:underline'
                 }`}
+                title="Navigate to course root"
               >
                 <Layers className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>All Materials</span>
+                <span>{subject.name}</span>
               </button>
 
-              {selectedFolderId === 'UNORGANIZED' && (
+              {isUnorganizedView && (
                 <>
-                  <ChevronRight className="w-3 h-3 text-ink-3" aria-hidden="true" />
-                  <span className="font-mono text-xs font-bold text-ink flex items-center gap-1.5">
+                  <ChevronRight className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
+                  <span className="font-mono text-xs font-bold text-ink bg-paper-sunk px-2 py-1 border border-rule flex items-center gap-1.5">
                     <FolderOpen className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
-                    <span>Unorganized</span>
+                    <span>Unorganized Materials</span>
                   </span>
                 </>
               )}
 
-              {breadcrumbs.map((crumb, idx) => (
-                <React.Fragment key={crumb.id}>
-                  <ChevronRight className="w-3 h-3 text-ink-3" aria-hidden="true" />
-                  <button
-                    type="button"
-                    onClick={() => setSelectedFolderId(crumb.id)}
-                    className={`font-mono text-xs transition-colors flex items-center gap-1.5 ${
-                      idx === breadcrumbs.length - 1
-                        ? 'font-bold text-ink'
-                        : 'text-ink-3 hover:text-ink'
-                    }`}
-                  >
-                    <FolderIcon className="w-3.5 h-3.5 text-ink-2" aria-hidden="true" />
-                    <span>{crumb.name}</span>
-                  </button>
-                </React.Fragment>
-              ))}
-
-              {/* Active Folder Actions (Ask Folder AI, Rename, Delete) */}
-              {activeFolder && (
-                <div className="flex items-center gap-1 ml-2 pl-2 border-l border-rule">
-                  <button
-                    type="button"
-                    onClick={askActiveFolder}
-                    className="btn btn-secondary px-2 py-0.5 text-[11px] font-mono flex items-center gap-1 text-ink"
-                    title={`Ask Study Assistant about materials in ${activeFolder.name}`}
-                  >
-                    <Sparkles className="w-3 h-3 text-lime-deep" aria-hidden="true" />
-                    <span>Ask Folder AI</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRenamingFolder(activeFolder);
-                      setRenamingName(activeFolder.name);
-                    }}
-                    className="p-1 text-ink-3 hover:text-ink hover:bg-paper-sunk transition-colors"
-                    title="Rename folder"
-                    aria-label="Rename folder"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDeleteConfirmFolder(activeFolder)}
-                    className="p-1 text-ink-3 hover:text-alert hover:bg-paper-sunk transition-colors"
-                    title="Delete folder (contents move to Unorganized)"
-                    aria-label="Delete folder"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                  </button>
-                </div>
-              )}
+              {breadcrumbs.map((crumb, idx) => {
+                const isCurrent = idx === breadcrumbs.length - 1;
+                const isDropTarget = dragOverFolderId === `CRUMB_${crumb.id}`;
+                return (
+                  <React.Fragment key={crumb.id}>
+                    <ChevronRight className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
+                    <button
+                      type="button"
+                      onClick={() => navigateToFolder(crumb.id)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        setDragOverFolderId(`CRUMB_${crumb.id}`);
+                      }}
+                      onDragLeave={() => setDragOverFolderId(null)}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        setDragOverFolderId(null);
+                        const resId =
+                          e.dataTransfer.getData('application/x-resource-id') ||
+                          e.dataTransfer.getData('text/plain');
+                        if (resId) {
+                          await moveToFolder(resId, crumb.id);
+                          showToast(`Moved file to "${crumb.name}"`);
+                        }
+                      }}
+                      className={`font-mono text-xs transition-colors flex items-center gap-1 px-2 py-1 ${
+                        isDropTarget
+                          ? 'border-2 border-lime bg-lime-wash text-ink font-bold'
+                          : isCurrent
+                          ? 'font-bold text-ink bg-paper-sunk border border-rule'
+                          : 'text-ink-2 hover:text-ink hover:underline'
+                      }`}
+                      title={`Navigate to ${crumb.name}`}
+                    >
+                      <FolderIcon className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
+                      <span>{crumb.name}</span>
+                    </button>
+                  </React.Fragment>
+                );
+              })}
             </div>
 
-            {/* Quick Folder Creator Action */}
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Directory Controls Right */}
+            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+              {activeFolder && (
+                <button
+                  type="button"
+                  onClick={askActiveFolder}
+                  className="btn btn-secondary px-2.5 py-1 text-xs font-mono flex items-center gap-1 text-ink"
+                  title={`Ask Study Assistant about materials in ${activeFolder.name}`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-lime-deep" aria-hidden="true" />
+                  <span>Ask Folder AI</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => {
-                  setNewFolderParentId(selectedFolderId !== 'ALL' && selectedFolderId !== 'UNORGANIZED' ? selectedFolderId : '');
+                  setNewFolderParentId(currentFolderId ?? '');
                   setNewFolderOpen(true);
                 }}
-                className="btn btn-ghost px-2.5 py-1 text-xs font-mono text-ink-2 hover:text-ink flex items-center gap-1.5 border border-rule hover:border-ink"
+                className="btn btn-secondary px-3 py-1 text-xs font-mono flex items-center gap-1.5 border-ink hover:bg-lime-wash"
               >
                 <FolderPlus className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>New Folder</span>
+                <span>{currentFolderId ? 'New Subfolder' : 'New Folder'}</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => openUploadModal(subjectId, currentFolderId ?? undefined)}
+                className="btn btn-primary px-3 py-1 text-xs font-mono flex items-center gap-1.5"
+              >
+                <PlusCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Upload File</span>
+              </button>
+
+              {/* View Mode Toggle: List vs Grid */}
+              <div className="flex items-center border border-rule ml-1">
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode('list')}
+                  className={`p-1.5 transition-colors ${
+                    viewMode === 'list'
+                      ? 'bg-ink text-paper'
+                      : 'bg-paper text-ink-3 hover:text-ink'
+                  }`}
+                  title="List view"
+                  aria-label="List view"
+                >
+                  <LayoutList className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode('grid')}
+                  className={`p-1.5 transition-colors ${
+                    viewMode === 'grid'
+                      ? 'bg-ink text-paper'
+                      : 'bg-paper text-ink-3 hover:text-ink'
+                  }`}
+                  title="Grid view"
+                  aria-label="Grid view"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* 2. Compact Folder Chips Shelf (Click to enter or drag files to move) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 text-xs font-mono">
-            {/* All Materials chip */}
-            <button
-              type="button"
-              onClick={() => setSelectedFolderId('ALL')}
-              className={`px-3 py-1.5 transition-colors shrink-0 flex items-center gap-1.5 border ${
-                selectedFolderId === 'ALL'
-                  ? 'bg-ink text-paper border-ink font-bold shadow-xs'
-                  : 'bg-paper text-ink-2 border-rule hover:border-ink hover:text-ink'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>All</span>
-              <span className={`text-[10px] tabular ${selectedFolderId === 'ALL' ? 'text-lime' : 'text-ink-3'}`}>
-                {own.length}
-              </span>
-            </button>
-
-            {/* Unorganized chip with Drop Target */}
-            <button
-              type="button"
-              onClick={() => setSelectedFolderId('UNORGANIZED')}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                setDragOverFolderId('UNORGANIZED');
-              }}
-              onDragLeave={() => setDragOverFolderId(null)}
-              onDrop={async (e) => {
-                e.preventDefault();
-                setDragOverFolderId(null);
-                const resId = e.dataTransfer.getData('application/x-resource-id') || e.dataTransfer.getData('text/plain');
-                if (resId) await moveToFolder(resId, null);
-              }}
-              className={`px-3 py-1.5 transition-colors shrink-0 flex items-center gap-1.5 border ${
-                dragOverFolderId === 'UNORGANIZED' ? 'border-2 border-lime bg-lime/20' : ''
-              } ${
-                selectedFolderId === 'UNORGANIZED'
-                  ? 'bg-ink text-paper border-ink font-bold shadow-xs'
-                  : 'bg-paper text-ink-2 border-rule hover:border-ink hover:text-ink'
-              }`}
-              title="Files not yet sorted into a folder (drag files here to remove from folder)"
-            >
-              <FolderOpen className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
-              <span>Unorganized</span>
-              <span className={`text-[10px] tabular ${selectedFolderId === 'UNORGANIZED' ? 'text-lime' : 'text-ink-3'}`}>
-                {unorganizedCount}
-              </span>
-            </button>
-
-            {/* Subfolders or root folders */}
-            {currentSubfolders.map((folder) => {
-              const isSelected = selectedFolderId === folder.id;
-              const isDragTarget = dragOverFolderId === folder.id;
-
-              return (
-                <button
-                  key={folder.id}
-                  type="button"
-                  onClick={() => setSelectedFolderId(folder.id)}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    setDragOverFolderId(folder.id);
-                  }}
-                  onDragLeave={() => setDragOverFolderId(null)}
-                  onDrop={async (e) => {
-                    e.preventDefault();
-                    setDragOverFolderId(null);
-                    const resId = e.dataTransfer.getData('application/x-resource-id') || e.dataTransfer.getData('text/plain');
-                    if (resId) await moveToFolder(resId, folder.id);
-                  }}
-                  className={`group px-3 py-1.5 transition-colors shrink-0 flex items-center gap-1.5 border ${
-                    isDragTarget ? 'border-2 border-lime bg-lime/20' : ''
-                  } ${
-                    isSelected
-                      ? 'bg-ink text-paper border-ink font-bold shadow-xs'
-                      : 'bg-paper text-ink-2 border-rule hover:border-ink hover:text-ink'
-                  }`}
-                  title={`Folder: ${folder.name} (${folder.resourceCount} items). Drag files here to move.`}
-                >
-                  <FolderIcon className={`w-3.5 h-3.5 ${isSelected ? 'text-lime' : 'text-ink-3'}`} aria-hidden="true" />
-                  <span className="truncate max-w-[160px]">{folder.name}</span>
-                  <span className={`text-[10px] tabular ${isSelected ? 'text-lime' : 'text-ink-3'}`}>
-                    {folder.resourceCount}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* 3. Single Unified Discovery Toolbar */}
+          {/* 2. File Manager Filter & Search Toolbar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-2 bg-paper border border-rule text-xs">
-            {/* Search Input */}
-            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-paper-sunk border border-rule flex-1 min-w-[220px]">
-              <Search className="w-3.5 h-3.5 text-ink-3 shrink-0" aria-hidden="true" />
-              <input
-                type="search"
-                value={subjectSearch}
-                onChange={(e) => setSubjectSearch(e.target.value)}
-                placeholder="Filter materials by title, tags or uploader…"
-                aria-label="Filter materials in this subject"
-                className="w-full bg-transparent text-xs text-ink placeholder:text-ink-3 focus:outline-none"
-              />
+            {/* Search Input with Scope Selector */}
+            <div className="flex items-center gap-1.5 flex-1 min-w-[260px]">
+              <div className="flex items-center gap-2 px-2.5 py-1.5 bg-paper-sunk border border-rule flex-1">
+                <Search className="w-3.5 h-3.5 text-ink-3 shrink-0" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={subjectSearch}
+                  onChange={(e) => setSubjectSearch(e.target.value)}
+                  placeholder={
+                    searchScope === 'subject'
+                      ? 'Search all materials in course…'
+                      : activeFolder
+                      ? `Search in “${activeFolder.name}”…`
+                      : 'Search in this folder…'
+                  }
+                  aria-label="Search materials"
+                  className="w-full bg-transparent text-xs text-ink placeholder:text-ink-3 focus:outline-none"
+                />
+                {subjectSearch && (
+                  <button
+                    onClick={() => setSubjectSearch('')}
+                    className="p-0.5 text-ink-3 hover:text-ink"
+                    aria-label="Clear filter"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Search Scope Switcher (Current folder vs Entire Subject) */}
+              <select
+                value={searchScope}
+                onChange={(e) => setSearchScope(e.target.value as 'current' | 'subject')}
+                aria-label="Search scope"
+                className="field text-xs py-1.5 pl-2.5 pr-8 bg-paper-sunk border border-rule text-ink cursor-pointer font-mono"
+              >
+                <option value="current">Current folder</option>
+                <option value="subject">Entire course</option>
+              </select>
             </div>
 
             {/* Filter Dropdowns in One Clean Row */}
@@ -964,7 +1087,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value as ResourceType | 'ALL')}
                 aria-label="Filter by material category"
-                className="field text-xs py-1.5 px-2 bg-paper-sunk border border-rule text-ink cursor-pointer"
+                className="field text-xs py-1.5 pl-2.5 pr-8 bg-paper-sunk border border-rule text-ink cursor-pointer"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat.type} value={cat.type}>
@@ -973,29 +1096,29 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 ))}
               </select>
 
-              {/* Indexing Status Select */}
-              <select
-                value={selectedIndexStatus}
-                onChange={(e) => setSelectedIndexStatus(e.target.value as 'ALL' | 'ready' | 'processing' | 'failed')}
-                aria-label="Filter by AI indexing status"
-                className="field text-xs py-1.5 px-2 bg-paper-sunk border border-rule text-ink cursor-pointer"
-              >
-                <option value="ALL">All Index States</option>
-                <option value="ready">Indexed for AI</option>
-                <option value="processing">Indexing…</option>
-                <option value="failed">Index Failed</option>
-              </select>
-
               {/* Format Select */}
               <select
                 value={selectedFormat}
                 onChange={(e) => setSelectedFormat(e.target.value as 'ALL' | 'pdf' | 'ppt')}
                 aria-label="Filter by file format"
-                className="field text-xs py-1.5 px-2 bg-paper-sunk border border-rule text-ink cursor-pointer"
+                className="field text-xs py-1.5 pl-2.5 pr-8 bg-paper-sunk border border-rule text-ink cursor-pointer"
               >
                 <option value="ALL">All Formats</option>
                 <option value="pdf">PDF only</option>
                 <option value="ppt">PowerPoint (PPT/PPTX)</option>
+              </select>
+
+              {/* Indexing Status Select */}
+              <select
+                value={selectedIndexStatus}
+                onChange={(e) => setSelectedIndexStatus(e.target.value as 'ALL' | 'ready' | 'processing' | 'failed')}
+                aria-label="Filter by AI indexing status"
+                className="field text-xs py-1.5 pl-2.5 pr-8 bg-paper-sunk border border-rule text-ink cursor-pointer"
+              >
+                <option value="ALL">All Index States</option>
+                <option value="ready">Indexed for AI</option>
+                <option value="processing">Indexing…</option>
+                <option value="failed">Index Failed</option>
               </select>
 
               {/* Tags Drawer Toggle */}
@@ -1015,14 +1138,17 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 </button>
               )}
 
-              {/* Count */}
-              <div className="font-mono text-[11px] text-ink-3 pl-1 shrink-0">
-                <span className="text-ink font-bold tabular">{filtered.length}</span> of {own.length}
+              {/* Directory Count */}
+              <div className="font-mono text-[11px] text-ink-3 pl-1 shrink-0 tabular">
+                <span className="text-ink font-bold">{directoryResources.length}</span> files
+                {directoryFolders.length > 0 && (
+                  <span> · <strong className="text-ink">{directoryFolders.length}</strong> folders</span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* 4. Secondary Tag Drawer (Hidden by default, cleanly revealed on request) */}
+          {/* 3. Secondary Tag Drawer (when active) */}
           {showTagBar && availableTags.length > 0 && (
             <div className="p-3 bg-paper-sunk border border-rule flex items-center gap-1.5 flex-wrap text-xs animate-fadeIn">
               <span className="font-mono text-[10px] uppercase tracking-wider text-ink-3 shrink-0 mr-1">
@@ -1055,105 +1181,641 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
             </div>
           )}
 
-          {/* 5. Clean Resource List Table */}
-          <div className="border border-rule bg-paper divide-y divide-rule overflow-hidden">
-            {/* Table Header with Select All */}
-            <div className="flex items-center justify-between px-4 py-2.5 bg-paper-sunk font-mono text-[11px] text-ink-3 select-none">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleToggleSelectAll}
-                  className="flex items-center gap-2 text-ink-3 hover:text-ink transition-colors"
-                  aria-label={selectedResourceIds.size === filtered.length && filtered.length > 0 ? 'Deselect all materials' : 'Select all materials'}
-                >
-                  {selectedResourceIds.size > 0 && selectedResourceIds.size === filtered.length ? (
-                    <CheckSquare className="w-4 h-4 text-ink fill-lime/30" />
-                  ) : (
-                    <Square className="w-4 h-4" />
-                  )}
-                  <span className="uppercase tracking-[0.06em]">
-                    {selectedResourceIds.size > 0
-                      ? `${selectedResourceIds.size} Selected`
-                      : 'Select All'}
+          {/* 4. Active Location Notice if in Unorganized */}
+          {isUnorganizedView && (
+            <div className="p-3.5 bg-paper-sunk border border-rule flex items-center justify-between gap-3 text-xs animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <FolderOpen className="w-4 h-4 text-ink-3 shrink-0" aria-hidden="true" />
+                <span className="text-ink-2">
+                  Showing <strong>{unorganizedCount}</strong> loose materials not filed into any folder.
+                  Drag rows onto folder cards or select files to bulk move them.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={navigateToRoot}
+                className="btn btn-ghost text-xs px-2.5 py-1 font-mono shrink-0 hover:underline"
+              >
+                Return to Course Root
+              </button>
+            </div>
+          )}
+
+          {/* 5. FOLDERS SECTION (Visible at Root or inside Folders with child subfolders) */}
+          {(directoryFolders.length > 0 || (!currentFolderId && !isUnorganizedView && unorganizedCount > 0)) && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-mono text-xs font-bold uppercase tracking-[0.08em] text-ink flex items-center gap-2">
+                  <FolderIcon className="w-3.5 h-3.5 text-ink-2" aria-hidden="true" />
+                  <span>
+                    {currentFolderId
+                      ? `Subfolders (${directoryFolders.length})`
+                      : `Folders (${directoryFolders.length + (unorganizedCount > 0 ? 1 : 0)})`}
                   </span>
-                </button>
+                </h3>
+                <span className="font-mono text-[10.5px] text-ink-3 hidden sm:inline">
+                  Click to open · Drag files to move
+                </span>
               </div>
 
-              <div className="hidden sm:block text-[10.5px] uppercase tracking-[0.06em] text-ink-3">
-                Drag rows onto folder chips to organize
-              </div>
+              {/* Grid view for folders */}
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {/* Unorganized system folder card at root */}
+                  {!currentFolderId && !isUnorganizedView && unorganizedCount > 0 && (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={navigateToUnorganized}
+                      onContextMenu={(e) => e.preventDefault()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigateToUnorganized();
+                        }
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        setDragOverFolderId('UNORGANIZED_CARD');
+                      }}
+                      onDragLeave={() => setDragOverFolderId(null)}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        setDragOverFolderId(null);
+                        const resId =
+                          e.dataTransfer.getData('application/x-resource-id') ||
+                          e.dataTransfer.getData('text/plain');
+                        if (resId) {
+                          await moveToFolder(resId, null);
+                          showToast('Moved file to Unorganized');
+                        }
+                      }}
+                      className={`group p-4 border transition-all cursor-pointer flex flex-col justify-between min-h-[105px] ${
+                        dragOverFolderId === 'UNORGANIZED_CARD'
+                          ? 'border-2 border-lime bg-lime-wash/60 shadow-xs'
+                          : 'border-dashed border-rule bg-paper-sunk/20 hover:border-ink hover:bg-paper'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <FolderOpen className="w-4 h-4 text-ink-3 group-hover:text-ink transition-colors" />
+                          <span className="font-bold text-[13.5px] text-ink group-hover:underline">
+                            Unorganized
+                          </span>
+                        </div>
+                        <p className="font-mono text-[11px] text-ink-3 tabular">
+                          {unorganizedCount} {unorganizedCount === 1 ? 'material' : 'materials'} needing filing
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-rule mt-2.5 flex items-center justify-between text-[11px] font-mono text-ink-3">
+                        <span className="text-[10px] uppercase tracking-wider text-ink-3 group-hover:text-ink transition-colors">
+                          {dragOverFolderId === 'UNORGANIZED_CARD' ? 'Drop to un-file' : 'Open folder'}
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-ink-3 group-hover:translate-x-0.5 group-hover:text-ink transition-transform" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Normal Folder Cards */}
+                  {directoryFolders.map((folder) => {
+                    const subCount = folders.filter((child) => child.parentId === folder.id).length;
+                    const isDragTarget = dragOverFolderId === folder.id;
+
+                    return (
+                      <div
+                        key={folder.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => navigateToFolder(folder.id)}
+                        onContextMenu={(e) => handleOpenContextMenu(e, 'folder', folder)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigateToFolder(folder.id);
+                          }
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDragOverFolderId(folder.id);
+                        }}
+                        onDragLeave={() => setDragOverFolderId(null)}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          setDragOverFolderId(null);
+                          const resId =
+                            e.dataTransfer.getData('application/x-resource-id') ||
+                            e.dataTransfer.getData('text/plain');
+                          if (resId) {
+                            await moveToFolder(resId, folder.id);
+                            showToast(`Moved file to "${folder.name}"`);
+                          }
+                        }}
+                        className={`group p-4 border transition-all cursor-pointer bg-paper flex flex-col justify-between min-h-[105px] ${
+                          isDragTarget
+                            ? 'border-2 border-lime bg-lime-wash/60 shadow-xs'
+                            : 'border-rule hover:border-ink hover:bg-paper-sunk/40'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <FolderIcon className="w-4 h-4 text-ink-2 group-hover:text-lime-deep shrink-0 transition-colors" />
+                              <span className="font-bold text-[13.5px] text-ink truncate group-hover:underline">
+                                {folder.name}
+                              </span>
+                            </div>
+
+                            {/* Three dots / action button */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenContextMenu(e, 'folder', folder)}
+                              className="p-1 text-ink-3 hover:text-ink hover:bg-paper-sunk transition-colors shrink-0"
+                              title="Folder actions"
+                              aria-label="Folder actions"
+                            >
+                              <MoreVertical className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="font-mono text-[11px] text-ink-3 tabular flex items-center gap-2">
+                            <span>
+                              {folder.resourceCount} {folder.resourceCount === 1 ? 'file' : 'files'}
+                            </span>
+                            {subCount > 0 && <span>· {subCount} subfolders</span>}
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-rule mt-2.5 flex items-center justify-between text-[11px] font-mono text-ink-3">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-3 group-hover:text-ink transition-colors">
+                            {isDragTarget ? 'Drop to move here' : 'Open folder'}
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 text-ink-3 group-hover:translate-x-0.5 group-hover:text-ink transition-transform" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* List view for folders */
+                <div className="border border-rule bg-paper divide-y divide-rule">
+                  {/* Unorganized row at root */}
+                  {!currentFolderId && !isUnorganizedView && unorganizedCount > 0 && (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={navigateToUnorganized}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        setDragOverFolderId('UNORGANIZED_ROW');
+                      }}
+                      onDragLeave={() => setDragOverFolderId(null)}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        setDragOverFolderId(null);
+                        const resId =
+                          e.dataTransfer.getData('application/x-resource-id') ||
+                          e.dataTransfer.getData('text/plain');
+                        if (resId) {
+                          await moveToFolder(resId, null);
+                          showToast('Moved file to Unorganized');
+                        }
+                      }}
+                      className={`px-4 py-2.5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                        dragOverFolderId === 'UNORGANIZED_ROW'
+                          ? 'border-2 border-lime bg-lime-wash/60'
+                          : 'hover:bg-paper-sunk/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <FolderOpen className="w-4 h-4 text-ink-3 shrink-0" />
+                        <span className="font-bold text-[13px] text-ink">Unorganized Files</span>
+                      </div>
+                      <div className="flex items-center gap-3 font-mono text-xs text-ink-3 tabular">
+                        <span>{unorganizedCount} loose files</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-ink-3" />
+                      </div>
+                    </div>
+                  )}
+
+                  {directoryFolders.map((folder) => {
+                    const subCount = folders.filter((child) => child.parentId === folder.id).length;
+                    const isDragTarget = dragOverFolderId === folder.id;
+
+                    return (
+                      <div
+                        key={folder.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => navigateToFolder(folder.id)}
+                        onContextMenu={(e) => handleOpenContextMenu(e, 'folder', folder)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDragOverFolderId(folder.id);
+                        }}
+                        onDragLeave={() => setDragOverFolderId(null)}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          setDragOverFolderId(null);
+                          const resId =
+                            e.dataTransfer.getData('application/x-resource-id') ||
+                            e.dataTransfer.getData('text/plain');
+                          if (resId) {
+                            await moveToFolder(resId, folder.id);
+                            showToast(`Moved file to "${folder.name}"`);
+                          }
+                        }}
+                        className={`px-4 py-2.5 flex items-center justify-between gap-3 cursor-pointer transition-colors group ${
+                          isDragTarget
+                            ? 'border-2 border-lime bg-lime-wash/60'
+                            : 'hover:bg-paper-sunk/60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <FolderIcon className="w-4 h-4 text-ink-2 group-hover:text-lime-deep shrink-0 transition-colors" />
+                          <span className="font-bold text-[13px] text-ink group-hover:underline truncate">
+                            {folder.name}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3 font-mono text-xs text-ink-3 tabular shrink-0">
+                          <span>
+                            {folder.resourceCount} {folder.resourceCount === 1 ? 'file' : 'files'}
+                          </span>
+                          {subCount > 0 && <span>· {subCount} subfolders</span>}
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenContextMenu(e, 'folder', folder)}
+                            className="p-1 text-ink-3 hover:text-ink hover:bg-paper transition-colors"
+                            aria-label="Folder actions"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 6. FILES SECTION (Strict directory contents) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-mono text-xs font-bold uppercase tracking-[0.08em] text-ink flex items-center gap-2">
+                <File className="w-3.5 h-3.5 text-ink-2" aria-hidden="true" />
+                <span>
+                  {searchScope === 'subject' && subjectSearch.trim()
+                    ? `Matching Course Files (${directoryResources.length})`
+                    : currentFolderId
+                    ? `Files in “${activeFolder?.name ?? 'Folder'}” (${directoryResources.length})`
+                    : isUnorganizedView
+                    ? `Unorganized Files (${directoryResources.length})`
+                    : `Root Files (${directoryResources.length})`}
+                </span>
+              </h3>
+              <span className="font-mono text-[10.5px] text-ink-3 hidden sm:inline">
+                Drag to move · Right-click for options
+              </span>
             </div>
 
-            {/* List Rows */}
-            {own.length === 0 ? (
-              <div className="p-12 text-center">
-                <FileText className="w-8 h-8 text-ink-3 mx-auto mb-3" aria-hidden="true" />
-                <h3 className="text-sm font-bold text-ink mb-1">No Materials Filed Yet</h3>
-                <p className="text-xs text-ink-2 max-w-[46ch] mx-auto mb-4">
-                  Be the first to upload lecture notes, PYQs, or lab sheets for {subject.name}. Files are
-                  indexed for AI study assistance in the background.
-                </p>
-                <button onClick={() => openUploadModal(subjectId)} className="btn btn-primary">
-                  <PlusCircle className="w-4 h-4" aria-hidden="true" />
-                  <span>Upload Materials</span>
-                </button>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="p-8 text-center text-xs text-ink-2">
-                <p>No materials found matching current filters.</p>
-                <button
-                  onClick={() => {
-                    setSelectedFolderId('ALL');
-                    setSelectedCategory('ALL');
-                    setSelectedFormat('ALL');
-                    setSelectedIndexStatus('ALL');
-                    setSelectedTags([]);
-                    setSubjectSearch('');
-                  }}
-                  className="mt-2 text-ink font-semibold underline underline-offset-2"
-                >
-                  Reset all filters
-                </button>
+            {/* List View Table */}
+            {viewMode === 'list' ? (
+              <div className="border border-rule bg-paper divide-y divide-rule overflow-hidden">
+                {/* Table Header with interactive column sort & Select All */}
+                <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-paper-sunk font-mono text-[11px] text-ink-3 select-none items-center">
+                  <div className="col-span-6 flex items-center gap-2 min-w-0">
+                    <button
+                      type="button"
+                      onClick={handleToggleSelectAll}
+                      className="text-ink-3 hover:text-ink transition-colors p-0.5"
+                      aria-label="Select all files in directory"
+                    >
+                      {selectedResourceIds.size > 0 &&
+                      selectedResourceIds.size === directoryResources.length ? (
+                        <CheckSquare className="w-4 h-4 text-ink fill-lime/30" />
+                      ) : (
+                        <Square className="w-4 h-4 text-ink-3" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSort('name')}
+                      className="font-bold uppercase tracking-[0.06em] text-ink flex items-center gap-1 hover:underline"
+                    >
+                      <span>Name</span>
+                      {sortField === 'name' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="col-span-2 hidden md:block">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSort('type')}
+                      className="font-bold uppercase tracking-[0.06em] text-ink flex items-center gap-1 hover:underline"
+                    >
+                      <span>Type</span>
+                      {sortField === 'type' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="col-span-2 hidden sm:block">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSort('size')}
+                      className="font-bold uppercase tracking-[0.06em] text-ink flex items-center gap-1 hover:underline"
+                    >
+                      <span>Size</span>
+                      {sortField === 'size' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="col-span-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSort('date')}
+                      className="font-bold uppercase tracking-[0.06em] text-ink inline-flex items-center gap-1 hover:underline ml-auto"
+                    >
+                      <span>Date Added</span>
+                      {sortField === 'date' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Rows or Empty States */}
+                {directoryResources.length === 0 ? (
+                  <div className="p-10 text-center text-xs text-ink-2">
+                    {activeFolder ? (
+                      <>
+                        <FolderOpen className="w-8 h-8 text-ink-3 mx-auto mb-2" aria-hidden="true" />
+                        <h4 className="text-sm font-bold text-ink mb-1">This folder has no files</h4>
+                        <p className="max-w-[42ch] mx-auto mb-4">
+                          Drag files here from other locations or upload new study materials into “{activeFolder.name}”.
+                        </p>
+                        <button
+                          onClick={() => openUploadModal(subjectId, activeFolder.id)}
+                          className="btn btn-secondary text-xs px-3 py-1.5"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5" />
+                          <span>Upload File into Folder</span>
+                        </button>
+                      </>
+                    ) : isUnorganizedView ? (
+                      <>
+                        <Check className="w-8 h-8 text-lime-deep mx-auto mb-2" aria-hidden="true" />
+                        <h4 className="text-sm font-bold text-ink mb-1">All Materials Are Organized</h4>
+                        <p className="max-w-[42ch] mx-auto mb-4">
+                          No loose files remain. Every document in this course is filed into a folder.
+                        </p>
+                        <button
+                          onClick={navigateToRoot}
+                          className="btn btn-secondary text-xs px-3 py-1.5"
+                        >
+                          Return to Course Root
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-8 h-8 text-ink-3 mx-auto mb-2" aria-hidden="true" />
+                        <h4 className="text-sm font-bold text-ink mb-1">No Loose Files at Root</h4>
+                        <p className="max-w-[42ch] mx-auto mb-4">
+                          All files are neatly filed in the folders above, or no files match the current filters.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  directoryResources.map((resource) => {
+                    const isSelected = selectedResourceIds.has(resource.id);
+                    const isDeck = resource.fileKind === 'pptx' || resource.fileKind === 'ppt';
+                    const bookmarked = isBookmarked(resource.id);
+
+                    return (
+                      <div
+                        key={resource.id}
+                        role="row"
+                        tabIndex={0}
+                        draggable={true}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', resource.id);
+                          e.dataTransfer.setData('application/x-resource-id', resource.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onClick={() => openDetail(resource)}
+                        onContextMenu={(e) => handleOpenContextMenu(e, 'resource', resource)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            openDetail(resource);
+                          }
+                        }}
+                        className={`grid grid-cols-12 gap-2 px-4 py-2.5 items-center cursor-pointer transition-colors border-b border-rule last:border-b-0 group ${
+                          isSelected ? 'bg-lime-wash' : 'bg-paper hover:bg-paper-sunk/60'
+                        }`}
+                      >
+                        {/* Name Column */}
+                        <div className="col-span-6 flex items-center gap-2.5 min-w-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleSelect(resource.id);
+                            }}
+                            className="p-0.5 text-ink-3 hover:text-ink shrink-0"
+                            aria-label={isSelected ? `Deselect ${resource.title}` : `Select ${resource.title}`}
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-ink fill-lime/30" />
+                            ) : (
+                              <Square className="w-4 h-4 text-ink-3 group-hover:text-ink" />
+                            )}
+                          </button>
+
+                          <div className="shrink-0 text-ink-3 group-hover:text-ink">
+                            {isDeck ? (
+                              <Presentation className="w-4 h-4" />
+                            ) : (
+                              <FileText className="w-4 h-4" />
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-[13px] text-ink group-hover:underline truncate max-w-sm">
+                                {resource.title}
+                              </span>
+                              <IngestMark resource={resource} />
+                            </div>
+
+                            {/* Show folder provenance if searching across course */}
+                            {searchScope === 'subject' && resource.folderId && (
+                              <span className="font-mono text-[10px] text-ink-3 block truncate">
+                                in 📁 {folderMap.get(resource.folderId)?.name ?? 'Folder'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Kind Column */}
+                        <div className="col-span-2 hidden md:block font-mono text-[11px] text-ink-2 truncate">
+                          <span className="stamp stamp-outline text-[9px] py-0 px-1 font-mono">
+                            {resource.type}
+                          </span>
+                        </div>
+
+                        {/* Size Column */}
+                        <div className="col-span-2 hidden sm:block font-mono text-[11px] text-ink-3 tabular">
+                          {resource.fileSize}
+                        </div>
+
+                        {/* Date & Actions Column */}
+                        <div
+                          className="col-span-2 flex items-center justify-end gap-1.5 font-mono text-[11px] text-ink-3 tabular"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span className="hidden sm:inline">{resource.uploadDate}</span>
+
+                          <button
+                            type="button"
+                            onClick={() => void downloadResource(resource)}
+                            className="p-1 text-ink-3 hover:text-ink hover:bg-paper transition-colors hidden md:inline-flex"
+                            title="Download file"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => void toggleBookmark(resource.id)}
+                            className="p-1 text-ink-3 hover:text-ink hover:bg-paper transition-colors hidden md:inline-flex"
+                            title={bookmarked ? 'Saved' : 'Save'}
+                          >
+                            <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? 'fill-lime-deep text-lime-deep' : ''}`} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenContextMenu(e, 'resource', resource)}
+                            className="p-1 text-ink-3 hover:text-ink hover:bg-paper transition-colors"
+                            aria-label="File options"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             ) : (
-              filtered.map((resource) => (
-                <ResourceRow
-                  key={resource.id}
-                  resource={resource}
-                  isSelected={selectedResourceIds.has(resource.id)}
-                  onToggleSelect={handleToggleSelect}
-                  onAsk={(r) => openAssistant({ mode: 'resource', resourceId: r.id })}
-                  onQuickMove={(r) => setQuickMoveResource(r)}
-                  folderName={resource.folderId ? (folderNameMap.get(resource.folderId) ?? 'Folder') : 'Unorganized'}
-                  showFolderBadge={selectedFolderId === 'ALL'}
-                  onFolderClick={(fId) => setSelectedFolderId(fId ?? 'UNORGANIZED')}
-                />
-              ))
+              /* Grid View Cards */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {directoryResources.length === 0 ? (
+                  <div className="col-span-full p-8 border border-rule bg-paper-sunk text-center text-xs text-ink-3">
+                    No files found in this directory.
+                  </div>
+                ) : (
+                  directoryResources.map((resource) => {
+                    const isSelected = selectedResourceIds.has(resource.id);
+                    const isDeck = resource.fileKind === 'pptx' || resource.fileKind === 'ppt';
+
+                    return (
+                      <div
+                        key={resource.id}
+                        role="button"
+                        tabIndex={0}
+                        draggable={true}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', resource.id);
+                          e.dataTransfer.setData('application/x-resource-id', resource.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onClick={() => openDetail(resource)}
+                        onContextMenu={(e) => handleOpenContextMenu(e, 'resource', resource)}
+                        className={`group p-4 border transition-all cursor-pointer flex flex-col justify-between min-h-[120px] ${
+                          isSelected
+                            ? 'border-2 border-lime bg-lime-wash'
+                            : 'border-rule bg-paper hover:border-ink hover:bg-paper-sunk/40'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isDeck ? (
+                                <Presentation className="w-4 h-4 text-ink-3 shrink-0" />
+                              ) : (
+                                <FileText className="w-4 h-4 text-ink-3 shrink-0" />
+                              )}
+                              <span className="font-bold text-[13px] text-ink truncate group-hover:underline">
+                                {resource.title}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenContextMenu(e, 'resource', resource)}
+                              className="p-1 text-ink-3 hover:text-ink shrink-0"
+                              aria-label="File options"
+                            >
+                              <MoreVertical className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="stamp stamp-outline text-[9px] py-0 px-1 font-mono">
+                              {resource.type}
+                            </span>
+                            <IngestMark resource={resource} />
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-rule mt-3 flex items-center justify-between font-mono text-[10.5px] text-ink-3 tabular">
+                          <span>{resource.fileSize}</span>
+                          <span>{resource.uploadDate}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             )}
           </div>
 
-          {/* 6. Floating Bulk Actions Bar (Appears ONLY when 1+ resources are selected) */}
+          {/* 7. Floating Multi-Select Action Bar */}
           {selectedResourceIds.size > 0 && (
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-paper border-2 border-ink shadow-overlay px-4 py-2.5 flex items-center gap-3 flex-wrap animate-fadeIn max-w-[95vw]">
               <div className="font-mono text-xs font-bold text-ink">
-                {selectedResourceIds.size} selected
+                {selectedResourceIds.size} files selected
               </div>
 
               <div className="h-4 w-[1px] bg-rule hidden sm:block" />
 
-              {/* Bulk Move */}
+              {/* Bulk Move into Folder */}
               <div className="flex items-center gap-1.5">
                 <select
                   value={bulkTargetFolderId}
                   onChange={(e) => setBulkTargetFolderId(e.target.value)}
-                  className="field text-xs py-1 px-2 bg-paper-sunk border border-rule text-ink cursor-pointer"
+                  className="field text-xs py-1.5 pl-2.5 pr-8 bg-paper-sunk border border-rule text-ink cursor-pointer font-mono"
                   aria-label="Select destination folder"
                 >
                   <option value="">Move to folder…</option>
                   <option value="UNORGANIZED">Unorganized (Root)</option>
-                  {folders.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      📁 {f.name}
+                  {folderTree.map(({ folder, depth }) => (
+                    <option key={folder.id} value={folder.id}>
+                      {'\u00A0\u00A0'.repeat(depth)}📁 {folder.name}
                     </option>
                   ))}
                 </select>
@@ -1347,6 +2009,223 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
         </section>
       )}
 
+      {/* Context Menu Overlay */}
+      {contextMenu && (
+        <div
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          className="fixed z-50 bg-paper border border-ink shadow-overlay py-1 min-w-[200px] text-xs font-mono animate-fadeIn"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.type === 'folder' && contextMenu.folder && (
+            <>
+              <div className="px-3 py-1 text-[10.5px] font-bold text-ink-3 border-b border-rule truncate">
+                📁 {contextMenu.folder.name}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigateToFolder(contextMenu.folder!.id);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-ink-2" />
+                <span>Open Folder</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  openAssistant({
+                    mode: 'folder',
+                    folderId: contextMenu.folder!.id,
+                    folderName: contextMenu.folder!.name,
+                    subjectId
+                  });
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-lime-deep" />
+                <span>Ask Folder AI</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewFolderParentId(contextMenu.folder!.id);
+                  setNewFolderOpen(true);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+              >
+                <FolderPlus className="w-3.5 h-3.5 text-ink-2" />
+                <span>New Subfolder inside…</span>
+              </button>
+              <div className="border-t border-rule my-1" />
+              <button
+                type="button"
+                onClick={() => {
+                  setRenamingFolder(contextMenu.folder!);
+                  setRenamingFolderName(contextMenu.folder!.name);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-ink-2" />
+                <span>Rename Folder</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMovingFolder(contextMenu.folder!);
+                  setMovingFolderTargetId(contextMenu.folder!.parentId ?? '');
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+              >
+                <FolderInput className="w-3.5 h-3.5 text-ink-2" />
+                <span>Move to…</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteConfirmFolder(contextMenu.folder!);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-alert/10 text-alert flex items-center gap-2"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Folder…</span>
+              </button>
+            </>
+          )}
+
+          {contextMenu.type === 'resource' && contextMenu.resource && (
+            <>
+              <div className="px-3 py-1 text-[10.5px] font-bold text-ink-3 border-b border-rule truncate">
+                📄 {contextMenu.resource.title}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  openDetail(contextMenu.resource!);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+              >
+                <FileText className="w-3.5 h-3.5 text-ink-2" />
+                <span>Open in Study View</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  openAssistant({
+                    mode: 'resource',
+                    resourceId: contextMenu.resource!.id
+                  });
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-lime-deep" />
+                <span>Ask AI About Document</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void downloadResource(contextMenu.resource!);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+              >
+                <Download className="w-3.5 h-3.5 text-ink-2" />
+                <span>Download File</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void toggleBookmark(contextMenu.resource!.id);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+              >
+                <Bookmark className="w-3.5 h-3.5 text-ink-2" />
+                <span>{isBookmarked(contextMenu.resource!.id) ? 'Remove from Saved' : 'Save for Revision'}</span>
+              </button>
+              {contextMenu.resource.ingestStatus === 'failed' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      showToast('Rebuilding vector index…');
+                      const result = await reindexResource(contextMenu.resource!.id);
+                      showToast(result.message);
+                    } catch (err) {
+                      showToast(err instanceof Error ? err.message : 'Re-index failed');
+                    }
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-alert/10 text-alert flex items-center gap-2"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Retry AI Indexing</span>
+                </button>
+              )}
+              <div className="border-t border-rule my-1" />
+              {contextMenu.resource.isUserUploaded && contextMenu.resource.ownerKey === ownerKey ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRenamingResource(contextMenu.resource!);
+                      setRenamingResourceTitle(contextMenu.resource!.title);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-ink-2" />
+                    <span>Rename File</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickMoveResource(contextMenu.resource!);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+                  >
+                    <FolderInput className="w-3.5 h-3.5 text-ink-2" />
+                    <span>Move to Folder…</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteConfirmResource(contextMenu.resource!);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-alert/10 text-alert flex items-center gap-2"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete File</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickMoveResource(contextMenu.resource!);
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-lime-wash hover:text-ink flex items-center gap-2"
+                >
+                  <FolderInput className="w-3.5 h-3.5 text-ink-2" />
+                  <span>Move to Folder…</span>
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {/* Create Folder Modal */}
       {newFolderOpen && (
         <div
@@ -1376,7 +2255,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                   type="text"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
-                  placeholder="e.g. Module 1 - Trees, PYQ 2025"
+                  placeholder="e.g. Module 1 - Trees, Lab Manuals"
                   className="field w-full px-3 py-2 text-xs"
                   autoFocus
                 />
@@ -1388,12 +2267,12 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                   <select
                     value={newFolderParentId}
                     onChange={(e) => setNewFolderParentId(e.target.value)}
-                    className="field w-full px-2.5 py-2 text-xs bg-paper-sunk border border-rule"
+                    className="field w-full pl-2.5 pr-8 py-2 text-xs bg-paper-sunk border border-rule font-mono"
                   >
-                    <option value="">Root level (No parent)</option>
-                    {folders.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        📁 {f.name}
+                    <option value="">Root level (Top Level)</option>
+                    {folderTree.map(({ folder, depth }) => (
+                      <option key={folder.id} value={folder.id}>
+                        {'\u00A0\u00A0'.repeat(depth)}📁 {folder.name}
                       </option>
                     ))}
                   </select>
@@ -1445,11 +2324,11 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
 
             <form onSubmit={handleSaveRenameFolder} className="space-y-3">
               <div>
-                <label className="block font-semibold text-xs text-ink mb-1">New Name</label>
+                <label className="block font-semibold text-xs text-ink mb-1">New Folder Name</label>
                 <input
                   type="text"
-                  value={renamingName}
-                  onChange={(e) => setRenamingName(e.target.value)}
+                  value={renamingFolderName}
+                  onChange={(e) => setRenamingFolderName(e.target.value)}
                   className="field w-full px-3 py-2 text-xs"
                   autoFocus
                 />
@@ -1465,10 +2344,198 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={!renamingName.trim()}
+                  disabled={!renamingFolderName.trim()}
                   className="btn btn-primary text-xs px-4 py-1.5 disabled:opacity-40"
                 >
                   Save Name
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Move Folder Modal (Cycle Prevention & Indented Hierarchy) */}
+      {movingFolder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-fadeIn"
+          onClick={() => setMovingFolder(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="border-2 border-ink max-w-sm w-full bg-paper p-6 shadow-overlay animate-fadeIn space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <FolderInput className="w-5 h-5 text-ink" />
+                <h3 className="text-sm font-extrabold text-ink uppercase font-mono tracking-tight">Move Folder</h3>
+              </div>
+              <button onClick={() => setMovingFolder(null)} className="text-ink-3 hover:text-ink">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-ink-2">
+              Move <strong className="text-ink">&ldquo;{movingFolder.name}&rdquo;</strong> into a destination parent or to root.
+            </p>
+
+            <form onSubmit={handlePerformMoveFolder} className="space-y-3">
+              <div>
+                <label className="block font-semibold text-xs text-ink mb-1">Destination Parent</label>
+                <select
+                  value={movingFolderTargetId}
+                  onChange={(e) => setMovingFolderTargetId(e.target.value)}
+                  className="field w-full pl-2.5 pr-8 py-2 text-xs bg-paper-sunk border border-rule font-mono"
+                >
+                  <option value="">Root level (Top Level)</option>
+                  {folderTree
+                    .filter(({ folder }) => !invalidMoveTargets.has(folder.id))
+                    .map(({ folder, depth }) => (
+                      <option key={folder.id} value={folder.id}>
+                        {'\u00A0\u00A0'.repeat(depth)}📁 {folder.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-rule">
+                <button
+                  type="button"
+                  onClick={() => setMovingFolder(null)}
+                  className="btn btn-ghost text-xs px-3 py-1.5"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary text-xs px-4 py-1.5"
+                >
+                  Move Folder
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Folder Confirmation Dialog (Choice to move contents or delete) */}
+      {deleteConfirmFolder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-fadeIn"
+          onClick={() => setDeleteConfirmFolder(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="border-2 border-ink max-w-md w-full bg-paper p-6 shadow-overlay animate-fadeIn space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-alert" />
+                <h3 className="text-base font-extrabold text-ink">
+                  Delete folder &ldquo;{deleteConfirmFolder.name}&rdquo;?
+                </h3>
+              </div>
+              <button onClick={() => setDeleteConfirmFolder(null)} className="text-ink-3 hover:text-ink">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-ink-2">
+              <p>Choose what happens to the files inside this folder:</p>
+
+              <label className="flex items-start gap-2.5 p-3 border border-rule bg-paper-sunk cursor-pointer">
+                <input
+                  type="radio"
+                  name="deleteMode"
+                  checked={deleteFolderMode === 'move'}
+                  onChange={() => setDeleteFolderMode('move')}
+                  className="mt-0.5"
+                />
+                <div>
+                  <strong className="text-ink block">Move contents to Unorganized (Recommended)</strong>
+                  <span>Preserves all files, vector chunks, and bookmarks in the course unorganized directory.</span>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2.5 p-3 border border-rule bg-paper-sunk cursor-pointer">
+                <input
+                  type="radio"
+                  name="deleteMode"
+                  checked={deleteFolderMode === 'deleteFiles'}
+                  onChange={() => setDeleteFolderMode('deleteFiles')}
+                  className="mt-0.5"
+                />
+                <div>
+                  <strong className="text-alert block">Also delete user-uploaded files</strong>
+                  <span>Permanently removes files you authored inside this folder. Official files move to Unorganized.</span>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-rule">
+              <button onClick={() => setDeleteConfirmFolder(null)} className="btn btn-ghost text-xs px-3 py-1.5">
+                Cancel
+              </button>
+              <button onClick={() => void handleConfirmDeleteFolder()} className="btn btn-alert text-xs px-4 py-1.5">
+                Delete Folder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename File Modal */}
+      {renamingResource && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-fadeIn"
+          onClick={() => setRenamingResource(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="border-2 border-ink max-w-sm w-full bg-paper p-6 shadow-overlay animate-fadeIn space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-ink" />
+                <h3 className="text-sm font-extrabold text-ink uppercase font-mono tracking-tight">Rename File</h3>
+              </div>
+              <button onClick={() => setRenamingResource(null)} className="text-ink-3 hover:text-ink">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRenameResource} className="space-y-3">
+              <div>
+                <label className="block font-semibold text-xs text-ink mb-1">Document Title</label>
+                <input
+                  type="text"
+                  value={renamingResourceTitle}
+                  onChange={(e) => setRenamingResourceTitle(e.target.value)}
+                  className="field w-full px-3 py-2 text-xs"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-rule">
+                <button
+                  type="button"
+                  onClick={() => setRenamingResource(null)}
+                  className="btn btn-ghost text-xs px-3 py-1.5"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!renamingResourceTitle.trim()}
+                  className="btn btn-primary text-xs px-4 py-1.5 disabled:opacity-40"
+                >
+                  Save Title
                 </button>
               </div>
             </form>
@@ -1513,20 +2580,21 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 {!quickMoveResource.folderId && <Check className="w-3.5 h-3.5 text-lime-deep" />}
               </button>
 
-              {folders.map((f) => {
-                const isCurrent = quickMoveResource.folderId === f.id;
+              {folderTree.map(({ folder, depth }) => {
+                const isCurrent = quickMoveResource.folderId === folder.id;
                 return (
                   <button
-                    key={f.id}
+                    key={folder.id}
                     type="button"
-                    onClick={() => void handlePerformQuickMove(f.id)}
+                    onClick={() => void handlePerformQuickMove(folder.id)}
                     className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-paper-sunk transition-colors ${
                       isCurrent ? 'bg-lime/20 font-bold' : ''
                     }`}
+                    style={{ paddingLeft: `${12 + depth * 12}px` }}
                   >
                     <span className="flex items-center gap-1.5 truncate">
                       <FolderIcon className="w-3.5 h-3.5 text-ink-2 shrink-0" />
-                      <span className="truncate">{f.name}</span>
+                      <span className="truncate">{folder.name}</span>
                     </span>
                     {isCurrent && <Check className="w-3.5 h-3.5 text-lime-deep shrink-0" />}
                   </button>
@@ -1547,38 +2615,44 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
         </div>
       )}
 
-      {/* Delete Folder Confirmation Dialog */}
-      {deleteConfirmFolder && (
+      {/* Delete Single Resource Confirmation Dialog */}
+      {deleteConfirmResource && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-fadeIn"
-          onClick={() => setDeleteConfirmFolder(null)}
+          onClick={() => setDeleteConfirmResource(null)}
         >
           <div
             role="dialog"
             aria-modal="true"
-            className="border-2 border-ink max-w-md w-full bg-paper p-6 shadow-overlay animate-fadeIn space-y-4"
+            className="border-2 border-ink max-w-sm w-full bg-paper p-6 shadow-overlay animate-fadeIn space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <Trash2 className="w-5 h-5 text-alert" />
-                <h3 className="text-base font-extrabold text-ink">Delete folder &ldquo;{deleteConfirmFolder.name}&rdquo;?</h3>
+                <h3 className="text-base font-extrabold text-ink">Delete this file?</h3>
               </div>
-              <button onClick={() => setDeleteConfirmFolder(null)} className="text-ink-3 hover:text-ink">
-                <X className="w-5 h-5" />
+              <button onClick={() => setDeleteConfirmResource(null)} className="text-ink-3 hover:text-ink">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <p className="text-xs text-ink-2 leading-relaxed">
-              Files inside this folder will <strong>not be deleted</strong>. They will safely move to the <strong>Unorganized</strong> section of this subject, retaining all file contents and vector embeddings.
+              Are you sure you want to delete <strong className="text-ink">&ldquo;{deleteConfirmResource.title}&rdquo;</strong>? This action cannot be undone.
             </p>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setDeleteConfirmFolder(null)} className="btn btn-ghost text-xs px-3 py-1.5">
+            <div className="flex justify-end gap-2 pt-2 border-t border-rule">
+              <button
+                onClick={() => setDeleteConfirmResource(null)}
+                className="btn btn-ghost text-xs px-3 py-1.5"
+              >
                 Cancel
               </button>
-              <button onClick={() => void handleConfirmDeleteFolder()} className="btn btn-alert text-xs px-4 py-1.5">
-                Delete Folder
+              <button
+                onClick={() => void handleConfirmDeleteResource()}
+                className="btn btn-alert text-xs px-4 py-1.5"
+              >
+                Delete File
               </button>
             </div>
           </div>

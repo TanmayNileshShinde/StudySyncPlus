@@ -37,10 +37,9 @@ function getChatModel(): string {
 
 /**
  * Maximum completion tokens for chat responses.
- * Defaults to 8192 tokens (providing ample budget for reasoning/thinking tokens
- * plus full multi-function C programs, algorithms, and complexity analyses).
- * Supports up to 16384 tokens. Enforces a minimum of 8192 tokens so stale
- * lower environment variables (e.g. 1800 or 4096) cannot throttle generation.
+ * Defaults to 16384 tokens (the full output budget for Nemotron 30B / NVIDIA NIM),
+ * giving maximum room for reasoning/thinking tokens plus full multi-function C programs,
+ * step-by-step algorithms, trace tables, and complexity analyses without cutoff.
  */
 function getMaxCompletionTokens(): number {
   const envVal = process.env.NVIDIA_MAX_TOKENS || process.env.NVIDIA_MAX_COMPLETION_TOKENS;
@@ -50,7 +49,7 @@ function getMaxCompletionTokens(): number {
       return parsed;
     }
   }
-  return 8192;
+  return 16384;
 }
 
 /** Sleep helper with optional jitter for exponential backoff. */
@@ -517,11 +516,19 @@ export const chat = action({
       }>;
     }>) || [];
 
-    // Save current user message to thread
-    await ctx.runMutation(api.chat.appendUserMessage, {
-      threadId,
-      content: userText,
-    });
+    // Save current user message to thread (guarding against rapid double-submits)
+    const lastExisting = existingMessages[existingMessages.length - 1];
+    const isDuplicateRecentUserMsg =
+      lastExisting &&
+      lastExisting.role === "user" &&
+      lastExisting.content.trim() === userText.trim();
+
+    if (!isDuplicateRecentUserMsg) {
+      await ctx.runMutation(api.chat.appendUserMessage, {
+        threadId,
+        content: userText,
+      });
+    }
 
     // Step 3: Contextual Query Expansion for Vector Search
     // If this is a follow-up in an ongoing thread, combine the prior conversation anchor
