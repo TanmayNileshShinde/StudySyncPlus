@@ -37,6 +37,52 @@ body {
   color: var(--ink);
 }
 
+/* ---- PDF.js Text Layer Synchronization & Pixel-Perfect Selection ---- */
+.pdfViewer .page,
+.pdf-page-container {
+  --user-unit: 1;
+  --total-scale-factor: calc(var(--scale-factor, 1) * var(--user-unit, 1));
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+  position: relative;
+}
+
+.textLayer {
+  opacity: 1 !important;
+  line-height: 1 !important;
+  caret-color: transparent !important;
+}
+
+.textLayer :is(span, br) {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  position: absolute !important;
+  white-space: pre !important;
+  cursor: text !important;
+  transform-origin: 0% 0% !important;
+}
+
+/* Ensure selected text remains 100% transparent while rendering clean highlight overlay */
+.textLayer ::selection,
+.textLayer span::selection {
+  background: rgba(163, 230, 53, 0.35) !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.textLayer ::-moz-selection,
+.textLayer span::-moz-selection {
+  background: rgba(163, 230, 53, 0.35) !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.textLayer br::selection,
+.textLayer br::-moz-selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

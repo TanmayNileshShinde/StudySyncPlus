@@ -3,9 +3,9 @@ import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useResources } from '../../context/ResourceContext';
 import { getOwnerKey } from '../../lib/owner';
-import { asResourceId, asSubjectId, asSemesterId, asThreadId } from '../../lib/convexIds';
+import { asResourceId, asSubjectId, asSemesterId, asThreadId, asFolderId } from '../../lib/convexIds';
 import { MarkdownRenderer } from '../MarkdownRenderer';
-import type { StudyResource } from '../../types';
+import type { StudyResource, StudyScopeKind } from '../../types';
 import {
   Sparkles,
   Send,
@@ -19,7 +19,9 @@ import {
   Layers,
   ExternalLink,
   ChevronRight,
-  AlertCircle
+  ChevronDown,
+  AlertCircle,
+  Folder as FolderIcon
 } from 'lucide-react';
 
 interface CitationChipProps {
@@ -84,6 +86,126 @@ interface Turn {
     score?: number;
   }>;
 }
+
+/** Separate thinking/reasoning blocks (<think>...</think>) from the clean markdown answer. */
+function parseAssistantMessage(content: string): { thinking: string | null; answer: string } {
+  if (!content) return { thinking: null, answer: '' };
+
+  const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>/i);
+  if (thinkMatch) {
+    const thinking = thinkMatch[1].trim();
+    const answer = content.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+    return {
+      thinking: thinking.length > 0 ? thinking : null,
+      answer
+    };
+  }
+
+  // Handle unclosed <think> tag during generation / streaming
+  const unclosedMatch = content.match(/<think>([\s\S]*)$/i);
+  if (unclosedMatch) {
+    return {
+      thinking: unclosedMatch[1].trim() || null,
+      answer: ''
+    };
+  }
+
+  return { thinking: null, answer: content };
+}
+
+/**
+ * Compact Thinking/Working indicator:
+ * Shows ONLY a compact "Thinking..." indicator while generating.
+ * Kept collapsed by default, with a subtle expand control for activity details.
+ */
+const CompactThinkingIndicator: React.FC<{
+  scope: StudyScopeKind;
+  activeDocTitle?: string;
+  activeSubjectName?: string;
+}> = ({ scope, activeDocTitle, activeSubjectName }) => {
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  return (
+    <div className="py-0.5">
+      <div className="inline-flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse shrink-0" aria-hidden="true" />
+        <span className="font-mono text-[11px] font-medium text-ink-2 select-none">Thinking...</span>
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((prev) => !prev)}
+          className="p-0.5 text-ink-3 hover:text-ink transition-colors flex items-center justify-center border border-transparent hover:border-rule"
+          title={detailsOpen ? 'Hide activity details' : 'Inspect activity details'}
+          aria-expanded={detailsOpen}
+          aria-label={detailsOpen ? 'Hide activity details' : 'Inspect activity details'}
+        >
+          <ChevronDown
+            className={`w-3 h-3 transition-transform duration-150 ${detailsOpen ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
+        </button>
+      </div>
+
+      {detailsOpen && (
+        <div className="mt-2 p-2 border border-rule bg-paper-sunk font-mono text-[10.5px] text-ink-2 space-y-1 select-none animate-fadeIn">
+          <div className="flex items-center justify-between gap-3 text-ink-3">
+            <span className="uppercase tracking-wider text-[9.5px]">Scope</span>
+            <span className="text-ink truncate max-w-[220px]">
+              {scope === 'document'
+                ? activeDocTitle || 'Current document'
+                : scope === 'folder'
+                  ? 'Current folder'
+                  : scope === 'selected'
+                    ? 'Selected resources'
+                    : scope === 'subject'
+                      ? activeSubjectName || 'Current subject'
+                      : 'Entire library'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-ink-3">
+            <span className="uppercase tracking-wider text-[9.5px]">Retrieval</span>
+            <span className="text-ink">Grounded semantic search</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Collapsed-by-default container for thoughts or reasoning, keeping the final
+ * answer separate, clean, and distraction-free.
+ */
+const ThoughtProcess: React.FC<{ thinking: string }> = ({ thinking }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="mb-2.5 border border-rule bg-paper-sunk">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="w-full text-left p-1.5 px-2 flex items-center justify-between gap-2 font-mono text-[10px] text-ink-3 hover:text-ink transition-colors select-none"
+        aria-expanded={isOpen}
+      >
+        <div className="flex items-center gap-1.5">
+          <ChevronRight
+            className={`w-3 h-3 transition-transform duration-150 shrink-0 ${isOpen ? 'rotate-90' : ''}`}
+            aria-hidden="true"
+          />
+          <span className="uppercase tracking-wider font-semibold">Thought process</span>
+        </div>
+        <span className="text-[9px] uppercase tracking-wider text-ink-3">
+          {isOpen ? 'Hide' : 'Inspect'}
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="p-2.5 pt-1.5 border-t border-rule font-mono text-[11px] text-ink-2 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto bg-paper">
+          {thinking}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
   activeDocument,
@@ -244,10 +366,14 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
         args.threadId = asResourceId(threadId);
       }
 
-      // Map 3-way scope to Convex retrieval mode
+      // Map scope to Convex retrieval mode
       if (studyScope === 'document' && activeDocument) {
         args.mode = 'resource';
         args.resourceId = asResourceId(activeDocument.id);
+      } else if (studyScope === 'folder' && activeDocument?.folderId) {
+        args.mode = 'folder';
+        args.folderId = asFolderId(activeDocument.folderId);
+        args.subjectId = asSubjectId(activeDocument.subjectId);
       } else if (studyScope === 'subject' && activeDocument) {
         args.mode = 'subject';
         args.subjectId = asSubjectId(activeDocument.subjectId);
@@ -310,6 +436,12 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
       const chunks = activeDocument.chunkCount ?? 0;
       return `Searching: "${activeDocument.title}" (${chunks} indexed chunks)`;
     }
+    if (studyScope === 'folder') {
+      return `Searching: Materials in current folder`;
+    }
+    if (studyScope === 'selected') {
+      return `Searching: Selected materials`;
+    }
     if (studyScope === 'subject') {
       const name = activeSubject?.name ?? activeDocument?.subjectName ?? 'Current Subject';
       return `Searching: All ${subjectDocsCount} materials in ${name}`;
@@ -354,7 +486,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
           </div>
         </div>
 
-        {/* 3-Way Context Scope Selector */}
+        {/* Context Scope Selector */}
         <div className="px-3 py-2 bg-paper-sunk">
           <div className="flex items-center gap-1 bg-paper border border-rule p-0.5">
             <button
@@ -369,6 +501,21 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
               <FileText className="w-3 h-3 shrink-0" aria-hidden="true" />
               <span className="truncate">This Doc</span>
             </button>
+
+            {activeDocument?.folderId && (
+              <button
+                onClick={() => setStudyScope('folder')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-1.5 text-[11px] font-mono font-semibold transition-colors ${
+                  studyScope === 'folder'
+                    ? 'bg-ink text-paper shadow-xs'
+                    : 'text-ink-2 hover:text-ink hover:bg-paper-sunk'
+                }`}
+                title="Scope AI search across all materials in this document's folder"
+              >
+                <FolderIcon className="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">Folder</span>
+              </button>
+            )}
 
             <button
               onClick={() => setStudyScope('subject')}
@@ -462,7 +609,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
       )}
 
       {/* Transcript Area */}
-      <div ref={transcriptRef} className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-4">
+      <div ref={transcriptRef} className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-6 sm:space-y-7 bg-paper">
         {turns.length === 0 ? (
           <div className="py-6 sm:py-8 text-center">
             <div className="w-10 h-10 bg-lime/20 border border-lime flex items-center justify-center mx-auto mb-3">
@@ -494,46 +641,76 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
             const isUser = turn.role === 'user';
             const isPendingAssistant = !isUser && !turn.content && pending !== null && idx === turns.length - 1;
 
+            if (isUser) {
+              return (
+                <div
+                  key={idx}
+                  className="flex flex-col items-end animate-fadeIn pl-6 sm:pl-10"
+                >
+                  {/* User label */}
+                  <div className="flex items-center gap-1.5 mb-1 px-1">
+                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-ink-3">
+                      You
+                    </span>
+                  </div>
+
+                  {/* Distinct user query bubble */}
+                  <div className="max-w-[88%] sm:max-w-[80%] px-3.5 py-2.5 bg-ink text-paper border border-ink text-xs sm:text-[13px] leading-relaxed font-sans shadow-none">
+                    <p className="whitespace-pre-wrap">{turn.content}</p>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div
                 key={idx}
-                className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-fadeIn`}
+                className="w-full flex flex-col items-start animate-fadeIn pt-1"
               >
-                {/* Speaker pill */}
-                <div className="flex items-center gap-1.5 mb-1 px-1">
-                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-ink-3">
-                    {isUser ? 'You' : 'StudySync AI'}
+                {/* Assistant speaker line */}
+                <div className="flex items-center gap-2 mb-2 px-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-lime shrink-0" aria-hidden="true" />
+                  <span className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-ink-2">
+                    StudySync AI
                   </span>
-                  {!isUser && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-lime" aria-hidden="true" />
-                  )}
                 </div>
 
-                {/* Message Body */}
-                <div
-                  className={`max-w-[95%] sm:max-w-[90%] p-3 text-xs leading-relaxed border ${
-                    isUser
-                      ? 'bg-ink text-paper border-ink font-medium shadow-xs'
-                      : 'bg-paper text-ink border-rule shadow-xs'
-                  }`}
-                >
+                {/* Seamless message body: full width, directly on background, no card/border/shadow */}
+                <div className="w-full text-ink leading-relaxed">
                   {isPendingAssistant ? (
-                    <div className="flex items-center gap-2 py-1 text-ink-2">
-                      <LoaderCircle className="w-4 h-4 animate-spin text-lime-deep" aria-hidden="true" />
-                      <span className="font-mono text-[11px]">Searching course documents & generating answer…</span>
-                    </div>
-                  ) : isUser ? (
-                    <p className="whitespace-pre-wrap">{turn.content}</p>
+                    <CompactThinkingIndicator
+                      scope={studyScope}
+                      activeDocTitle={activeDocument?.title}
+                      activeSubjectName={activeSubject?.name}
+                    />
                   ) : (
                     <div>
-                      <MarkdownRenderer content={turn.content} />
+                      {(() => {
+                        const { thinking, answer } = parseAssistantMessage(turn.content);
+                        return (
+                          <>
+                            {thinking && <ThoughtProcess thinking={thinking} />}
+                            {answer ? (
+                              <MarkdownRenderer content={answer} />
+                            ) : (
+                              <CompactThinkingIndicator
+                                scope={studyScope}
+                                activeDocTitle={activeDocument?.title}
+                                activeSubjectName={activeSubject?.name}
+                              />
+                            )}
+                          </>
+                        );
+                      })()}
 
                       {/* Clickable Grounded Citations */}
                       {turn.citations && turn.citations.length > 0 && (
-                        <div className="mt-3 pt-2.5 border-t border-rule">
-                          <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-ink-3 block mb-1.5 font-semibold">
-                            Grounded Sources ({turn.citations.length}):
-                          </span>
+                        <div className="mt-4 pt-3 border-t border-rule/70">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-ink-3 font-semibold">
+                              Grounded Sources ({turn.citations.length})
+                            </span>
+                          </div>
                           <div className="flex flex-wrap gap-1.5">
                             {turn.citations.map((c, ci) => (
                               <CitationChip

@@ -305,7 +305,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
         {/* Rendered Document Pages */}
         {pdfDoc && (
-          <div className="flex flex-col items-center min-w-min mx-auto pb-16">
+          <div className="pdfViewer flex flex-col items-center min-w-min mx-auto pb-16">
             {pageNumbers.map((p) => (
               <PdfPage
                 key={p}

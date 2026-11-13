@@ -27,9 +27,15 @@ export const PdfPage: React.FC<PdfPageProps> = ({
   const [inView, setInView] = useState(false);
   const [rendered, setRendered] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [pageDimensions, setPageDimensions] = useState<{
+    width: number;
+    height: number;
+    userUnit: number;
+  } | null>(null);
 
-  const pageWidth = Math.round(baseWidth * scale);
-  const pageHeight = Math.round(baseHeight * scale);
+  const pageWidth = pageDimensions ? pageDimensions.width : Math.round(baseWidth * scale);
+  const pageHeight = pageDimensions ? pageDimensions.height : Math.round(baseHeight * scale);
+  const userUnit = pageDimensions?.userUnit ?? 1;
 
   // Intersection observer to mount/render only when approaching viewport
   useEffect(() => {
@@ -75,6 +81,28 @@ export const PdfPage: React.FC<PdfPageProps> = ({
         if (cancelled) return;
 
         const viewport = page.getViewport({ scale });
+        const widthPx = Math.floor(viewport.width);
+        const heightPx = Math.floor(viewport.height);
+        const pageUserUnit = viewport.userUnit || 1;
+        const totalScale = scale * pageUserUnit;
+
+        setPageDimensions({
+          width: widthPx,
+          height: heightPx,
+          userUnit: pageUserUnit
+        });
+
+        // Synchronize container CSS custom properties for PDF.js text layer calculations
+        if (containerRef.current) {
+          containerRef.current.style.width = `${widthPx}px`;
+          containerRef.current.style.height = `${heightPx}px`;
+          containerRef.current.style.setProperty('--scale-factor', `${scale}`);
+          containerRef.current.style.setProperty('--user-unit', `${pageUserUnit}`);
+          containerRef.current.style.setProperty('--total-scale-factor', `${totalScale}`);
+          containerRef.current.style.setProperty('--scale-round-x', '1px');
+          containerRef.current.style.setProperty('--scale-round-y', '1px');
+        }
+
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -84,8 +112,8 @@ export const PdfPage: React.FC<PdfPageProps> = ({
         const dpr = window.devicePixelRatio || 1;
         canvas.width = Math.floor(viewport.width * dpr);
         canvas.height = Math.floor(viewport.height * dpr);
-        canvas.style.width = `${Math.floor(viewport.width)}px`;
-        canvas.style.height = `${Math.floor(viewport.height)}px`;
+        canvas.style.width = `${widthPx}px`;
+        canvas.style.height = `${heightPx}px`;
 
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
@@ -106,9 +134,13 @@ export const PdfPage: React.FC<PdfPageProps> = ({
         const textLayerDiv = textLayerRef.current;
         if (textLayerDiv) {
           textLayerDiv.innerHTML = '';
-          textLayerDiv.style.width = `${Math.floor(viewport.width)}px`;
-          textLayerDiv.style.height = `${Math.floor(viewport.height)}px`;
+          textLayerDiv.style.width = `${widthPx}px`;
+          textLayerDiv.style.height = `${heightPx}px`;
           textLayerDiv.style.setProperty('--scale-factor', `${scale}`);
+          textLayerDiv.style.setProperty('--user-unit', `${pageUserUnit}`);
+          textLayerDiv.style.setProperty('--total-scale-factor', `${totalScale}`);
+          textLayerDiv.style.setProperty('--scale-round-x', '1px');
+          textLayerDiv.style.setProperty('--scale-round-y', '1px');
 
           const textContent = await page.getTextContent();
           if (cancelled) return;
@@ -150,14 +182,20 @@ export const PdfPage: React.FC<PdfPageProps> = ({
     <div
       ref={containerRef}
       data-page-number={pageNum}
-      className={`pdf-page-container relative bg-paper shadow-xs transition-shadow my-4 mx-auto select-text ${
+      className={`pdf-page-container page relative bg-paper transition-shadow my-4 mx-auto select-text ${
         isCited
           ? 'ring-2 ring-lime ring-offset-4 ring-offset-paper-sunk shadow-md'
           : 'border border-rule hover:border-ink/40'
       }`}
       style={{
         width: `${pageWidth}px`,
-        height: `${pageHeight}px`
+        height: `${pageHeight}px`,
+        // Synchronized PDF.js v5 scale variables
+        ['--scale-factor' as any]: `${scale}`,
+        ['--user-unit' as any]: `${userUnit}`,
+        ['--total-scale-factor' as any]: `${scale * userUnit}`,
+        ['--scale-round-x' as any]: '1px',
+        ['--scale-round-y' as any]: '1px',
       }}
     >
       {/* Cited Page Badge */}
@@ -168,18 +206,25 @@ export const PdfPage: React.FC<PdfPageProps> = ({
         </div>
       )}
 
-      {/* Canvas Layer */}
+      {/* Canvas Layer inside PDF.js canvasWrapper */}
       {inView ? (
         <>
-          <canvas
-            ref={canvasRef}
-            className="block w-full h-full pointer-events-none"
-            aria-label={`Page ${pageNum}`}
-          />
+          <div
+            className="canvasWrapper absolute inset-0 overflow-hidden pointer-events-none"
+            style={{ width: `${pageWidth}px`, height: `${pageHeight}px` }}
+          >
+            <canvas
+              ref={canvasRef}
+              className="block pointer-events-none"
+              style={{ width: `${pageWidth}px`, height: `${pageHeight}px` }}
+              aria-label={`Page ${pageNum}`}
+            />
+          </div>
           {/* Interactive Text Selection Layer */}
           <div
             ref={textLayerRef}
             className="textLayer absolute inset-0 z-10 pointer-events-auto"
+            style={{ width: `${pageWidth}px`, height: `${pageHeight}px` }}
           />
         </>
       ) : (

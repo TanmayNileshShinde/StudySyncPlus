@@ -68,3 +68,12 @@ export const repairResourceFields = mutation({
     return patched;
   },
 });
+
+/** Reset all document chunks before vector dimension upgrade to prevent index conflict. */
+export const resetAllChunksForEmbeddingUpgrade = mutation({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx): Promise<number> => {
+    return await ctx.runMutation(internal.ingestInternal.clearAllDocumentChunks, {});
+  },
+});

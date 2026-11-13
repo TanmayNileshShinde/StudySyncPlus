@@ -11,6 +11,7 @@
 import type * as bookmarks from "../bookmarks.js";
 import type * as chat from "../chat.js";
 import type * as extract from "../extract.js";
+import type * as folders from "../folders.js";
 import type * as ingest from "../ingest.js";
 import type * as ingestInternal from "../ingestInternal.js";
 import type * as init from "../init.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   bookmarks: typeof bookmarks;
   chat: typeof chat;
   extract: typeof extract;
+  folders: typeof folders;
   ingest: typeof ingest;
   ingestInternal: typeof ingestInternal;
   init: typeof init;

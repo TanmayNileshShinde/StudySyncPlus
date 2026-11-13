@@ -23,7 +23,7 @@ import type {
   SemesterInfo
 } from '../types';
 import { getOwnerKey } from '../lib/owner';
-import { asResourceId, asSemesterId, asStorageId, asSubjectId } from '../lib/convexIds';
+import { asFolderId, asResourceId, asSemesterId, asStorageId, asSubjectId } from '../lib/convexIds';
 import { apiService } from '../services/apiService';
 
 /**
@@ -94,6 +94,16 @@ interface ResourceContextType {
   addSubject: (input: NewSubjectInput) => Promise<void>;
   setSubjectArchived: (id: string, isArchived: boolean) => Promise<void>;
 
+  // Organization & Folder management
+  moveToFolder: (id: string, folderId: string | null) => Promise<void>;
+  bulkMoveToFolder: (ids: string[], folderId: string | null) => Promise<number>;
+  bulkDelete: (ids: string[]) => Promise<number>;
+  bulkUpdateTags: (ids: string[], addTags?: string[], removeTags?: string[]) => Promise<number>;
+  createFolder: (subjectId: string, name: string, parentId?: string, color?: string) => Promise<string>;
+  renameFolder: (id: string, name: string) => Promise<void>;
+  moveFolder: (id: string, targetParentId: string | null) => Promise<void>;
+  removeFolder: (id: string) => Promise<void>;
+
   toastMessage: string | null;
   showToast: (msg: string) => void;
 }
@@ -132,6 +142,16 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addSubjectMut = useMutation(api.subjects.add);
   const setSubjectArchivedMut = useMutation(api.subjects.setArchived);
   const reindexAction = useAction(api.ingest.reindexResource);
+
+  const moveToFolderMut = useMutation(api.resources.moveToFolder);
+  const bulkMoveToFolderMut = useMutation(api.resources.bulkMoveToFolder);
+  const bulkDeleteMut = useMutation(api.resources.bulkDelete);
+  const bulkUpdateTagsMut = useMutation(api.resources.bulkUpdateTags);
+
+  const createFolderMut = useMutation(api.folders.create);
+  const renameFolderMut = useMutation(api.folders.rename);
+  const moveFolderMut = useMutation(api.folders.moveFolder);
+  const removeFolderMut = useMutation(api.folders.remove);
 
   // First load: seed the Semester III dataset if the deployment is empty.
   const seedRequested = useRef(false);
@@ -454,7 +474,8 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         description: input.description,
         tags: input.tags,
         ownerKey,
-        fileName: input.file.name
+        fileName: input.file.name,
+        folderId: input.folderId ? asFolderId(input.folderId) : undefined,
       })) as unknown as string;
       return id;
     },
@@ -478,7 +499,8 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         uploadedBy: input.uploadedBy,
         rollNumber: input.rollNumber,
         replaceStorageId: replaceStorageId ? asStorageId(replaceStorageId) : undefined,
-        replaceFileName: input.replaceFile?.name
+        replaceFileName: input.replaceFile?.name,
+        folderId: input.folderId !== undefined ? (input.folderId ? asFolderId(input.folderId) : null) : undefined,
       });
       showToast('Resource updated successfully');
     },
@@ -586,6 +608,118 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [setSubjectArchivedMut, showToast]
   );
 
+  // --- Folder & Organization Operations -------------------------------------
+  const moveToFolder = useCallback(
+    async (id: string, folderId: string | null) => {
+      try {
+        await moveToFolderMut({
+          id: asResourceId(id),
+          folderId: folderId ? asFolderId(folderId) : null,
+        });
+        showToast(folderId ? 'Moved to folder' : 'Moved to Unorganized');
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : 'Could not move resource.');
+      }
+    },
+    [moveToFolderMut, showToast]
+  );
+
+  const bulkMoveToFolder = useCallback(
+    async (ids: string[], folderId: string | null): Promise<number> => {
+      try {
+        const moved = await bulkMoveToFolderMut({
+          ids: ids.map(asResourceId),
+          folderId: folderId ? asFolderId(folderId) : null,
+        });
+        showToast(folderId ? `Moved ${moved} item${moved === 1 ? '' : 's'} to folder` : `Moved ${moved} item${moved === 1 ? '' : 's'} to Unorganized`);
+        return moved;
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : 'Could not move resources.');
+        return 0;
+      }
+    },
+    [bulkMoveToFolderMut, showToast]
+  );
+
+  const bulkDelete = useCallback(
+    async (ids: string[]): Promise<number> => {
+      try {
+        const count = await bulkDeleteMut({
+          ids: ids.map(asResourceId),
+          ownerKey,
+        });
+        showToast(`Removed ${count} item${count === 1 ? '' : 's'}`);
+        return count;
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : 'Could not delete resources.');
+        return 0;
+      }
+    },
+    [ownerKey, bulkDeleteMut, showToast]
+  );
+
+  const bulkUpdateTags = useCallback(
+    async (ids: string[], addTags?: string[], removeTags?: string[]): Promise<number> => {
+      try {
+        const count = await bulkUpdateTagsMut({
+          ids: ids.map(asResourceId),
+          addTags,
+          removeTags,
+        });
+        showToast(`Updated tags for ${count} item${count === 1 ? '' : 's'}`);
+        return count;
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : 'Could not update tags.');
+        return 0;
+      }
+    },
+    [bulkUpdateTagsMut, showToast]
+  );
+
+  const createFolder = useCallback(
+    async (subjectId: string, name: string, parentId?: string, color?: string): Promise<string> => {
+      if (!semester) throw new Error('Semester not loaded yet.');
+      const id = (await createFolderMut({
+        subjectId: asSubjectId(subjectId),
+        semesterId: asSemesterId(semester.id),
+        name,
+        parentId: parentId ? asFolderId(parentId) : undefined,
+        color,
+        ownerKey,
+      })) as unknown as string;
+      showToast(`Folder "${name}" created`);
+      return id;
+    },
+    [semester, ownerKey, createFolderMut, showToast]
+  );
+
+  const renameFolder = useCallback(
+    async (id: string, name: string) => {
+      await renameFolderMut({ id: asFolderId(id), name });
+      showToast(`Folder renamed to "${name}"`);
+    },
+    [renameFolderMut, showToast]
+  );
+
+  const moveFolder = useCallback(
+    async (id: string, targetParentId: string | null) => {
+      await moveFolderMut({
+        id: asFolderId(id),
+        targetParentId: targetParentId ? asFolderId(targetParentId) : null,
+      });
+      showToast('Folder position updated');
+    },
+    [moveFolderMut, showToast]
+  );
+
+  const removeFolder = useCallback(
+    async (id: string) => {
+      await removeFolderMut({ id: asFolderId(id) });
+      showToast('Folder deleted (contents moved to Unorganized)');
+    },
+    [removeFolderMut, showToast]
+  );
+
   // --- Overlays & Study Navigation ------------------------------------------
   const openUploadModal = useCallback((subjectId?: string) => {
     setUploadSubjectId(subjectId ?? null);
@@ -603,6 +737,20 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           openStudyWorkspace(match.id, undefined, 'subject');
         } else {
           navigate(`/assistant?subject=${encodeURIComponent(scope.subjectId)}`);
+        }
+      } else if (scope.mode === 'folder') {
+        const match = resources.find((r) => r.folderId === scope.folderId) ?? resources[0];
+        if (match) {
+          openStudyWorkspace(match.id, undefined, 'folder');
+        } else {
+          navigate(`/assistant?folder=${encodeURIComponent(scope.folderId)}`);
+        }
+      } else if (scope.mode === 'selected') {
+        const match = resources.find((r) => scope.resourceIds.includes(r.id)) ?? resources[0];
+        if (match) {
+          openStudyWorkspace(match.id, undefined, 'selected');
+        } else {
+          navigate('/assistant');
         }
       } else {
         const match = resources.find((r) => r.title.includes('MSE Master Study Guide')) ?? resources[0];
@@ -696,6 +844,14 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       resetToDefaults,
       addSubject,
       setSubjectArchived,
+      moveToFolder,
+      bulkMoveToFolder,
+      bulkDelete,
+      bulkUpdateTags,
+      createFolder,
+      renameFolder,
+      moveFolder,
+      removeFolder,
       toastMessage,
       showToast
     }),
@@ -744,6 +900,14 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       resetToDefaults,
       addSubject,
       setSubjectArchived,
+      moveToFolder,
+      bulkMoveToFolder,
+      bulkDelete,
+      bulkUpdateTags,
+      createFolder,
+      renameFolder,
+      moveFolder,
+      removeFolder,
       toastMessage,
       showToast
     ]

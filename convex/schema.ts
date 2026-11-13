@@ -78,11 +78,28 @@ export default defineSchema({
     ingestedAt: v.optional(v.number()),
     chunkCount: v.optional(v.number()),
     contentHash: v.optional(v.string()), // file-bytes fingerprint for duplicate-processing protection
+    folderId: v.optional(v.id("folders")), // organizational folder (undefined = Unorganized)
   })
     .index("by_semester", ["semesterId"])
     .index("by_subject", ["subjectId"])
+    .index("by_folder", ["folderId"])
     .index("by_owner", ["ownerKey"])
     .index("by_legacy_id", ["legacyId"]),
+
+  // Nested custom folders for organizing hundreds of resources per subject
+  folders: defineTable({
+    subjectId: v.id("subjects"),
+    semesterId: v.id("semesters"),
+    name: v.string(), // "Module 1: Stacks & Queues"
+    parentId: v.optional(v.id("folders")), // supports nested folders
+    color: v.optional(v.string()), // optional accent color token
+    order: v.number(), // display order
+    ownerKey: v.optional(v.string()), // undefined = official, or creator key
+    createdAt: v.number(),
+  })
+    .index("by_subject", ["subjectId"])
+    .index("by_parent", ["parentId"])
+    .index("by_subject_and_parent", ["subjectId", "parentId"]),
 
   bookmarks: defineTable({
     ownerKey: v.string(),
@@ -113,11 +130,11 @@ export default defineSchema({
     .index("by_semester", ["semesterId"])
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
-      dimensions: 1024,
+      dimensions: 2048,
       filterFields: ["resourceId", "semesterId", "subjectId"],
     }),
 
-  // Persistent chat threads for AI Assistant (Library, Semester, Subject, or Resource modes)
+  // Persistent chat threads for AI Assistant (Library, Semester, Subject, Folder, Selected, or Resource modes)
   chatThreads: defineTable({
     ownerKey: v.string(),
     title: v.string(),
@@ -125,18 +142,23 @@ export default defineSchema({
       v.literal("library"),
       v.literal("semester"),
       v.literal("subject"),
+      v.literal("folder"),
+      v.literal("selected"),
       v.literal("resource")
     ),
     resourceId: v.optional(v.id("resources")),
     semesterId: v.optional(v.id("semesters")),
     subjectId: v.optional(v.id("subjects")),
+    folderId: v.optional(v.id("folders")),
+    selectedResourceIds: v.optional(v.array(v.id("resources"))),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerKey", "updatedAt"])
     .index("by_resource", ["resourceId"])
     .index("by_semester", ["semesterId"])
-    .index("by_subject", ["subjectId"]),
+    .index("by_subject", ["subjectId"])
+    .index("by_folder", ["folderId"]),
 
   // Persistent messages within a chat thread
   chatMessages: defineTable({

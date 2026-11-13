@@ -95,3 +95,42 @@ export const markReadyFromExistingChunks = internalMutation({
     return marked;
   },
 });
+
+/** Return all catalogued resources with stored files (for full re-indexing). */
+export const listAllStoredResources = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const out: Array<{
+      id: Id<"resources">;
+      title: string;
+      courseCode: string;
+      ingestStatus?: string;
+      chunkCount?: number;
+    }> = [];
+    for await (const resource of ctx.db.query("resources")) {
+      if (resource.storageId) {
+        out.push({
+          id: resource._id,
+          title: resource.title,
+          courseCode: resource.courseCode,
+          ingestStatus: resource.ingestStatus,
+          chunkCount: resource.chunkCount,
+        });
+      }
+    }
+    return out;
+  },
+});
+
+/** Clear all chunks across all resources (used when migrating vector index dimensions). */
+export const clearAllDocumentChunks = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let count = 0;
+    for await (const chunk of ctx.db.query("documentChunks")) {
+      await ctx.db.delete(chunk._id);
+      count++;
+    }
+    return count;
+  },
+});

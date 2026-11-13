@@ -38,6 +38,21 @@ export interface StudyResource {
   ingestError: string | null;
   ingestedAt: number | null;
   chunkCount: number | null;
+  folderId: string | null; // organizational folder (null = Unorganized root)
+}
+
+/** Custom nested folder for scaling a subject to hundreds of documents. */
+export interface Folder {
+  id: string;
+  subjectId: string;
+  semesterId: string;
+  name: string;
+  parentId: string | null; // nested folders
+  color: string | null;
+  order: number;
+  resourceCount: number;
+  ownerKey: string | null;
+  createdAt: number;
 }
 
 /** Library rail + upload picker entry (active, unarchived courses only). */
@@ -87,8 +102,8 @@ export type AppView =
   | { kind: 'saved' }
   | { kind: 'not-found' };
 
-/** The 3-way context selector for the AI Assistant within the Study Workspace. */
-export type StudyScopeKind = 'document' | 'subject' | 'library';
+/** The context selector for the AI Assistant within the Study Workspace and Subject Workspace. */
+export type StudyScopeKind = 'document' | 'folder' | 'selected' | 'subject' | 'library';
 
 /**
  * Retrieval scope for the Study Assistant. The panel derives this from the
@@ -96,7 +111,9 @@ export type StudyScopeKind = 'document' | 'subject' | 'library';
  */
 export type AssistantScope =
   | { mode: 'semester' }
-  | { mode: 'subject'; subjectId: string }
+  | { mode: 'subject'; subjectId: string; subjectName?: string }
+  | { mode: 'folder'; folderId: string; folderName?: string; subjectId?: string }
+  | { mode: 'selected'; resourceIds: string[]; label?: string; subjectId?: string }
   | { mode: 'resource'; resourceId: string };
 
 /** Secondary features demoted into the top-bar overflow (user decision). */
@@ -121,6 +138,7 @@ export interface ResourceEditInput {
   uploadedBy?: string;
   rollNumber?: string;
   replaceFile?: File;
+  folderId?: string | null;
 }
 
 /** Input for a single file inside the bulk-upload flow. */
@@ -133,6 +151,7 @@ export interface BulkUploadInput {
   rollNumber: string;
   description: string;
   tags: string[];
+  folderId?: string;
 }
 
 export interface NewSubjectInput {

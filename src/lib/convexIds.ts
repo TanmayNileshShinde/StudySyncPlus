@@ -24,3 +24,7 @@ export function asStorageId(id: string): Id<'_storage'> {
 export function asThreadId(id: string): Id<'chatThreads'> {
   return id as unknown as Id<'chatThreads'>;
 }
+
+export function asFolderId(id: string): Id<'folders'> {
+  return id as unknown as Id<'folders'>;
+}

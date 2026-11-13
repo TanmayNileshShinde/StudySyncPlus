@@ -30,11 +30,15 @@ export const createThread = mutation({
       v.literal("library"),
       v.literal("semester"),
       v.literal("subject"),
+      v.literal("folder"),
+      v.literal("selected"),
       v.literal("resource")
     ),
     resourceId: v.optional(v.id("resources")),
     semesterId: v.optional(v.id("semesters")),
     subjectId: v.optional(v.id("subjects")),
+    folderId: v.optional(v.id("folders")),
+    selectedResourceIds: v.optional(v.array(v.id("resources"))),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -45,6 +49,8 @@ export const createThread = mutation({
       resourceId: args.resourceId,
       semesterId: args.semesterId,
       subjectId: args.subjectId,
+      folderId: args.folderId,
+      selectedResourceIds: args.selectedResourceIds,
       createdAt: now,
       updatedAt: now,
     });

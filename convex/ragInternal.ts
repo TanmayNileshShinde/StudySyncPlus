@@ -145,7 +145,7 @@ export const hydrateChunkResults = internalQuery({
     // Cache resource lookups to prevent redundant queries
     const resourceCache = new Map<
       string,
-      { title: string; courseCode: string; fileKind: "pdf" | "ppt" | "pptx" | null }
+      { title: string; courseCode: string; fileKind: "pdf" | "ppt" | "pptx" | null; ready: boolean }
     >();
 
     for (const hit of args.hits) {
@@ -159,9 +159,13 @@ export const hydrateChunkResults = internalQuery({
           title: res?.title ?? "Unknown Document",
           courseCode: res?.courseCode ?? "Course",
           fileKind: res?.fileKind ?? null,
+          ready: res?.ingestStatus === "ready",
         };
         resourceCache.set(chunk.resourceId, meta);
       }
+
+      // Safety rule: Only retrieve from successfully indexed documents
+      if (!meta.ready) continue;
 
       hydrated.push({
         chunkId: chunk._id,
@@ -176,6 +180,23 @@ export const hydrateChunkResults = internalQuery({
     }
 
     return hydrated;
+  },
+});
+
+/** Return resource IDs belonging to a specific folder (for folder-scoped RAG). */
+export const getResourcesInFolder = internalQuery({
+  args: { folderId: v.id("folders") },
+  handler: async (ctx, args) => {
+    const folder = await ctx.db.get(args.folderId);
+    if (!folder) return { subjectId: null, resourceIds: [] as Id<"resources">[] };
+    const rows = await ctx.db
+      .query("resources")
+      .withIndex("by_folder", (q) => q.eq("folderId", args.folderId))
+      .collect();
+    return {
+      subjectId: folder.subjectId,
+      resourceIds: rows.map((r) => r._id),
+    };
   },
 });
 

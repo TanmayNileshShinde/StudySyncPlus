@@ -24,7 +24,7 @@ import type { Id } from "./_generated/dataModel";
 import { extractStoredFile } from "./extract";
 import { callNvidiaEmbeddings, chunkPageText } from "./rag";
 
-const EMBED_BATCH_SIZE = 24;
+const EMBED_BATCH_SIZE = 16;
 const MAX_UNITS = 400; // safety valve against pathological documents
 
 type IngestionOutcome =
@@ -226,5 +226,89 @@ export const backfillPipelineState = action({
       else failed += 1;
     }
     return { repaired: stale.length, indexed, skipped, failed };
+  },
+});
+
+/**
+ * Public action: Re-index all catalogued resources with stored files into the new
+ * vector model (nvidia/llama-nemotron-embed-vl-1b-v2, 2048 dims).
+ * Full end-to-end extraction, chunking, embedding generation, and status update.
+ */
+export const reindexAllStoredResources = action({
+  args: {
+    force: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    total: v.number(),
+    ready: v.number(),
+    failed: v.number(),
+    skipped: v.number(),
+    details: v.array(
+      v.object({
+        resourceId: v.id("resources"),
+        title: v.string(),
+        status: v.string(),
+        chunksIndexed: v.optional(v.number()),
+        message: v.string(),
+      })
+    ),
+  }),
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    total: number;
+    ready: number;
+    failed: number;
+    skipped: number;
+    details: Array<{
+      resourceId: Id<"resources">;
+      title: string;
+      status: string;
+      chunksIndexed?: number;
+      message: string;
+    }>;
+  }> => {
+    const list: Array<{ id: Id<"resources">; title: string }> = await ctx.runQuery(
+      internal.ingestInternal.listAllStoredResources,
+      {}
+    );
+    const force = args.force ?? true;
+    let ready = 0;
+    let failed = 0;
+    let skipped = 0;
+    const details = [];
+
+    for (const item of list) {
+      const outcome = await runIngestion(ctx, item.id, force);
+      if (outcome.status === "ready") {
+        ready++;
+        details.push({
+          resourceId: item.id,
+          title: item.title,
+          status: "ready",
+          chunksIndexed: outcome.chunksIndexed,
+          message: outcome.message,
+        });
+      } else if (outcome.status === "skipped") {
+        skipped++;
+        details.push({
+          resourceId: item.id,
+          title: item.title,
+          status: "skipped",
+          message: outcome.message,
+        });
+      } else {
+        failed++;
+        details.push({
+          resourceId: item.id,
+          title: item.title,
+          status: "failed",
+          message: outcome.message,
+        });
+      }
+    }
+
+    return { total: list.length, ready, failed, skipped, details };
   },
 });

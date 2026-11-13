@@ -109,6 +109,24 @@
   - `[ Library ]`: Scopes AI retrieval across the entire academic library (`mode: "semester"`).
   - Context Honesty Bar displays exact chunk counts and document boundaries.
   - Preserves the conversation thread across scope switches and document switches.
+- **Compact & Distraction-Free Thinking UI**:
+  - Displays only a compact **"Thinking..."** pulse indicator while the AI generates a response.
+  - Kept collapsed by default with an optional expand/collapse toggle for students to inspect the activity scope and retrieval action.
+  - Strict absence of noisy progress timelines, numbered steps, status descriptions, or tool logs.
+  - Thinking blocks (`<think>...</think>`) from reasoning models are separated into an optional collapsed Thought Process accordion, keeping the final academic answer clean and directly readable.
+- **Full-Width Seamless Conversation Stream**:
+  - Unboxed AI responses that utilize the full available chat width without card borders, backgrounds, shadows, or rounded containers.
+  - User messages stay crisp and visually distinct (right-aligned in solid iron-ink).
+  - Preserved typography, headings, lists, syntax-highlighted code blocks, and scrollable GFM comparison tables.
+- **Optimized NVIDIA Output Limits & Graceful Handling**:
+  - Increased completion token limit from `1800` to `4096` tokens (`NVIDIA_MAX_TOKENS`), giving ample headroom for reasoning models to generate comprehensive academic study guides without midway truncation.
+  - RAG prompt budgets preserved (~2,000 tokens for retrieved chunks, history, and system instructions).
+  - Graceful truncation detection (`finish_reason === "length"`) with resumption advisory if the hard ceiling is ever reached.
+- **Pixel-Perfect PDF.js Text-Layer Synchronization**:
+  - Resolved text-selection duplication and misalignment issues across zoom levels and page dimensions.
+  - Synchronized PDF.js v5 scale variables (`--scale-factor`, `--user-unit`, `--total-scale-factor`, `--scale-round-x/y`) on page containers and text layers.
+  - Wrapped canvas elements in PDF.js-standard `.canvasWrapper` containers with matched physical and CSS pixel boundaries, preventing CSS subpixel stretching.
+  - Strictly isolated text selection styling (`color: transparent !important; -webkit-text-fill-color: transparent !important; background: rgba(163, 230, 53, 0.35) !important;`) so glyphs never render visible duplicate black fonts over the canvas during drag-selection. Text remains 100% searchable, selectable, and copyable.
 - **Page-Mapped Interactive Citations**:
   - Citations display exact document name and page/slide badge (e.g. `[DSA MSE Guide · Page 20]`).
   - Clicking a citation smoothly scrolls the PDF viewer directly to Page 20 and highlights an active citation banner.

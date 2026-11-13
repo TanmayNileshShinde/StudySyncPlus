@@ -91,9 +91,26 @@ export const resourceViewValidator = v.object({
   ingestError: v.union(v.string(), v.null()),
   ingestedAt: v.union(v.number(), v.null()),
   chunkCount: v.union(v.number(), v.null()),
+  folderId: v.union(v.id("folders"), v.null()),
 });
 
 export type ResourceView = Infer<typeof resourceViewValidator>;
+
+/** Client-facing folder view (for organizing hundreds of files per subject). */
+export const folderViewValidator = v.object({
+  id: v.id("folders"),
+  subjectId: v.id("subjects"),
+  semesterId: v.id("semesters"),
+  name: v.string(),
+  parentId: v.union(v.id("folders"), v.null()),
+  color: v.union(v.string(), v.null()),
+  order: v.number(),
+  resourceCount: v.number(),
+  ownerKey: v.union(v.string(), v.null()),
+  createdAt: v.number(),
+});
+
+export type FolderView = Infer<typeof folderViewValidator>;
 
 /** Client-facing subject row (library rail, upload picker). */
 export const subjectViewValidator = v.object({

@@ -22,9 +22,12 @@ function getNvidiaApiKey(): string {
   return key.trim();
 }
 
-/** Get configured embedding model (defaults to nvidia/nemotron-3.5-embed-1b which supports 1024 dims). */
+/**
+ * Get configured embedding model.
+ * Defaults to "nvidia/llama-nemotron-embed-vl-1b-v2" (Nemotron Embed 1B v2, 2048 output dimensions).
+ */
 function getEmbeddingModel(): string {
-  return process.env.NVIDIA_EMBEDDING_MODEL || "nvidia/nemotron-3.5-embed-1b";
+  return process.env.NVIDIA_EMBEDDING_MODEL || "nvidia/llama-nemotron-embed-vl-1b-v2";
 }
 
 /** Get configured chat model (defaults to nvidia/nemotron-3.5-lightning-30b-a3b). */
@@ -33,14 +36,36 @@ function getChatModel(): string {
 }
 
 /**
- * Generate 1024-dimensional embeddings via NVIDIA NIM API.
- * Uses nvidia/nemotron-3.5-embed-1b with explicit 1024-dimension projection.
- * Exported for reuse by the automatic ingestion pipeline (convex/ingest.ts).
+ * Maximum completion tokens for chat responses.
+ * Default is 4096 tokens (giving plenty of room for reasoning tokens + full comprehensive answer),
+ * while staying well within provider limits, Convex action timeouts, and preserving context budget for RAG.
  */
-export async function callNvidiaEmbeddings(
+function getMaxCompletionTokens(): number {
+  const envVal = process.env.NVIDIA_MAX_TOKENS || process.env.NVIDIA_MAX_COMPLETION_TOKENS;
+  if (envVal) {
+    const parsed = parseInt(envVal, 10);
+    if (!isNaN(parsed) && parsed >= 512 && parsed <= 8192) {
+      return parsed;
+    }
+  }
+  return 4096;
+}
+
+/** Sleep helper with optional jitter for exponential backoff. */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Execute a single bounded batch request (<= 8 chunks) to NVIDIA NIM with retries
+ * and exponential backoff for transient failures (429, 5xx, timeouts).
+ */
+async function callNvidiaSingleBatch(
   texts: string[],
-  inputType: "passage" | "query" = "passage"
+  inputType: "passage" | "query"
 ): Promise<number[][]> {
+  if (texts.length === 0) return [];
+
   const apiKey = getNvidiaApiKey();
   const model = getEmbeddingModel();
 
@@ -48,37 +73,105 @@ export async function callNvidiaEmbeddings(
     input: texts,
     model,
     input_type: inputType,
-    dimensions: 1024,
     encoding_format: "float",
   };
 
-  const response = await fetch(`${NVIDIA_BASE_URL}/embeddings`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`NVIDIA Embeddings API failed [${response.status}]: ${errorText}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(`${NVIDIA_BASE_URL}/embeddings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(30000), // 30s timeout per attempt
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const isTransient =
+          response.status === 429 ||
+          response.status === 500 ||
+          response.status === 502 ||
+          response.status === 503 ||
+          response.status === 504;
+
+        if (isTransient && attempt < MAX_RETRIES) {
+          const backoff = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 300, 8000);
+          console.warn(
+            `[callNvidiaEmbeddings] Transient error (${response.status}) on attempt ${attempt + 1}/${MAX_RETRIES + 1}. Retrying in ${Math.round(backoff)}ms...`
+          );
+          await sleep(backoff);
+          continue;
+        }
+
+        throw new Error(`NVIDIA Embeddings API failed [${response.status}]: ${errorText}`);
+      }
+
+      const json = await response.json();
+      const embeddings: number[][] = json.data.map(
+        (item: { embedding: number[] }) => item.embedding
+      );
+
+      // Assert dimension alignment with Convex schema (2048 dimensions)
+      if (embeddings.length > 0 && embeddings[0].length !== 2048) {
+        throw new Error(
+          `Embedding dimension mismatch: NVIDIA model '${model}' returned ${embeddings[0].length} dimensions, but Convex schema expects 2048.`
+        );
+      }
+
+      return embeddings;
+    } catch (err: any) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const isAbort = err?.name === "TimeoutError" || err?.name === "AbortError";
+      if ((isAbort || err?.message?.includes("fetch failed")) && attempt < MAX_RETRIES) {
+        const backoff = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 300, 8000);
+        console.warn(
+          `[callNvidiaEmbeddings] Network error (${err.message}) on attempt ${attempt + 1}/${MAX_RETRIES + 1}. Retrying in ${Math.round(backoff)}ms...`
+        );
+        await sleep(backoff);
+        continue;
+      }
+      throw lastError;
+    }
   }
 
-  const json = await response.json();
-  const embeddings: number[][] = json.data.map(
-    (item: { embedding: number[] }) => item.embedding
-  );
+  throw lastError ?? new Error("callNvidiaSingleBatch failed after all retries.");
+}
 
-  // Assert dimension alignment with Convex schema (1024 dimensions)
-  if (embeddings.length > 0 && embeddings[0].length !== 1024) {
-    throw new Error(
-      `Embedding dimension mismatch: NVIDIA model '${model}' returned ${embeddings[0].length} dimensions, but Convex schema expects 1024.`
-    );
+/**
+ * Generate 2048-dimensional embeddings via NVIDIA NIM API.
+ * Uses nvidia/llama-nemotron-embed-vl-1b-v2.
+ * Safely partitions texts into bounded sub-batches (max 8 passages per request)
+ * to strictly observe the model's 8,192 token context limit and prevent request timeouts.
+ * Exported for reuse by the automatic ingestion pipeline (convex/ingest.ts).
+ */
+export async function callNvidiaEmbeddings(
+  texts: string[],
+  inputType: "passage" | "query" = "passage"
+): Promise<number[][]> {
+  if (texts.length === 0) return [];
+
+  // Single query doesn't need chunking
+  if (texts.length === 1) {
+    return await callNvidiaSingleBatch(texts, inputType);
   }
 
-  return embeddings;
+  // Bounded sub-batches to respect the 8,192 token limit of the model
+  const SUB_BATCH_SIZE = 8;
+  const allEmbeddings: number[][] = [];
+
+  for (let i = 0; i < texts.length; i += SUB_BATCH_SIZE) {
+    const subBatch = texts.slice(i, i + SUB_BATCH_SIZE);
+    const subEmbeddings = await callNvidiaSingleBatch(subBatch, inputType);
+    allEmbeddings.push(...subEmbeddings);
+  }
+
+  return allEmbeddings;
 }
 
 /** Split clean page/slide text into overlapping semantic chunks with provenance. */
@@ -208,7 +301,7 @@ export const ingestResourcePages = action({
     }
 
     // Step 4: Generate embeddings in batches and persist
-    const BATCH_SIZE = 24;
+    const BATCH_SIZE = 16;
     let savedTotal = 0;
 
     for (let i = 0; i < allChunks.length; i += BATCH_SIZE) {
@@ -244,7 +337,7 @@ export const ingestResourcePages = action({
 
 /**
  * Public action: Semantic retrieval across Convex Vector Search.
- * Supports Library, Semester, Subject, and Individual Document modes.
+ * Supports Library, Semester, Subject, Folder, Selected Resources, and Individual Document modes.
  */
 export const search = action({
   args: {
@@ -253,11 +346,15 @@ export const search = action({
       v.literal("library"),
       v.literal("semester"),
       v.literal("subject"),
+      v.literal("folder"),
+      v.literal("selected"),
       v.literal("resource")
     ),
     resourceId: v.optional(v.id("resources")),
     semesterId: v.optional(v.id("semesters")),
     subjectId: v.optional(v.id("subjects")),
+    folderId: v.optional(v.id("folders")),
+    selectedResourceIds: v.optional(v.array(v.id("resources"))),
     limit: v.optional(v.number()),
   },
   handler: async (
@@ -278,6 +375,21 @@ export const search = action({
     const trimmedQuery = args.query.trim();
     if (trimmedQuery.length === 0) return [];
 
+    let targetResourceIds: Set<string> | null = null;
+    let effectiveSubjectId = args.subjectId;
+
+    if (args.mode === "folder" && args.folderId) {
+      const folderInfo: { subjectId: Id<"subjects"> | null; resourceIds: Id<"resources">[] } =
+        await ctx.runQuery(internal.ragInternal.getResourcesInFolder, {
+          folderId: args.folderId,
+        });
+      if (folderInfo.resourceIds.length === 0) return [];
+      targetResourceIds = new Set(folderInfo.resourceIds.map(String));
+      if (folderInfo.subjectId) effectiveSubjectId = folderInfo.subjectId;
+    } else if (args.mode === "selected" && args.selectedResourceIds && args.selectedResourceIds.length > 0) {
+      targetResourceIds = new Set(args.selectedResourceIds.map(String));
+    }
+
     // Step 1: Generate query embedding
     const [queryEmbedding] = await callNvidiaEmbeddings([trimmedQuery], "query");
 
@@ -285,17 +397,17 @@ export const search = action({
     let searchFilter;
     if (args.mode === "resource" && args.resourceId) {
       searchFilter = (q: any) => q.eq("resourceId", args.resourceId);
-    } else if (args.mode === "subject" && args.subjectId) {
-      // Subject chat: retrieve across ALL documents belonging to that subject.
-      searchFilter = (q: any) => q.eq("subjectId", args.subjectId);
+    } else if (effectiveSubjectId) {
+      searchFilter = (q: any) => q.eq("subjectId", effectiveSubjectId);
     } else if (args.mode === "semester" && args.semesterId) {
       searchFilter = (q: any) => q.eq("semesterId", args.semesterId);
     }
 
     // Step 3: Run Vector Search in Convex
+    const searchLimit = targetResourceIds ? Math.max((args.limit ?? 6) * 3, 20) : (args.limit ?? 6);
     const rawResults = await ctx.vectorSearch("documentChunks", "by_embedding", {
       vector: queryEmbedding,
-      limit: args.limit ?? 6,
+      limit: searchLimit,
       ...(searchFilter ? { filter: searchFilter } : {}),
     });
 
@@ -306,9 +418,18 @@ export const search = action({
     if (viableHits.length === 0) return [];
 
     // Step 4: Hydrate chunk records and resource metadata
-    return await ctx.runQuery(internal.ragInternal.hydrateChunkResults, {
+    const hydrated = await ctx.runQuery(internal.ragInternal.hydrateChunkResults, {
       hits: viableHits.map((h) => ({ id: h._id, score: h._score })),
     });
+
+    // Step 5: If folder or selected mode, filter to only the targeted resources
+    if (targetResourceIds) {
+      return hydrated
+        .filter((chunk) => targetResourceIds.has(String(chunk.resourceId)))
+        .slice(0, args.limit ?? 6);
+    }
+
+    return hydrated.slice(0, args.limit ?? 6);
   },
 });
 
@@ -324,11 +445,15 @@ export const chat = action({
       v.literal("library"),
       v.literal("semester"),
       v.literal("subject"),
+      v.literal("folder"),
+      v.literal("selected"),
       v.literal("resource")
     ),
     resourceId: v.optional(v.id("resources")),
     semesterId: v.optional(v.id("semesters")),
     subjectId: v.optional(v.id("subjects")),
+    folderId: v.optional(v.id("folders")),
+    selectedResourceIds: v.optional(v.array(v.id("resources"))),
     message: v.string(),
   },
   handler: async (
@@ -364,6 +489,8 @@ export const chat = action({
         resourceId: args.resourceId,
         semesterId: args.semesterId,
         subjectId: args.subjectId,
+        folderId: args.folderId,
+        selectedResourceIds: args.selectedResourceIds,
       });
     } else {
       threadId = args.threadId;
@@ -394,6 +521,8 @@ export const chat = action({
         resourceId: args.resourceId,
         semesterId: args.semesterId,
         subjectId: args.subjectId,
+        folderId: args.folderId,
+        selectedResourceIds: args.selectedResourceIds,
         limit: 5,
       });
     } catch (err) {
@@ -473,6 +602,7 @@ ${userText}`;
     ];
 
     // Step 5: Call NVIDIA Chat Completion API
+    const maxTokens = getMaxCompletionTokens();
     let assistantReply = "";
     try {
       const response = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
@@ -485,7 +615,7 @@ ${userText}`;
           model: chatModel,
           messages,
           temperature: 0.2,
-          max_tokens: 1800,
+          max_tokens: maxTokens,
         }),
       });
 
@@ -502,20 +632,28 @@ ${userText}`;
             model: "minimaxai/minimax-m3.1-flash",
             messages,
             temperature: 0.2,
-            max_tokens: 4024,
+            max_tokens: maxTokens,
           }),
         });
         if (fbResponse.ok) {
           const fbJson = await fbResponse.json();
-          const fbMsg = fbJson.choices?.[0]?.message;
+          const choice = fbJson.choices?.[0];
+          const fbMsg = choice?.message;
           assistantReply = fbMsg?.content?.trim() || fbMsg?.reasoning_content?.trim() || "";
+          if (choice?.finish_reason === "length") {
+            assistantReply += "\n\n*(Note: This response reached the maximum output length. You can ask me to continue or elaborate further on any section.)*";
+          }
         } else {
           throw new Error(`NVIDIA Chat API failed: ${errorText}`);
         }
       } else {
         const json = await response.json();
-        const msg = json.choices?.[0]?.message;
+        const choice = json.choices?.[0];
+        const msg = choice?.message;
         assistantReply = msg?.content?.trim() || msg?.reasoning_content?.trim() || "";
+        if (choice?.finish_reason === "length") {
+          assistantReply += "\n\n*(Note: This response reached the maximum output length. You can ask me to continue or elaborate further on any section.)*";
+        }
       }
     } catch (err: any) {
       assistantReply = `⚠️ NVIDIA API Error: ${err.message || "Failed to contact language model."}. Please check that your NVIDIA API key is valid and has model credits.`;

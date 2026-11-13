@@ -43,6 +43,7 @@ function toView(
     ingestError?: string;
     ingestedAt?: number;
     chunkCount?: number;
+    folderId?: Id<"folders">;
   },
   semesterNumber: number,
 ): ResourceView {
@@ -80,6 +81,7 @@ function toView(
     ingestError: doc.ingestError ?? null,
     ingestedAt: doc.ingestedAt ?? null,
     chunkCount: doc.chunkCount ?? null,
+    folderId: (doc.folderId as Id<"folders">) ?? null,
   };
 }
 
@@ -226,6 +228,7 @@ export const create = mutation({
     tags: v.array(v.string()),
     ownerKey: v.string(),
     fileName: v.string(),
+    folderId: v.optional(v.id("folders")),
   },
   returns: v.id("resources"),
   handler: async (ctx, args) => {
@@ -237,6 +240,13 @@ export const create = mutation({
     if (subject.isArchived) throw new ConvexError("This course is archived and cannot accept uploads.");
     if (subject.semesterId !== args.semesterId) {
       throw new ConvexError("Selected course does not belong to the active semester.");
+    }
+
+    if (args.folderId) {
+      const folder = await ctx.db.get(args.folderId);
+      if (!folder || folder.subjectId !== args.subjectId) {
+        throw new ConvexError("Selected folder does not belong to this subject.");
+      }
     }
 
     const tags = args.tags
@@ -266,6 +276,7 @@ export const create = mutation({
       ownerKey: args.ownerKey,
       isOfficial: false,
       ingestStatus: "pending",
+      folderId: args.folderId,
     });
 
     scheduleIngestion(ctx, resourceId);
@@ -291,6 +302,7 @@ export const update = mutation({
     rollNumber: v.optional(v.string()),
     replaceStorageId: v.optional(v.id("_storage")),
     replaceFileName: v.optional(v.string()),
+    folderId: v.optional(v.union(v.id("folders"), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -321,6 +333,7 @@ export const update = mutation({
       ingestError: string | undefined;
       contentHash: string | undefined;
       chunkCount: number | undefined;
+      folderId: Id<"folders"> | undefined;
     }> = {};
 
     if (args.title !== undefined) {
@@ -361,6 +374,16 @@ export const update = mutation({
       patch.subjectId = args.subjectId;
       patch.subjectName = subject.name;
       patch.courseCode = subject.courseCode;
+    }
+
+    if (args.folderId !== undefined) {
+      if (args.folderId !== null) {
+        const folder = await ctx.db.get(args.folderId);
+        if (!folder || folder.subjectId !== resource.subjectId) {
+          throw new ConvexError("Target folder does not belong to this subject.");
+        }
+      }
+      patch.folderId = args.folderId === null ? undefined : args.folderId;
     }
 
     if (args.replaceStorageId !== undefined) {
@@ -461,5 +484,148 @@ export const download = mutation({
     if (!url) return null;
     const ext = resource.fileKind === "pptx" ? "pptx" : resource.fileKind === "ppt" ? "ppt" : "pdf";
     return { url, fileName: resource.fileName ?? `${resource.title}.${ext}` };
+  },
+});
+
+/**
+ * Move a resource to a folder (or to Unorganized root when folderId is null).
+ * Single identity preserved: no re-upload, no re-embedding, zero chunk duplication.
+ */
+export const moveToFolder = mutation({
+  args: {
+    id: v.id("resources"),
+    folderId: v.union(v.id("folders"), v.null()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const resource = await ctx.db.get(args.id);
+    if (!resource) throw new ConvexError("Resource not found.");
+
+    if (args.folderId !== null) {
+      const folder = await ctx.db.get(args.folderId);
+      if (!folder) throw new ConvexError("Target folder not found.");
+      if (folder.subjectId !== resource.subjectId) {
+        throw new ConvexError("Cannot move resource to a folder of another course.");
+      }
+    }
+
+    await ctx.db.patch(args.id, {
+      folderId: args.folderId === null ? undefined : args.folderId,
+    });
+    return null;
+  },
+});
+
+/**
+ * Bulk move multiple resources to a folder (or Unorganized root).
+ * Preserves document identity, embeddings, and storage files intact.
+ */
+export const bulkMoveToFolder = mutation({
+  args: {
+    ids: v.array(v.id("resources")),
+    folderId: v.union(v.id("folders"), v.null()),
+  },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    if (args.ids.length === 0) return 0;
+    let targetSubjectId: Id<"subjects"> | null = null;
+    if (args.folderId !== null) {
+      const folder = await ctx.db.get(args.folderId);
+      if (!folder) throw new ConvexError("Target folder not found.");
+      targetSubjectId = folder.subjectId;
+    }
+
+    let moved = 0;
+    for (const id of args.ids) {
+      const resource = await ctx.db.get(id);
+      if (!resource) continue;
+      if (targetSubjectId && resource.subjectId !== targetSubjectId) continue;
+      await ctx.db.patch(id, {
+        folderId: args.folderId === null ? undefined : args.folderId,
+      });
+      moved++;
+    }
+    return moved;
+  },
+});
+
+/**
+ * Bulk delete user-uploaded resources (ownerKey enforced).
+ * Cascades bookmarks, ratings, chunks, and storage files.
+ */
+export const bulkDelete = mutation({
+  args: {
+    ids: v.array(v.id("resources")),
+    ownerKey: v.string(),
+  },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    let deleted = 0;
+    for (const id of args.ids) {
+      const resource = await ctx.db.get(id);
+      if (!resource) continue;
+      if (resource.isOfficial || resource.ownerKey === undefined) continue;
+      if (resource.ownerKey !== args.ownerKey) continue;
+
+      for await (const bookmark of ctx.db
+        .query("bookmarks")
+        .withIndex("by_resource", (q) => q.eq("resourceId", id))) {
+        await ctx.db.delete(bookmark._id);
+      }
+      for await (const rating of ctx.db
+        .query("ratings")
+        .withIndex("by_resource_and_owner", (q) => q.eq("resourceId", id))) {
+        await ctx.db.delete(rating._id);
+      }
+      for await (const chunk of ctx.db
+        .query("documentChunks")
+        .withIndex("by_resource", (q) => q.eq("resourceId", id))) {
+        await ctx.db.delete(chunk._id);
+      }
+      if (resource.storageId) {
+        try {
+          await ctx.storage.delete(resource.storageId);
+        } catch {
+          // Ignore
+        }
+      }
+      await ctx.db.delete(id);
+      deleted++;
+    }
+    return deleted;
+  },
+});
+
+/**
+ * Bulk tag manipulation: add or remove tags across selected resources.
+ */
+export const bulkUpdateTags = mutation({
+  args: {
+    ids: v.array(v.id("resources")),
+    addTags: v.optional(v.array(v.string())),
+    removeTags: v.optional(v.array(v.string())),
+  },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const toAdd = (args.addTags ?? [])
+      .map((t) => t.trim().toLowerCase())
+      .filter((t) => t.length > 0);
+    const toRemove = new Set(
+      (args.removeTags ?? []).map((t) => t.trim().toLowerCase())
+    );
+
+    let updated = 0;
+    for (const id of args.ids) {
+      const resource = await ctx.db.get(id);
+      if (!resource) continue;
+      const tagSet = new Set(resource.tags.map((t) => t.toLowerCase()));
+      for (const t of toRemove) tagSet.delete(t);
+      for (const t of toAdd) tagSet.add(t);
+      await ctx.db.patch(id, {
+        tags: Array.from(tagSet).slice(0, 20),
+      });
+      updated++;
+    }
+    return updated;
   },
 });

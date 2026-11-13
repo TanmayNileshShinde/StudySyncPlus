@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useResources } from '../context/ResourceContext';
 import { useOverlayBehavior } from '../hooks/useOverlayBehavior';
+import { asSubjectId } from '../lib/convexIds';
 import type { ResourceType, StudyResource } from '../types';
-import { X, UploadCloud, FileText, Presentation, LoaderCircle, CheckCircle2, AlertCircle, Trash2, RotateCcw, ChevronDown } from 'lucide-react';
+import { X, UploadCloud, FileText, Presentation, LoaderCircle, CheckCircle2, AlertCircle, Trash2, RotateCcw, ChevronDown, Folder as FolderIcon } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const RESOURCE_TYPES: ResourceType[] = [
@@ -21,7 +24,8 @@ const CONFETTI_COLORS = ['#111111', '#a3e635', '#d6d3d1'];
 const DEMO_STUDENT = { name: 'Tanmay Shinde', studentId: '126BTCM2008' };
 const UPLOADER_STORAGE_KEY = 'studysyncplus_uploader_v1';
 
-type ItemStatus = 'queued' | 'uploading' | 'creating' | 'indexing' | 'ready' | 'failed';
+type UploadPhase = 'queued' | 'uploading' | 'uploaded' | 'failed';
+type IndexingPhase = 'pending' | 'processing' | 'ready' | 'failed' | null;
 
 interface QueueItem {
   uid: string;
@@ -29,8 +33,9 @@ interface QueueItem {
   title: string;
   type: ResourceType;
   note: string; // optional per-file description override
-  status: ItemStatus;
-  progress: number; // 0..100 while uploading
+  uploadStatus: UploadPhase;
+  indexingStatus: IndexingPhase;
+  progress: number; // 0..100 while uploading bytes
   error?: string;
   createdId?: string;
 }
@@ -66,29 +71,27 @@ function loadUploader(): { name: string; roll: string } {
 }
 
 const StatusCell: React.FC<{ item: QueueItem }> = ({ item }) => {
-  switch (item.status) {
-    case 'queued':
-      return <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-ink-3">Queued</span>;
-    case 'uploading':
-      return (
-        <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-ink-2 tabular w-16">
-          Uploading {item.progress}%
-        </span>
-      );
-    case 'creating':
-      return (
-        <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-2">
-          <LoaderCircle className="w-3 h-3 animate-spin" aria-hidden="true" />
-          Filing
-        </span>
-      );
-    case 'indexing':
-      return (
-        <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-2">
-          <LoaderCircle className="w-3 h-3 animate-spin" aria-hidden="true" />
-          Indexing
-        </span>
-      );
+  if (item.uploadStatus === 'queued') {
+    return <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-ink-3">Queued</span>;
+  }
+  if (item.uploadStatus === 'uploading') {
+    return (
+      <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-ink-2 tabular w-16">
+        Uploading {item.progress}%
+      </span>
+    );
+  }
+  if (item.uploadStatus === 'failed') {
+    return (
+      <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.06em] text-alert" title={item.error}>
+        <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
+        Upload Failed
+      </span>
+    );
+  }
+
+  // Upload succeeded — show live background indexing pipeline status
+  switch (item.indexingStatus) {
     case 'ready':
       return (
         <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.06em] text-lime-text">
@@ -96,11 +99,25 @@ const StatusCell: React.FC<{ item: QueueItem }> = ({ item }) => {
           Indexed
         </span>
       );
+    case 'processing':
+      return (
+        <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-2">
+          <LoaderCircle className="w-3 h-3 animate-spin text-lime-deep" aria-hidden="true" />
+          Indexing…
+        </span>
+      );
     case 'failed':
       return (
         <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.06em] text-alert" title={item.error}>
           <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
-          Failed
+          Index Failed
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-3">
+          <span className="w-1.5 h-1.5 bg-ink-3 inline-block" aria-hidden="true" />
+          Queued for AI
         </span>
       );
   }
@@ -118,6 +135,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
   const panelRef = useOverlayBehavior(isOpen, onClose);
 
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const [items, setItems] = useState<QueueItem[]>([]);
   const [uploaderName, setUploaderName] = useState(DEMO_STUDENT.name);
   const [uploaderRoll, setUploaderRoll] = useState(DEMO_STUDENT.studentId);
@@ -126,6 +144,11 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
   const [expandedUid, setExpandedUid] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [confettiDone, setConfettiDone] = useState(false);
+
+  const subjectFolders = useQuery(
+    api.folders.listBySubject,
+    selectedSubjectId ? { subjectId: asSubjectId(selectedSubjectId) } : 'skip'
+  ) ?? [];
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const itemsRef = useRef<QueueItem[]>([]);
@@ -138,6 +161,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
     setUploaderName(saved.name);
     setUploaderRoll(saved.roll);
     setSelectedSubjectId(subjectId ?? subjects[0]?.id ?? '');
+    setSelectedFolderId('');
     setItems([]);
     setRunning(false);
     setConfettiDone(false);
@@ -146,22 +170,22 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, subjectId]);
 
-  // The live query reports ingestion outcomes for created rows.
+  // The live query reports real-time background indexing outcomes for created rows.
   useEffect(() => {
     if (!isOpen || resources.length === 0) return;
     setItems((prev) => {
       let changed = false;
       const next = prev.map((item) => {
-        if (!item.createdId || (item.status !== 'indexing' && item.status !== 'creating')) return item;
+        if (!item.createdId || item.uploadStatus !== 'uploaded') return item;
         const row: StudyResource | undefined = resources.find((r) => r.id === item.createdId);
         if (!row) return item;
-        if (row.ingestStatus === 'ready') {
+        if (row.ingestStatus !== item.indexingStatus) {
           changed = true;
-          return { ...item, status: 'ready' as const, error: undefined };
-        }
-        if (row.ingestStatus === 'failed') {
-          changed = true;
-          return { ...item, status: 'failed' as const, error: row.ingestError ?? 'Indexing failed.' };
+          return {
+            ...item,
+            indexingStatus: row.ingestStatus,
+            error: row.ingestStatus === 'failed' ? (row.ingestError ?? 'Indexing failed.') : undefined,
+          };
         }
         return item;
       });
@@ -194,7 +218,8 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
         title: cleanTitle(file.name),
         type: defaultType,
         note: '',
-        status: 'queued',
+        uploadStatus: 'queued',
+        indexingStatus: null,
         progress: 0
       });
     }
@@ -208,7 +233,12 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
 
   const removeItem = (uid: string) => setItems((prev) => prev.filter((item) => item.uid !== uid));
 
-  /** Sequential pipeline: upload → create → (server schedules ingestion). */
+  /**
+   * Decoupled workflow:
+   * 1. Upload bytes to Convex storage + write resource record.
+   * 2. As soon as upload succeeds, item is 'uploaded' and server runs background indexing!
+   * 3. Modal can be closed immediately.
+   */
   const processItem = async (item: QueueItem): Promise<void> => {
     const description =
       item.note.trim().length >= 15
@@ -218,6 +248,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
       file: item.file,
       title: item.title.trim(),
       subjectId: selectedSubjectId,
+      folderId: selectedFolderId ? selectedFolderId : undefined,
       type: item.type,
       uploadedBy: uploaderName.trim(),
       rollNumber: uploaderRoll.trim().toUpperCase(),
@@ -225,12 +256,18 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
       tags: subject ? [subject.courseCode, 'Semester3'] : ['Semester3']
     };
     try {
-      updateItem(item.uid, { status: 'uploading', progress: 0, error: undefined });
+      updateItem(item.uid, { uploadStatus: 'uploading', progress: 0, error: undefined });
       const createdId = await createResource(input, (pct) => updateItem(item.uid, { progress: pct }));
-      updateItem(item.uid, { status: 'indexing', progress: 100, createdId });
+      // Storage upload & database filing complete! Server scheduled background vector indexing.
+      updateItem(item.uid, {
+        uploadStatus: 'uploaded',
+        indexingStatus: 'pending',
+        progress: 100,
+        createdId,
+      });
     } catch (e) {
       updateItem(item.uid, {
-        status: 'failed',
+        uploadStatus: 'failed',
         error: e instanceof Error ? e.message : 'Upload failed. Please try again.'
       });
     }
@@ -239,10 +276,10 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
   const startUpload = async () => {
     if (running || !selectedSubjectId) return;
     // Client-side title validation before any upload starts.
-    const pending = itemsRef.current.filter((i) => i.status === 'queued' || i.status === 'failed');
+    const pending = itemsRef.current.filter((i) => i.uploadStatus === 'queued' || i.uploadStatus === 'failed');
     for (const item of pending) {
       if (item.title.trim().length < 6) {
-        updateItem(item.uid, { status: 'failed', error: 'Title must be at least 6 characters long.' });
+        updateItem(item.uid, { uploadStatus: 'failed', error: 'Title must be at least 6 characters long.' });
       }
     }
     if (uploaderName.trim().length < 3) {
@@ -260,11 +297,10 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
     }
 
     setRunning(true);
-    const queue = itemsRef.current.filter((i) => i.status === 'queued' || (i.status === 'failed' && i.title.trim().length >= 6));
+    const queue = itemsRef.current.filter((i) => i.uploadStatus === 'queued' || (i.uploadStatus === 'failed' && i.title.trim().length >= 6));
     for (const item of queue) {
-      // Skip items another pass already settled.
       const current = itemsRef.current.find((i) => i.uid === item.uid);
-      if (!current || current.status === 'ready' || current.status === 'indexing') continue;
+      if (!current || current.uploadStatus === 'uploaded') continue;
       await processItem(item);
     }
     setRunning(false);
@@ -273,47 +309,52 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
   const retryItem = async (uid: string) => {
     const item = itemsRef.current.find((i) => i.uid === uid);
     if (!item || running) return;
-    if (item.createdId && item.error && item.status === 'failed') {
-      // Indexing failed after a successful create — a re-index is enough.
-      updateItem(uid, { status: 'indexing' });
+    // If the file was already uploaded to Convex, retry background indexing ONLY (never re-upload bytes!)
+    if (item.uploadStatus === 'uploaded' && item.createdId) {
+      updateItem(uid, { indexingStatus: 'processing', error: undefined });
       try {
         const result = await reindexResource(item.createdId);
-        if (result.status === 'ready') updateItem(uid, { status: 'ready', error: undefined });
-        else updateItem(uid, { status: 'failed', error: result.message });
+        if (result.status === 'ready') {
+          updateItem(uid, { indexingStatus: 'ready', error: undefined });
+        } else {
+          updateItem(uid, { indexingStatus: 'failed', error: result.message });
+        }
       } catch (e) {
-        updateItem(uid, { status: 'failed', error: e instanceof Error ? e.message : 'Re-index failed.' });
+        updateItem(uid, { indexingStatus: 'failed', error: e instanceof Error ? e.message : 'Re-index failed.' });
       }
       return;
     }
-    updateItem(uid, { status: 'queued', error: undefined, createdId: undefined });
+    // Upload failed — retry byte upload
+    updateItem(uid, { uploadStatus: 'queued', error: undefined, createdId: undefined });
     await processItem(item);
   };
 
-  const queuedCount = items.filter((i) => i.status === 'queued').length;
-  const busyCount = items.filter((i) => i.status === 'uploading' || i.status === 'creating' || i.status === 'indexing').length;
-  const readyCount = items.filter((i) => i.status === 'ready').length;
-  const failedCount = items.filter((i) => i.status === 'failed').length;
-  const settled = items.length > 0 && busyCount === 0 && queuedCount === 0 && !running;
+  const isActivelyUploading = running || items.some((i) => i.uploadStatus === 'uploading');
+  const queuedCount = items.filter((i) => i.uploadStatus === 'queued').length;
+  const uploadedCount = items.filter((i) => i.uploadStatus === 'uploaded').length;
+  const readyCount = items.filter((i) => i.indexingStatus === 'ready').length;
+  const failedCount = items.filter((i) => i.uploadStatus === 'failed' || i.indexingStatus === 'failed').length;
+  const settled = items.length > 0 && !isActivelyUploading && queuedCount === 0;
 
-  // One authored success moment when every file is indexed.
+  // Author success moment when every file has completed indexing
   useEffect(() => {
-    if (!settled || failedCount > 0 || readyCount === 0 || confettiDone) return;
+    if (!settled || failedCount > 0 || readyCount === 0 || confettiDone || readyCount !== items.length) return;
     setConfettiDone(true);
     confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 }, colors: CONFETTI_COLORS });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settled, failedCount, readyCount]);
+  }, [settled, failedCount, readyCount, items.length]);
 
-  const canStart = (queuedCount > 0 || failedCount > 0) && !!selectedSubjectId && !running;
+  const canStart = (queuedCount > 0 || items.some((i) => i.uploadStatus === 'failed')) && !!selectedSubjectId && !isActivelyUploading;
 
   const summary = useMemo(() => {
     if (items.length === 0) return null;
     const parts: string[] = [];
-    if (readyCount > 0) parts.push(`${readyCount} indexed`);
-    if (busyCount > 0) parts.push(`${busyCount} in progress`);
+    if (uploadedCount > 0) parts.push(`${uploadedCount} uploaded`);
+    if (readyCount > 0) parts.push(`${readyCount} indexed for AI`);
     if (queuedCount > 0) parts.push(`${queuedCount} queued`);
     if (failedCount > 0) parts.push(`${failedCount} failed`);
     return parts.join(' · ');
-  }, [items.length, readyCount, busyCount, queuedCount, failedCount]);
+  }, [items.length, uploadedCount, readyCount, queuedCount, failedCount]);
 
   if (!isOpen) return null;
 
@@ -321,7 +362,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-fadeIn"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !running && busyCount === 0) onClose();
+        if (e.target === e.currentTarget && !isActivelyUploading) onClose();
       }}
     >
       <div
@@ -339,39 +380,84 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
               Add materials
             </h2>
             <p className="text-xs text-ink-2 mt-0.5">
-              PDFs, PPTs and PPTX decks. Everything is indexed for the assistant automatically.
+              PDFs, PPTs and PPTX decks. Uploads save instantly; AI indexing runs seamlessly in the background.
             </p>
           </div>
           <button
             onClick={onClose}
             className="btn btn-ghost px-2 shrink-0"
             aria-label="Close"
-            disabled={running || busyCount > 0}
+            disabled={isActivelyUploading}
           >
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         <div className="px-6 py-5 space-y-5 text-[13px]">
-          {/* Subject picker */}
-          <div>
-            <label htmlFor="bulk-subject" className="block font-semibold text-ink mb-1">
-              Subject
-            </label>
-            <select
-              id="bulk-subject"
-              value={selectedSubjectId}
-              onChange={(e) => setSelectedSubjectId(e.target.value)}
-              disabled={running || busyCount > 0}
-              className="field w-full px-3 py-2.5"
-            >
-              {subjects.length === 0 && <option value="">No subjects available</option>}
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.courseCode})
-                </option>
-              ))}
-            </select>
+          {/* Asynchronous indexing banner when files are saved to Convex */}
+          {uploadedCount > 0 && (
+            <div className="p-3 bg-lime/10 border border-lime text-xs text-ink flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <CheckCircle2 className="w-4 h-4 text-lime-deep shrink-0" aria-hidden="true" />
+                <span className="truncate">
+                  <strong>{uploadedCount} file{uploadedCount === 1 ? '' : 's'} saved to storage.</strong> Background AI indexing continues while you study.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn btn-secondary px-3 py-1 text-xs shrink-0"
+              >
+                Done / Close
+              </button>
+            </div>
+          )}
+
+          {/* Subject & Folder pickers */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="bulk-subject" className="block font-semibold text-ink mb-1">
+                Subject
+              </label>
+              <select
+                id="bulk-subject"
+                value={selectedSubjectId}
+                onChange={(e) => {
+                  setSelectedSubjectId(e.target.value);
+                  setSelectedFolderId('');
+                }}
+                disabled={isActivelyUploading}
+                className="field w-full px-3 py-2.5"
+              >
+                {subjects.length === 0 && <option value="">No subjects available</option>}
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.courseCode})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="bulk-folder" className="block font-semibold text-ink mb-1 flex items-center gap-1.5">
+                <FolderIcon className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
+                <span>Target Folder (Optional)</span>
+              </label>
+              <select
+                id="bulk-folder"
+                value={selectedFolderId}
+                onChange={(e) => setSelectedFolderId(e.target.value)}
+                disabled={isActivelyUploading}
+                className="field w-full px-3 py-2.5"
+              >
+                <option value="">Unorganized (Subject root)</option>
+                {subjectFolders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    📁 {f.name} ({f.resourceCount} {f.resourceCount === 1 ? 'file' : 'files'})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Dropzone */}
@@ -436,7 +522,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                           type="text"
                           value={item.title}
                           onChange={(e) => updateItem(item.uid, { title: e.target.value })}
-                          disabled={item.status === 'uploading' || item.status === 'creating' || item.status === 'indexing' || item.status === 'ready'}
+                          disabled={item.uploadStatus === 'uploading' || item.uploadStatus === 'uploaded'}
                           aria-label={`Title for ${item.file.name}`}
                           className="field flex-1 min-w-0 px-2 py-1 text-[13px] font-semibold"
                           placeholder="Material title"
@@ -451,7 +537,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                           <span>{item.error}</span>
                         </p>
                       )}
-                      {item.status === 'uploading' && (
+                      {item.uploadStatus === 'uploading' && (
                         <div className="h-1 bg-rule mt-1.5" aria-hidden="true">
                           <div className="h-full bg-lime-deep transition-[width] duration-200" style={{ width: `${item.progress}%` }} />
                         </div>
@@ -461,7 +547,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                     <select
                       value={item.type}
                       onChange={(e) => updateItem(item.uid, { type: e.target.value as ResourceType })}
-                      disabled={item.status !== 'queued' && item.status !== 'failed'}
+                      disabled={item.uploadStatus !== 'queued' && item.uploadStatus !== 'failed'}
                       aria-label={`Category for ${item.file.name}`}
                       className="field w-full sm:w-[130px] px-2 py-1.5 text-[12px]"
                     >
@@ -486,19 +572,19 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                       >
                         <ChevronDown className={`w-4 h-4 transition-transform ${expandedUid === item.uid ? 'rotate-180' : ''}`} aria-hidden="true" />
                       </button>
-                      {(item.status === 'failed') && (
+                      {(item.uploadStatus === 'failed' || item.indexingStatus === 'failed') && (
                         <button
                           onClick={() => void retryItem(item.uid)}
                           className="p-1.5 text-ink-3 hover:text-ink hover:bg-paper-sunk transition-colors"
                           aria-label={`Retry ${item.file.name}`}
-                          title="Retry"
+                          title={item.uploadStatus === 'uploaded' ? 'Retry AI Indexing (without re-uploading file)' : 'Retry Upload'}
                         >
                           <RotateCcw className="w-4 h-4" aria-hidden="true" />
                         </button>
                       )}
                       <button
                         onClick={() => removeItem(item.uid)}
-                        disabled={item.status === 'uploading' || item.status === 'creating' || item.status === 'indexing'}
+                        disabled={item.uploadStatus === 'uploading'}
                         className="p-1.5 text-ink-3 hover:text-alert hover:bg-paper-sunk transition-colors disabled:opacity-30"
                         aria-label={`Remove ${item.file.name}`}
                         title="Remove"
@@ -527,7 +613,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
           {items.length > 0 && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              disabled={running}
+              disabled={isActivelyUploading}
               className="btn btn-secondary w-full border-dashed"
             >
               <UploadCloud className="w-4 h-4" aria-hidden="true" />
@@ -575,12 +661,12 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
             <button
               onClick={onClose}
               className="btn btn-ghost px-4"
-              disabled={running || busyCount > 0}
+              disabled={isActivelyUploading}
             >
-              {settled ? 'Close' : 'Cancel'}
+              {settled || uploadedCount > 0 ? 'Close' : 'Cancel'}
             </button>
             <button onClick={() => void startUpload()} disabled={!canStart} className="btn btn-primary px-5">
-              {running ? (
+              {isActivelyUploading ? (
                 <>
                   <LoaderCircle className="w-4 h-4 animate-spin" aria-hidden="true" />
                   <span>Uploading…</span>

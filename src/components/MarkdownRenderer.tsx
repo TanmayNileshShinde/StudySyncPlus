@@ -107,7 +107,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
           },
           table({ children }) {
             return (
-              <div className="my-4 border border-rule overflow-x-auto bg-paper shadow-xs">
+              <div className="my-3.5 border border-rule overflow-x-auto bg-paper">
                 <table className="w-full text-left text-xs border-collapse">
                   {children}
                 </table>
