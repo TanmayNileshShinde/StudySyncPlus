@@ -24,13 +24,20 @@ export interface StudyResource {
   downloadCount: number;
   rating: number; // aggregate 0..5 (0 = unrated)
   ratingCount: number;
-  fileFormat: 'PDF';
+  fileFormat: 'PDF' | 'PPT' | 'PPTX';
   description: string;
   tags: string[];
   isUserUploaded: boolean; // false = official seeded content
   ownerKey: string | null; // owner identity for uploads (null = official)
-  hasFile: boolean; // real stored PDF (vs legacy summary-card fallback)
+  hasFile: boolean; // real stored file (vs legacy summary-card fallback)
   fileName: string | null;
+  /** Underlying document kind — drives "Page N" vs "Slide N" citations. */
+  fileKind: 'pdf' | 'ppt' | 'pptx' | null;
+  /** RAG pipeline state; null = legacy row never ingested. */
+  ingestStatus: 'pending' | 'processing' | 'ready' | 'failed' | null;
+  ingestError: string | null;
+  ingestedAt: number | null;
+  chunkCount: number | null;
 }
 
 /** Library rail + upload picker entry (active, unarchived courses only). */
@@ -65,7 +72,27 @@ export interface SemesterInfo {
   schemeLabel: string;
 }
 
-export type ActiveTab = 'library' | 'analytics' | 'async-lab' | 'syllabus-viva' | 'curriculum-scheme';
+// ---------------------------------------------------------------------------
+// Navigation — subject-centric information architecture
+// ---------------------------------------------------------------------------
+
+/**
+ * The three primary destinations. A subject is the workspace; the assistant
+ * is reachable from anywhere and inherits context from the current view.
+ */
+export type AppView = { kind: 'home' } | { kind: 'subject'; subjectId: string } | { kind: 'assistant' };
+
+/**
+ * Retrieval scope for the Study Assistant. The panel derives this from the
+ * current view (resource > subject > semester) — never shown as a "mode".
+ */
+export type AssistantScope =
+  | { mode: 'semester' }
+  | { mode: 'subject'; subjectId: string }
+  | { mode: 'resource'; resourceId: string };
+
+/** Secondary features demoted into the top-bar overflow (user decision). */
+export type MoreSheetKind = 'analytics' | 'async-lab' | 'scheme' | 'syllabus';
 
 export interface FormErrors {
   title?: string;
@@ -77,17 +104,6 @@ export interface FormErrors {
   description?: string;
 }
 
-export interface ResourceUploadInput {
-  file: File;
-  title: string;
-  subjectId: string;
-  type: ResourceType;
-  uploadedBy: string;
-  rollNumber: string;
-  description: string;
-  tags: string[];
-}
-
 export interface ResourceEditInput {
   title?: string;
   description?: string;
@@ -97,6 +113,18 @@ export interface ResourceEditInput {
   uploadedBy?: string;
   rollNumber?: string;
   replaceFile?: File;
+}
+
+/** Input for a single file inside the bulk-upload flow. */
+export interface BulkUploadInput {
+  file: File;
+  title: string;
+  subjectId: string;
+  type: ResourceType;
+  uploadedBy: string;
+  rollNumber: string;
+  description: string;
+  tags: string[];
 }
 
 export interface NewSubjectInput {

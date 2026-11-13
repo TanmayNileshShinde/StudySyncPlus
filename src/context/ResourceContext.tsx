@@ -7,17 +7,28 @@ import React, {
   useRef,
   useState
 } from 'react';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import type { StudyResource, SubjectOption, SchemeCourse, ResourceType, ActiveTab, ResourceUploadInput, ResourceEditInput, NewSubjectInput, SemesterInfo } from '../types';
+import type {
+  StudyResource,
+  SubjectOption,
+  SchemeCourse,
+  AppView,
+  AssistantScope,
+  BulkUploadInput,
+  ResourceEditInput,
+  NewSubjectInput,
+  SemesterInfo
+} from '../types';
 import { getOwnerKey } from '../lib/owner';
 import { asResourceId, asSemesterId, asStorageId, asSubjectId } from '../lib/convexIds';
 import { apiService } from '../services/apiService';
 
 /**
  * Data lives in Convex (resources, subjects, semesters, bookmarks, ratings).
- * This context keeps the temporary UI state — tab, search, filters — and
- * exposes typed wrappers around the Convex functions the UI needs.
+ * This context keeps the temporary UI state — current view, assistant scope,
+ * overlay state, filters — and exposes typed wrappers around the Convex
+ * functions the UI needs.
  */
 interface ResourceContextType {
   // Data (Convex-backed, realtime)
@@ -29,24 +40,42 @@ interface ResourceContextType {
   bookmarkIds: string[];
   bookmarkCount: number;
 
-  // Temporary UI state (session-local by design)
-  activeTab: ActiveTab;
-  setActiveTab: (tab: ActiveTab) => void;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  selectedSubject: string | 'All';
-  setSelectedSubject: (subject: string | 'All') => void;
-  selectedType: ResourceType | 'All';
-  setSelectedType: (type: ResourceType | 'All') => void;
-  filteredResources: StudyResource[];
+  // Navigation (subject-centric IA)
+  view: AppView;
+  openHome: () => void;
+  openSubject: (subjectId: string) => void;
+  openAssistant: (scope: AssistantScope) => void;
+  assistantScope: AssistantScope;
+
+  // Subject-page filters
+  subjectSearch: string;
+  setSubjectSearch: (query: string) => void;
+
+  // Overlays
+  uploadSubjectId: string | null; // non-null = bulk-upload modal open
+  openUploadModal: (subjectId?: string) => void;
+  closeUploadModal: () => void;
+  detailResource: StudyResource | null;
+  openDetail: (resource: StudyResource) => void;
+  closeDetail: () => void;
+  editResource: StudyResource | null;
+  openEdit: (resource: StudyResource) => void;
+  closeEdit: () => void;
 
   // Actions
-  toggleBookmark: (id: string) => void;
+  toggleBookmark: (id: string) => Promise<void>;
   isBookmarked: (id: string) => boolean;
   downloadResource: (resource: StudyResource) => Promise<void>;
-  addResource: (input: ResourceUploadInput) => Promise<void>;
+  /** Signed artifact for ZIP building / previews — no toast, no browser download. */
+  collectDownloadArtifact: (resource: StudyResource) => Promise<{ url: string; fileName: string } | null>;
+  /** One file → storage, with progress. Returns the storage id. */
+  uploadFileWithProgress: (file: File, onProgress: (pct: number) => void) => Promise<string>;
+  /** Publish metadata (starts ingestion server-side). Silent — returns the resource id. */
+  createResource: (input: BulkUploadInput, onUploadProgress?: (pct: number) => void) => Promise<string>;
   updateResource: (id: string, input: ResourceEditInput) => Promise<void>;
   deleteResource: (id: string) => Promise<void>;
+  /** Force a vector-index rebuild (retry after failure, or manual refresh). */
+  reindexResource: (id: string) => Promise<{ status: string; message: string }>;
   rateResource: (id: string, value: number) => Promise<void>;
   resetToDefaults: () => Promise<void>;
   addSubject: (input: NewSubjectInput) => Promise<void>;
@@ -89,6 +118,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const resetToSeedMut = useMutation(api.init.resetToSeed);
   const addSubjectMut = useMutation(api.subjects.add);
   const setSubjectArchivedMut = useMutation(api.subjects.setArchived);
+  const reindexAction = useAction(api.ingest.reindexResource);
 
   // First load: seed the Semester III dataset if the deployment is empty.
   const seedRequested = useRef(false);
@@ -109,10 +139,12 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   // --- Temporary UI state ----------------------------------------------------
-  const [activeTab, setActiveTab] = useState<ActiveTab>('library');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedSubject, setSelectedSubject] = useState<string | 'All'>('All');
-  const [selectedType, setSelectedType] = useState<ResourceType | 'All'>('All');
+  const [view, setView] = useState<AppView>({ kind: 'home' });
+  const [assistantScope, setAssistantScope] = useState<AssistantScope>({ mode: 'semester' });
+  const [subjectSearch, setSubjectSearch] = useState('');
+  const [uploadSubjectId, setUploadSubjectId] = useState<string | null>(null);
+  const [detailResource, setDetailResource] = useState<StudyResource | null>(null);
+  const [editResource, setEditResource] = useState<StudyResource | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -120,6 +152,22 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToastMessage(msg);
     toastTimer.current = setTimeout(() => setToastMessage(null), 3500);
+  }, []);
+
+  // --- Navigation ------------------------------------------------------------
+  const openHome = useCallback(() => {
+    setView({ kind: 'home' });
+    setSubjectSearch('');
+  }, []);
+
+  const openSubject = useCallback((subjectId: string) => {
+    setView({ kind: 'subject', subjectId });
+    setSubjectSearch('');
+  }, []);
+
+  const openAssistant = useCallback((scope: AssistantScope) => {
+    setAssistantScope(scope);
+    setView({ kind: 'assistant' });
   }, []);
 
   // --- Derived data ----------------------------------------------------------
@@ -157,23 +205,6 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const bookmarkIds: string[] = useMemo(() => bookmarkRows ?? [], [bookmarkRows]);
   const bookmarkIdSet = useMemo(() => new Set(bookmarkIds), [bookmarkIds]);
 
-  const filteredResources = useMemo(() => {
-    return resources.filter((item) => {
-      const q = searchQuery.toLowerCase();
-      const matchesSearch =
-        item.title.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q) ||
-        item.courseCode.toLowerCase().includes(q) ||
-        item.tags.some((tag) => tag.toLowerCase().includes(q)) ||
-        item.uploadedBy.toLowerCase().includes(q);
-
-      const matchesSubject = selectedSubject === 'All' || item.subjectName === selectedSubject;
-      const matchesType = selectedType === 'All' || item.type === selectedType;
-
-      return matchesSearch && matchesSubject && matchesType;
-    });
-  }, [resources, searchQuery, selectedSubject, selectedType]);
-
   const isLibraryLoading = seedState === undefined || semester === undefined || resourceRows === undefined;
 
   // --- Actions ---------------------------------------------------------------
@@ -191,28 +222,57 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [ownerKey, toggleBookmarkMut, showToast]
   );
 
-  const uploadFileToStorage = useCallback(
-    async (file: File): Promise<string> => {
-      const uploadUrl = await generateUploadUrlMut({});
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': file.type || 'application/pdf' },
-        body: file
-      });
-      if (!response.ok) {
-        throw new Error(`File upload failed (HTTP ${response.status}).`);
-      }
-      const { storageId } = (await response.json()) as { storageId: string };
-      return storageId;
-    },
+  /**
+   * Direct-to-storage upload via XHR so the caller gets real progress events
+   * (fetch() has no upload progress). Resolves with the storage id.
+   */
+  const uploadFileWithProgress = useCallback(
+    (file: File, onProgress: (pct: number) => void): Promise<string> =>
+      new Promise<string>((resolve, reject) => {
+        void (async () => {
+          try {
+            const uploadUrl = await generateUploadUrlMut({});
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', uploadUrl);
+            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable) {
+                onProgress(Math.min(99, Math.round((e.loaded / e.total) * 100)));
+              }
+            };
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                onProgress(100);
+                try {
+                  const { storageId } = JSON.parse(xhr.responseText) as { storageId: string };
+                  if (!storageId) throw new Error('missing storageId');
+                  resolve(storageId);
+                } catch {
+                  reject(new Error('Unexpected storage response. Please try again.'));
+                }
+              } else if (xhr.status === 413) {
+                reject(new Error('File too large for storage (50 MB limit).'));
+              } else {
+                reject(new Error(`File upload failed (HTTP ${xhr.status}).`));
+              }
+            };
+            xhr.onerror = () => reject(new Error('Network error during upload. Please retry.'));
+            xhr.onabort = () => reject(new Error('Upload cancelled.'));
+            xhr.send(file);
+          } catch (e) {
+            reject(e instanceof Error ? e : new Error('Upload failed. Please try again.'));
+          }
+        })();
+      }),
     [generateUploadUrlMut]
   );
 
-  const addResource = useCallback(
-    async (input: ResourceUploadInput) => {
+  /** Publish metadata; the server schedules RAG ingestion automatically. Silent. */
+  const createResource = useCallback(
+    async (input: BulkUploadInput, onUploadProgress?: (pct: number) => void): Promise<string> => {
       if (!semester) throw new Error('The library is still loading. Please try again in a moment.');
-      const storageId = await uploadFileToStorage(input.file);
-      await createResourceMut({
+      const storageId = await uploadFileWithProgress(input.file, (pct) => onUploadProgress?.(pct));
+      const id = (await createResourceMut({
         storageId: asStorageId(storageId),
         semesterId: asSemesterId(semester.id),
         subjectId: asSubjectId(input.subjectId),
@@ -224,17 +284,17 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         tags: input.tags,
         ownerKey,
         fileName: input.file.name
-      });
-      showToast(`PDF Resource "${input.title.slice(0, 24)}..." published!`);
+      })) as unknown as string;
+      return id;
     },
-    [semester, ownerKey, uploadFileToStorage, createResourceMut, showToast]
+    [semester, ownerKey, uploadFileWithProgress, createResourceMut]
   );
 
   const updateResource = useCallback(
     async (id: string, input: ResourceEditInput) => {
       let replaceStorageId: string | undefined;
       if (input.replaceFile) {
-        replaceStorageId = await uploadFileToStorage(input.replaceFile);
+        replaceStorageId = await uploadFileWithProgress(input.replaceFile, () => undefined);
       }
       await updateResourceMut({
         id: asResourceId(id),
@@ -251,14 +311,14 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
       showToast('Resource updated successfully');
     },
-    [ownerKey, uploadFileToStorage, updateResourceMut, showToast]
+    [ownerKey, uploadFileWithProgress, updateResourceMut, showToast]
   );
 
   const deleteResource = useCallback(
     async (id: string) => {
       try {
         await removeResourceMut({ id: asResourceId(id), ownerKey });
-        showToast('Resource removed successfully');
+        showToast('Resource removed');
       } catch (e) {
         showToast(e instanceof Error ? e.message : 'Could not delete this resource.');
       }
@@ -266,12 +326,35 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [ownerKey, removeResourceMut, showToast]
   );
 
+  const reindexResource = useCallback(
+    async (id: string): Promise<{ status: string; message: string }> => {
+      const result = await reindexAction({ resourceId: asResourceId(id) });
+      return { status: result.status, message: result.message };
+    },
+    [reindexAction]
+  );
+
+  /** Signed URL for preview/ZIP consumers. Null for legacy summary-card rows. */
+  const collectDownloadArtifact = useCallback(
+    async (resource: StudyResource): Promise<{ url: string; fileName: string } | null> => {
+      if (!resource.hasFile) return null;
+      try {
+        const result = await downloadMut({ id: asResourceId(resource.id) });
+        if (!result) return null;
+        return { url: result.url, fileName: result.fileName };
+      } catch {
+        return null;
+      }
+    },
+    [downloadMut]
+  );
+
   const downloadResource = useCallback(
     async (resource: StudyResource) => {
       try {
-        const result = await downloadMut({ id: asResourceId(resource.id) });
+        const result = await collectDownloadArtifact(resource);
         if (result) {
-          // Stored PDF: fetch the signed URL and hand the real file to the user.
+          // Stored file: fetch the signed URL and hand the real file to the user.
           const response = await fetch(result.url);
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const blob = await response.blob();
@@ -292,7 +375,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         showToast(e instanceof Error ? e.message : 'Download failed. Please try again.');
       }
     },
-    [downloadMut, showToast]
+    [collectDownloadArtifact, showToast]
   );
 
   const rateResource = useCallback(
@@ -327,10 +410,20 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setSubjectArchived = useCallback(
     async (id: string, isArchived: boolean) => {
       await setSubjectArchivedMut({ id: asSubjectId(id), isArchived });
-      showToast(isArchived ? 'Course archived — hidden from the library.' : 'Course restored to the library.');
+      showToast(isArchived ? 'Course archived — hidden from the shelf.' : 'Course restored to the shelf.');
     },
     [setSubjectArchivedMut, showToast]
   );
+
+  // --- Overlays --------------------------------------------------------------
+  const openUploadModal = useCallback((subjectId?: string) => {
+    setUploadSubjectId(subjectId ?? null);
+  }, []);
+  const closeUploadModal = useCallback(() => setUploadSubjectId(null), []);
+  const openDetail = useCallback((resource: StudyResource) => setDetailResource(resource), []);
+  const closeDetail = useCallback(() => setDetailResource(null), []);
+  const openEdit = useCallback((resource: StudyResource) => setEditResource(resource), []);
+  const closeEdit = useCallback(() => setEditResource(null), []);
 
   const value = useMemo(
     () => ({
@@ -341,21 +434,31 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       isLibraryLoading,
       bookmarkIds,
       bookmarkCount: bookmarkIds.length,
-      activeTab,
-      setActiveTab,
-      searchQuery,
-      setSearchQuery,
-      selectedSubject,
-      setSelectedSubject,
-      selectedType,
-      setSelectedType,
-      filteredResources,
+      view,
+      openHome,
+      openSubject,
+      openAssistant,
+      assistantScope,
+      subjectSearch,
+      setSubjectSearch,
+      uploadSubjectId,
+      openUploadModal,
+      closeUploadModal,
+      detailResource,
+      openDetail,
+      closeDetail,
+      editResource,
+      openEdit,
+      closeEdit,
       toggleBookmark,
       isBookmarked,
       downloadResource,
-      addResource,
+      collectDownloadArtifact,
+      uploadFileWithProgress,
+      createResource,
       updateResource,
       deleteResource,
+      reindexResource,
       rateResource,
       resetToDefaults,
       addSubject,
@@ -370,17 +473,30 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       semester,
       isLibraryLoading,
       bookmarkIds,
-      activeTab,
-      searchQuery,
-      selectedSubject,
-      selectedType,
-      filteredResources,
+      view,
+      openHome,
+      openSubject,
+      openAssistant,
+      assistantScope,
+      subjectSearch,
+      uploadSubjectId,
+      openUploadModal,
+      closeUploadModal,
+      detailResource,
+      openDetail,
+      closeDetail,
+      editResource,
+      openEdit,
+      closeEdit,
       toggleBookmark,
       isBookmarked,
       downloadResource,
-      addResource,
+      collectDownloadArtifact,
+      uploadFileWithProgress,
+      createResource,
       updateResource,
       deleteResource,
+      reindexResource,
       rateResource,
       resetToDefaults,
       addSubject,

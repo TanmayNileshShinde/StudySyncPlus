@@ -17,14 +17,15 @@ const EMPTY_FORM = {
   inLibrary: true
 };
 
-export const CurriculumSchemeModal: React.FC = () => {
+export const CurriculumSchemeModal: React.FC<{ onOpenSubject?: (subjectId: string) => void }> = ({
+  onOpenSubject
+}) => {
   const {
     schemeCourses,
     semester,
     addSubject,
     setSubjectArchived,
-    setSelectedSubject,
-    setActiveTab,
+    openSubject,
     showToast
   } = useResources();
 
@@ -34,13 +35,16 @@ export const CurriculumSchemeModal: React.FC = () => {
 
   const semesterLabel = semester?.label ?? 'Semester III';
 
-  const handleFilterByCourse = (course: { courseName: string; inLibrary: boolean }) => {
-    if (course.inLibrary) {
-      setSelectedSubject(course.courseName);
-      setActiveTab('library');
-      showToast(`Library filtered for: ${course.courseName}`);
+  const handleFilterByCourse = (course: { id: string; courseName: string; inLibrary: boolean; isArchived: boolean }) => {
+    if (course.inLibrary && !course.isArchived) {
+      if (onOpenSubject) {
+        onOpenSubject(course.id);
+      } else {
+        openSubject(course.id);
+      }
+      showToast(`Opened: ${course.courseName}`);
     } else {
-      showToast(`No library section for "${course.courseName}" yet.`);
+      showToast(`No shelf section for "${course.courseName}" yet.`);
     }
   };
 
@@ -225,7 +229,7 @@ export const CurriculumSchemeModal: React.FC = () => {
                 <tr
                   key={item.id}
                   className={`transition-colors hover:bg-lime-wash group cursor-pointer ${item.isArchived ? 'opacity-50' : ''}`}
-                  onClick={() => handleFilterByCourse(item)}
+                  onClick={() => handleFilterByCourse({ id: item.id, courseName: item.courseName, inLibrary: item.inLibrary, isArchived: item.isArchived })}
                 >
                   <td className="py-3 px-3 font-mono text-ink-3 tabular">{item.srNo}</td>
                   <td className="py-3 px-3 font-medium text-ink-2">

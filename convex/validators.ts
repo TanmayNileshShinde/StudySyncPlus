@@ -11,8 +11,56 @@ export const resourceTypeValidator = v.union(
 
 export type ResourceTypeValue = "Lecture Notes" | "Past Exam Papers" | "Lab Manual" | "Cheat Sheet" | "Reference Book";
 
-/** Hard platform cap for one stored PDF (requirement: 50 MB). */
+/** Stored document kinds: real PDF plus PowerPoint decks. */
+export const fileKindValidator = v.union(
+  v.literal("pdf"),
+  v.literal("ppt"),
+  v.literal("pptx"),
+);
+export type FileKind = Infer<typeof fileKindValidator>;
+
+/** Ingestion pipeline state for a stored document. */
+export const ingestStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("processing"),
+  v.literal("ready"),
+  v.literal("failed"),
+);
+export type IngestStatus = Infer<typeof ingestStatusValidator>;
+
+/** Display label for a stored file kind. */
+export function fileKindLabel(kind: FileKind | undefined): "PDF" | "PPT" | "PPTX" {
+  switch (kind) {
+    case "ppt":
+      return "PPT";
+    case "pptx":
+      return "PPTX";
+    default:
+      return "PDF";
+  }
+}
+
+/** Hard platform cap for one stored file (requirement: 50 MB). */
 export const MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+/** Content types accepted by the storage validator (PDF + PowerPoint decks). */
+export const ALLOWED_CONTENT_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+  "application/vnd.ms-powerpoint", // .ppt
+];
+
+/** Map a MIME type (or filename fallback) to a stored file kind. */
+export function resolveFileKind(contentType: string, fileName: string): FileKind {
+  if (contentType === "application/vnd.openxmlformats-officedocument.presentationml.presentation") return "pptx";
+  if (contentType === "application/vnd.ms-powerpoint") return "ppt";
+  if (contentType === "application/pdf") return "pdf";
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".pptx")) return "pptx";
+  if (lower.endsWith(".ppt")) return "ppt";
+  if (lower.endsWith(".pdf")) return "pdf";
+  throw new Error(`Unsupported file type: ${contentType || fileName}`);
+}
 
 /** Client-facing resource view (what the React app renders). */
 export const resourceViewValidator = v.object({
@@ -31,13 +79,18 @@ export const resourceViewValidator = v.object({
   downloadCount: v.number(),
   rating: v.number(), // aggregate 0..5 (0 = unrated)
   ratingCount: v.number(),
-  fileFormat: v.literal("PDF"),
+  fileFormat: v.union(v.literal("PDF"), v.literal("PPT"), v.literal("PPTX")),
+  fileKind: v.union(fileKindValidator, v.null()),
   description: v.string(),
   tags: v.array(v.string()),
   isUserUploaded: v.boolean(), // !isOfficial
   ownerKey: v.union(v.string(), v.null()),
-  hasFile: v.boolean(), // real stored PDF (vs legacy summary-card fallback)
+  hasFile: v.boolean(), // real stored file (vs legacy summary-card fallback)
   fileName: v.union(v.string(), v.null()),
+  ingestStatus: v.union(ingestStatusValidator, v.null()),
+  ingestError: v.union(v.string(), v.null()),
+  ingestedAt: v.union(v.number(), v.null()),
+  chunkCount: v.union(v.number(), v.null()),
 });
 
 export type ResourceView = Infer<typeof resourceViewValidator>;

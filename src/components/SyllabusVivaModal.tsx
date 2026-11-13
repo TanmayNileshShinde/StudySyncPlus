@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Layers, Code } from 'lucide-react';
 
-interface SyllabusModule {
+export interface SyllabusModule {
   moduleNumber: number;
   mappedCO: string;
   name: string;
@@ -11,7 +11,7 @@ interface SyllabusModule {
   codeReference: string;
 }
 
-const SYLLABUS_MODULES: SyllabusModule[] = [
+export const SYLLABUS_MODULES: SyllabusModule[] = [
   {
     moduleNumber: 1,
     mappedCO: 'CO1',
@@ -26,7 +26,7 @@ const SYLLABUS_MODULES: SyllabusModule[] = [
     ],
     implementationInApp:
       'All components are built with modern ES6+ syntax. Dynamic DOM updates are handled via React VDOM, form validation checks title length, regex roll numbers and PDF size caps, while resources, bookmarks and ratings persist in the Convex backend; the Async & JS Lab retains a live browser localStorage inspector for the syllabus outcome.',
-    codeReference: 'src/components/UploadModal.tsx & convex/resources.ts'
+    codeReference: 'src/components/BulkUploadModal.tsx & convex/resources.ts'
   },
   {
     moduleNumber: 2,

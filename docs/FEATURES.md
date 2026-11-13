@@ -124,27 +124,45 @@ All overlays: ink 40% scrim, zero-radius panel, ESC closes, focus trapped and re
 | Live browser localStorage inspector (refreshable), CORS explainer | `JsSandboxModal.tsx` | Shipped |
 | 4 syllabus modules × CO mapping × outcomes × in-app implementation × source-file references, module rail with stamp-fill active state | `SyllabusVivaModal.tsx` | Shipped |
 
-## 8. Backend & Storage Systems
+## 8. Tab 2 — StudySync AI (Grounded RAG Assistant)
+
+| Feature | Where | Status |
+|---|---|---|
+| Tri-mode semantic retrieval (Library, Semester III, Individual PDF) | `StudySyncAiTab.tsx` → `rag.search` | Shipped |
+| End-to-end vector RAG with Convex vector search (`documentChunks.by_embedding`, 1024-d) | `convex/schema.ts`, `convex/rag.ts` | Shipped |
+| NVIDIA Nemotron 3.5 1024-d embeddings (`nvidia/nemotron-3.5-embed-1b`) with asymmetric passage/query projection | `convex/rag.ts` | Shipped |
+| NVIDIA Nemotron 30B reasoning chat completion (`nvidia/nemotron-3.5-lightning-30b-a3b`) with strict grounding | `convex/rag.ts` | Shipped |
+| Real PDF ingestion (131 pages of `DSA_MSE_Master_Study_Guide.pdf` -> 417 vector chunks with page numbers) | `scripts/ingest_test_pdf.mjs`, `rag.ingestResourcePages` | Shipped |
+| Grounding provenance ledger: streamlined single-row citation chips with match percentage, collapsible excerpts, and instant page-mapped PDF viewer | `StudySyncAiTab.tsx` | Shipped |
+| In-app PDF Document Viewer with exact page jumping (`#page=X`), direct tab popout, and split preview | `StudySyncAiTab.tsx` | Shipped |
+| Rich Markdown rendering: tables, code blocks with copy button, syntax highlighting (`highlight.js`) | `MarkdownRenderer.tsx` | Shipped |
+| Safe Mermaid diagram & flowchart rendering with automatic syntax sanitization and sizing controls | `MermaidDiagram.tsx` | Shipped |
+| Persistent multi-session chat history, dedicated draft session creation, switching, and deletion | `convex/chat.ts`, `StudySyncAiTab.tsx` | Shipped |
+| Suggested syllabus questions and context-aware follow-up prompt chips | `StudySyncAiTab.tsx` | Shipped |
+| Direct deep-linking: "Ask AI" buttons on `ResourceCard` and `ResourceDetailModal` to jump straight to PDF chat | `ResourceCard.tsx`, `ResourceDetailModal.tsx` | Shipped |
+| Edge-case guarantees: polite out-of-domain question refusal, missing-context honesty, and idempotent duplicate ingestion protection | `convex/rag.ts`, `scripts/test_rag_pipeline.mjs` | Shipped |
+
+## 9. Backend & Storage Systems
 
 | System | Details | Status |
 |---|---|---|
-| Persistence | Convex cloud database replaces localStorage for resources, subjects, semesters, bookmarks, and ratings | Shipped |
+| Persistence | Convex cloud database replaces localStorage for resources, subjects, semesters, bookmarks, ratings, chat threads, and chat messages | Shipped |
 | File Storage | Convex File Storage for real PDFs (50 MB limit); direct two-step upload via `generateUploadUrl` + `resources.create`; preview and download via `fileUrl` / `download` | Shipped |
 | Ownership Model | Stable anonymous `ownerKey` stored in localStorage; student uploaders own their creations and can edit/delete them; official seed records are protected | Shipped |
-| Data Seeding | Idempotent `init.seedIfEmpty` and `init.resetToSeed`; Semester III scheme and 8 initial resources migrated to Convex | Shipped |
-| RAG Readiness | `documentChunks` table in `convex/schema.ts` with 1536-dimensional vector index `by_embedding` and `resourceId` filtering prepared for PDF chunking & vector search | Shipped |
+| Data Seeding | Idempotent `init.seedIfEmpty` and `init.resetToSeed`; Semester III scheme and initial resources migrated to Convex | Shipped |
+| Vector Search | `documentChunks` table in `convex/schema.ts` with 1024-dimensional vector index `by_embedding` and `resourceId` / `semesterId` filtering | Shipped |
 | Accessibility | Overlay focus traps, keyboard-operable cards/rows, `aria-pressed`/`aria-live`/labels, `prefers-reduced-motion` collapse, AA contrast tokens | Shipped |
 
 ---
 
-## 9. Known Limitations (evidence-based)
+## 10. Known Limitations (evidence-based)
 
 1. **No authentication / login** — By explicit constraint, the platform is publicly accessible without Clerk or auth credentials. Ownership is guarded by browser-local `ownerKey`.
 2. **Weekly-traffic line chart is synthetic** — Intentionally labeled as demonstration data in analytics.
 3. **No client URL routing** — Single-page app with React state navigation (tabs and deep links operate in memory).
-4. **500 kB bundle size warning** — Chart.js is bundled without dynamic code splitting.
+4. **500 kB bundle size warning** — Chart.js and Mermaid are bundled without dynamic code splitting.
 5. **Delete uses `window.confirm`** — Browser native dialog prior to mutation execution.
 
 ---
 
-*Verified against `npm run build` (clean), `npm run lint` (0 errors), full Convex integration test for PDF upload/download/update/delete, and live queries/mutations.*
+*Verified against `npm run build` (clean), `npm run lint` (0 errors), live Convex Vector Search, NVIDIA Nemotron 1024-d embeddings, 7/7 automated RAG test suite pass, and live PDF grounding.*

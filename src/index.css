@@ -300,7 +300,8 @@ body {
   .animate-fadeIn,
   .animate-stamp,
   .animate-toast,
-  .animate-flash {
+  .animate-flash,
+  .animate-spin {
     animation-duration: 1ms;
   }
 }

@@ -1,8 +1,8 @@
 {
   "files": [],
+  "include": [],
   "references": [
     { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.convex.json" }
+    { "path": "./tsconfig.node.json" }
   ]
 }

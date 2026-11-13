@@ -6,20 +6,27 @@
   "homepage": "https://TanmayNileshShinde.github.io/StudySyncPlus",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && tsc -p tsconfig.convex.json --noEmit && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@types/pdf-parse": "^1.1.5",
     "canvas-confetti": "^1.9.4",
     "chart.js": "^4.6.1",
     "convex": "^1.49.0",
+    "fflate": "^0.8.3",
     "lucide-react": "^1.72.0",
+    "mermaid": "^12.3.0",
+    "pdf-parse": "^2.4.5",
     "react": "^19.3.1",
     "react-chartjs-2": "^5.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

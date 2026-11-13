@@ -110,10 +110,11 @@ class ApiService {
   }
 
   /**
-   * Generates a downloadable dummy file (Blob URL) to demonstrate browser DOM interaction (CO1.2)
+   * Builds the summary-sheet text for legacy seeded rows (no stored file).
+   * Used by the single download fallback and the ZIP bulk export.
    */
-  generateAndDownloadResource(resource: StudyResource): void {
-    const content = `==========================================================
+  generateResourceSummaryText(resource: StudyResource): string {
+    return `==========================================================
 STUDYSYNCPLUS — SEMESTER 3 STUDENT RESOURCE SHARING HUB
 Shah & Anchor Kutchhi Engineering College (SAKEC)
 Course Project: Web Computing & Modern Frameworks
@@ -143,6 +144,13 @@ Developed by:
   - Aditya Shah   (126BTCM2009 | Roll 68)
 ==========================================================
 `;
+  }
+
+  /**
+   * Generates a downloadable dummy file (Blob URL) to demonstrate browser DOM interaction (CO1.2)
+   */
+  generateAndDownloadResource(resource: StudyResource): void {
+    const content = this.generateResourceSummaryText(resource);
 
     const blob = new Blob([content], { type: 'application/pdf;charset=utf-8' });
     const url = URL.createObjectURL(blob);

@@ -55,6 +55,7 @@ export default defineSchema({
     fileSizeBytes: v.number(), // real bytes for uploads; nominal for legacy seeds
     storageId: v.optional(v.id("_storage")), // real PDF in Convex File Storage
     fileName: v.optional(v.string()), // original client filename (display only)
+    fileKind: v.optional(v.union(v.literal("pdf"), v.literal("ppt"), v.literal("pptx"))),
     downloadCount: v.number(),
     ratingSum: v.number(),
     ratingCount: v.number(),
@@ -63,6 +64,20 @@ export default defineSchema({
     ownerKey: v.optional(v.string()), // undefined = official seeded content
     isOfficial: v.boolean(),
     legacyId: v.optional(v.string()), // "res-001"… — idempotent seeding handle
+    // RAG pipeline state. pending/processing/ready/failed; undefined = legacy
+    // row that never had a stored file (client-side summary fallback only).
+    ingestStatus: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("processing"),
+        v.literal("ready"),
+        v.literal("failed")
+      )
+    ),
+    ingestError: v.optional(v.string()),
+    ingestedAt: v.optional(v.number()),
+    chunkCount: v.optional(v.number()),
+    contentHash: v.optional(v.string()), // file-bytes fingerprint for duplicate-processing protection
   })
     .index("by_semester", ["semesterId"])
     .index("by_subject", ["subjectId"])
@@ -84,19 +99,63 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_resource_and_owner", ["resourceId", "ownerKey"]),
 
-  // Prepared for future PDF chunking + RAG: chunks exist per resource today,
-  // embeddings are optional and will be backfilled by an indexing action.
+  // Document chunks for PDF/PPT indexing and vector search (RAG)
   documentChunks: defineTable({
     resourceId: v.id("resources"),
+    semesterId: v.optional(v.id("semesters")),
+    subjectId: v.optional(v.id("subjects")), // enables subject-scoped vector search
     seq: v.number(),
     text: v.string(),
-    page: v.optional(v.number()),
+    page: v.optional(v.number()), // PDF page number or PPT/PPTX slide number
     embedding: v.optional(v.array(v.float64())),
   })
     .index("by_resource", ["resourceId", "seq"])
+    .index("by_semester", ["semesterId"])
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
-      dimensions: 1536,
-      filterFields: ["resourceId"],
+      dimensions: 1024,
+      filterFields: ["resourceId", "semesterId", "subjectId"],
     }),
+
+  // Persistent chat threads for AI Assistant (Library, Semester, Subject, or Resource modes)
+  chatThreads: defineTable({
+    ownerKey: v.string(),
+    title: v.string(),
+    mode: v.union(
+      v.literal("library"),
+      v.literal("semester"),
+      v.literal("subject"),
+      v.literal("resource")
+    ),
+    resourceId: v.optional(v.id("resources")),
+    semesterId: v.optional(v.id("semesters")),
+    subjectId: v.optional(v.id("subjects")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_owner", ["ownerKey", "updatedAt"])
+    .index("by_resource", ["resourceId"])
+    .index("by_semester", ["semesterId"])
+    .index("by_subject", ["subjectId"]),
+
+  // Persistent messages within a chat thread
+  chatMessages: defineTable({
+    threadId: v.id("chatThreads"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    citations: v.optional(
+      v.array(
+        v.object({
+          chunkId: v.id("documentChunks"),
+          resourceId: v.id("resources"),
+          resourceTitle: v.string(),
+          page: v.optional(v.number()),
+          fileKind: v.optional(v.string()), // "pdf" | "ppt" | "pptx" — labels the ref "Page" vs "Slide"
+          textSnippet: v.string(),
+          score: v.number(),
+        })
+      )
+    ),
+    createdAt: v.number(),
+  }).index("by_thread", ["threadId", "createdAt"]),
 });

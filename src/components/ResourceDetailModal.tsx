@@ -6,14 +6,21 @@ import { useResources } from '../context/ResourceContext';
 import { useOverlayBehavior } from '../hooks/useOverlayBehavior';
 import { getOwnerKey } from '../lib/owner';
 import { asResourceId } from '../lib/convexIds';
-import { X, Download, Bookmark, Star, Share2, Pencil, FileText } from 'lucide-react';
+import {
+  X,
+  Download,
+  Bookmark,
+  Star,
+  Share2,
+  Pencil,
+  Trash2,
+  FileText,
+  Presentation,
+  Sparkles,
+  RotateCcw,
+  LoaderCircle
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
-
-interface ResourceDetailModalProps {
-  resource: StudyResource | null;
-  onClose: () => void;
-  onEdit: (resource: StudyResource) => void;
-}
 
 const CONFETTI_COLORS = ['#111111', '#a3e635', '#d6d3d1'];
 
@@ -52,10 +59,61 @@ const RatingWidget: React.FC<{ resourceId: string }> = ({ resourceId }) => {
   );
 };
 
-export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resource, onClose, onEdit }) => {
-  const { toggleBookmark, isBookmarked, downloadResource, showToast } = useResources();
+/** Ingestion state as a stamp with optional recovery action. */
+const IngestStamp: React.FC<{ resource: StudyResource; onRetry: () => void; retrying: boolean }> = ({
+  resource,
+  onRetry,
+  retrying
+}) => {
+  if (!resource.hasFile) return null;
+  if (resource.ingestStatus === 'ready') {
+    return (
+      <span className="stamp stamp-verified animate-stamp" title={`Indexed ${resource.chunkCount ?? 0} vector chunks`}>
+        Indexed
+      </span>
+    );
+  }
+  if (resource.ingestStatus === 'failed') {
+    return (
+      <button
+        onClick={onRetry}
+        disabled={retrying}
+        className="stamp inline-flex items-center gap-1 bg-paper text-alert border border-alert hover:bg-alert hover:text-paper transition-colors disabled:opacity-50"
+        title={resource.ingestError ?? 'Indexing failed'}
+      >
+        {retrying ? <LoaderCircle className="w-3 h-3 animate-spin" aria-hidden="true" /> : <RotateCcw className="w-3 h-3" aria-hidden="true" />}
+        {retrying ? 'Retrying…' : 'Index failed — retry'}
+      </button>
+    );
+  }
+  return (
+    <span className="stamp stamp-outline inline-flex items-center gap-1" title="Building the vector index">
+      <LoaderCircle className="w-3 h-3 animate-spin" aria-hidden="true" />
+      Indexing
+    </span>
+  );
+};
+
+interface ResourceDetailModalProps {
+  resource: StudyResource | null;
+  onClose: () => void;
+}
+
+export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resource, onClose }) => {
+  const {
+    toggleBookmark,
+    isBookmarked,
+    downloadResource,
+    openEdit,
+    openAssistant,
+    closeDetail,
+    deleteResource,
+    reindexResource,
+    showToast
+  } = useResources();
   const panelRef = useOverlayBehavior(!!resource, onClose);
   const ownerKey = getOwnerKey();
+  const [retrying, setRetrying] = useState(false);
 
   // Hooks run unconditionally; queries skip while the modal is closed.
   const fileData = useQuery(
@@ -67,6 +125,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
 
   const bookmarked = isBookmarked(resource.id);
   const isOwner = resource.isUserUploaded && resource.ownerKey === ownerKey;
+  const isDeck = resource.fileKind === 'ppt' || resource.fileKind === 'pptx';
 
   const handleDownload = () => {
     void downloadResource(resource);
@@ -83,6 +142,24 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
     showToast('Direct study resource link copied to clipboard!');
   };
 
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      const result = await reindexResource(resource.id);
+      showToast(result.message);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Re-index failed. Please try again.');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (window.confirm(`Delete "${resource.title}"? This also removes its saved bookmarks and vector index.`)) {
+      void deleteResource(resource.id).then(() => closeDetail());
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-fadeIn"
@@ -96,18 +173,18 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
         role="dialog"
         aria-modal="true"
         aria-labelledby="detail-modal-title"
-        className="ruled w-full max-w-xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto shadow-overlay animate-fadeIn"
+        className="ruled w-full max-w-xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto shadow-overlay animate-fadeIn bg-paper"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 pb-4 border-b border-ink">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-              <span className="stamp stamp-ink">Sem {resource.semester}</span>
-              <span className="stamp stamp-outline font-mono">{resource.courseCode}</span>
+              <span className="stamp stamp-ink font-mono">{resource.courseCode}</span>
               <span className="stamp stamp-outline">{resource.type}</span>
-              <span className="stamp stamp-outline">{resource.fileFormat}</span>
+              <span className="stamp stamp-outline font-mono">{resource.fileFormat}</span>
+              <IngestStamp resource={resource} onRetry={() => void handleRetry()} retrying={retrying} />
             </div>
-            <h2 id="detail-modal-title" className="text-xl sm:text-2xl font-display font-black text-ink leading-tight">
+            <h2 id="detail-modal-title" className="text-xl sm:text-2xl font-black text-ink leading-tight tracking-tight">
               {resource.title}
             </h2>
             <p className="text-xs font-semibold text-ink-2 mt-1">{resource.subjectName}</p>
@@ -122,7 +199,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
         <div className="py-5 space-y-5 text-xs sm:text-sm">
           <div>
             <h3 className="text-[11px] font-mono font-semibold text-ink-3 uppercase tracking-[0.08em] mb-2">
-              Description &amp; Key Concepts
+              Description &amp; key concepts
             </h3>
             <p className="text-ink-2 leading-relaxed ruled-sunk p-4">{resource.description}</p>
           </div>
@@ -135,14 +212,14 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
               <dd className="text-[10px] font-mono text-ink-2">{resource.rollNumber}</dd>
             </div>
             <div className="p-3">
-              <dt className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em]">File Size</dt>
+              <dt className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em]">File size</dt>
               <dd className="font-bold text-ink font-mono mt-0.5">{resource.fileSize}</dd>
               <dd className="text-[10px] text-ink-3">{resource.fileFormat}</dd>
             </div>
             <div className="p-3">
               <dt className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em]">Downloads</dt>
               <dd className="font-bold text-ink font-mono tabular mt-0.5">{resource.downloadCount}</dd>
-              <dd className="text-[10px] text-lime-text font-semibold">{resource.hasFile ? 'Stored PDF' : 'Verified'}</dd>
+              <dd className="text-[10px] text-lime-text font-semibold">{resource.hasFile ? 'Stored file' : 'Summary sheet'}</dd>
             </div>
             <div className="p-3">
               <dt className="text-[10px] font-mono text-ink-3 uppercase tracking-[0.08em]">Rating</dt>
@@ -154,14 +231,22 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
             </div>
           </dl>
 
-          {/* Inline preview for stored PDFs */}
+          {/* Inline preview for stored PDFs; honest fallback for decks */}
           {resource.hasFile && (
             <div>
               <h3 className="text-[11px] font-mono font-semibold text-ink-3 uppercase tracking-[0.08em] mb-2">
-                Document Preview
+                Document preview
               </h3>
               <div className="ruled-sunk p-2">
-                {fileData ? (
+                {isDeck ? (
+                  <div className="p-6 text-center">
+                    <Presentation className="w-7 h-7 text-ink-3 mx-auto mb-2" aria-hidden="true" />
+                    <p className="text-[13px] text-ink-2 max-w-[40ch] mx-auto">
+                      Slides preview in their own app. The assistant can still answer from every slide —
+                      or download the deck below.
+                    </p>
+                  </div>
+                ) : fileData ? (
                   <object
                     data={fileData.url}
                     type="application/pdf"
@@ -187,21 +272,23 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
           )}
 
           {/* Tags */}
-          <div>
-            <h3 className="text-[11px] font-mono font-semibold text-ink-3 uppercase tracking-[0.08em] mb-2">
-              Curriculum Tags
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {resource.tags.map((tag, idx) => (
-                <span
-                  key={idx}
-                  className="px-2 py-0.5 border border-rule text-ink-2 font-mono font-medium text-[11px] bg-paper"
-                >
-                  #{tag}
-                </span>
-              ))}
+          {resource.tags.length > 0 && (
+            <div>
+              <h3 className="text-[11px] font-mono font-semibold text-ink-3 uppercase tracking-[0.08em] mb-2">
+                Tags
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {resource.tags.map((tag, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-0.5 border border-rule text-ink-2 font-mono font-medium text-[11px] bg-paper"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Peer rating */}
           <div className="pt-1">
@@ -227,17 +314,41 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ resour
             </button>
 
             {isOwner && (
-              <button onClick={() => onEdit(resource)} className="btn btn-secondary">
-                <Pencil className="w-4 h-4" aria-hidden="true" />
-                <span>Edit</span>
-              </button>
+              <>
+                <button onClick={() => { closeDetail(); openEdit(resource); }} className="btn btn-secondary">
+                  <Pencil className="w-4 h-4" aria-hidden="true" />
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="btn btn-ghost px-2 text-ink-3 hover:text-alert"
+                  aria-label={`Delete ${resource.title}`}
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4" aria-hidden="true" />
+                </button>
+              </>
             )}
           </div>
 
-          <button onClick={handleDownload} className="btn btn-primary px-6">
-            <Download className="w-4 h-4" aria-hidden="true" />
-            <span>Download ({resource.fileSize})</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                closeDetail();
+                openAssistant({ mode: 'resource', resourceId: resource.id });
+              }}
+              className="btn btn-secondary border-ink hover:bg-lime-wash flex items-center gap-1.5"
+              title="Ask the Study Assistant about this document"
+            >
+              <Sparkles className="w-4 h-4 text-lime-deep" aria-hidden="true" />
+              <span>Ask AI</span>
+            </button>
+
+            <button onClick={handleDownload} className="btn btn-primary px-6">
+              <Download className="w-4 h-4" aria-hidden="true" />
+              <span>Download ({resource.fileSize})</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
