@@ -24,10 +24,10 @@ function getNvidiaApiKey(): string {
 
 /**
  * Get configured embedding model.
- * Defaults to "nvidia/llama-nemotron-embed-vl-1b-v2" (Nemotron Embed 1B v2, 2048 output dimensions).
+ * Defaults to "nvidia/nemotron-3.5-embed-1b" (Nemotron 3.5 Embed 1B, 2048 output dimensions).
  */
 function getEmbeddingModel(): string {
-  return process.env.NVIDIA_EMBEDDING_MODEL || "nvidia/llama-nemotron-embed-vl-1b-v2";
+  return process.env.NVIDIA_EMBEDDING_MODEL || "nvidia/nemotron-3.5-embed-1b";
 }
 
 /** Get configured chat model (defaults to nvidia/nemotron-3.5-lightning-30b-a3b). */
@@ -57,20 +57,17 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Execute a single bounded batch request (<= 8 chunks) to NVIDIA NIM with retries
+ * Execute a single embedding request to NVIDIA NIM with retries, strict 10s timeout,
  * and exponential backoff for transient failures (429, 5xx, timeouts).
  */
-async function callNvidiaSingleBatch(
-  texts: string[],
-  inputType: "passage" | "query"
-): Promise<number[][]> {
-  if (texts.length === 0) return [];
-
-  const apiKey = getNvidiaApiKey();
-  const model = getEmbeddingModel();
-
-  const payload: Record<string, unknown> = {
-    input: texts,
+async function callNvidiaSingleText(
+  text: string,
+  inputType: "passage" | "query",
+  apiKey: string,
+  model: string
+): Promise<number[]> {
+  const payload = {
+    input: [text],
     model,
     input_type: inputType,
     encoding_format: "float",
@@ -88,7 +85,7 @@ async function callNvidiaSingleBatch(
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(30000), // 30s timeout per attempt
+        signal: AbortSignal.timeout(10000), // Strict 10s timeout
       });
 
       if (!response.ok) {
@@ -101,7 +98,7 @@ async function callNvidiaSingleBatch(
           response.status === 504;
 
         if (isTransient && attempt < MAX_RETRIES) {
-          const backoff = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 300, 8000);
+          const backoff = Math.min(500 * Math.pow(2, attempt) + Math.random() * 200, 4000);
           console.warn(
             `[callNvidiaEmbeddings] Transient error (${response.status}) on attempt ${attempt + 1}/${MAX_RETRIES + 1}. Retrying in ${Math.round(backoff)}ms...`
           );
@@ -113,23 +110,23 @@ async function callNvidiaSingleBatch(
       }
 
       const json = await response.json();
-      const embeddings: number[][] = json.data.map(
-        (item: { embedding: number[] }) => item.embedding
-      );
+      const embedding = json.data?.[0]?.embedding;
+      if (!embedding || !Array.isArray(embedding)) {
+        throw new Error("NVIDIA Embeddings API returned malformed response with no embedding vector.");
+      }
 
-      // Assert dimension alignment with Convex schema (2048 dimensions)
-      if (embeddings.length > 0 && embeddings[0].length !== 2048) {
+      if (embedding.length !== 2048) {
         throw new Error(
-          `Embedding dimension mismatch: NVIDIA model '${model}' returned ${embeddings[0].length} dimensions, but Convex schema expects 2048.`
+          `Embedding dimension mismatch: NVIDIA model '${model}' returned ${embedding.length} dimensions, but Convex schema expects 2048.`
         );
       }
 
-      return embeddings;
+      return embedding;
     } catch (err: any) {
       lastError = err instanceof Error ? err : new Error(String(err));
       const isAbort = err?.name === "TimeoutError" || err?.name === "AbortError";
       if ((isAbort || err?.message?.includes("fetch failed")) && attempt < MAX_RETRIES) {
-        const backoff = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 300, 8000);
+        const backoff = Math.min(500 * Math.pow(2, attempt) + Math.random() * 200, 4000);
         console.warn(
           `[callNvidiaEmbeddings] Network error (${err.message}) on attempt ${attempt + 1}/${MAX_RETRIES + 1}. Retrying in ${Math.round(backoff)}ms...`
         );
@@ -140,14 +137,14 @@ async function callNvidiaSingleBatch(
     }
   }
 
-  throw lastError ?? new Error("callNvidiaSingleBatch failed after all retries.");
+  throw lastError ?? new Error("callNvidiaSingleText failed after all retries.");
 }
 
 /**
  * Generate 2048-dimensional embeddings via NVIDIA NIM API.
- * Uses nvidia/llama-nemotron-embed-vl-1b-v2.
- * Safely partitions texts into bounded sub-batches (max 8 passages per request)
- * to strictly observe the model's 8,192 token context limit and prevent request timeouts.
+ * Uses nvidia/nemotron-3.5-embed-1b.
+ * Employs bounded concurrency (6 concurrent requests) for optimal throughput,
+ * with strict 10s per-request timeouts and exponential backoff.
  * Exported for reuse by the automatic ingestion pipeline (convex/ingest.ts).
  */
 export async function callNvidiaEmbeddings(
@@ -156,22 +153,27 @@ export async function callNvidiaEmbeddings(
 ): Promise<number[][]> {
   if (texts.length === 0) return [];
 
-  // Single query doesn't need chunking
+  const apiKey = getNvidiaApiKey();
+  const model = getEmbeddingModel();
+
   if (texts.length === 1) {
-    return await callNvidiaSingleBatch(texts, inputType);
+    const single = await callNvidiaSingleText(texts[0], inputType, apiKey, model);
+    return [single];
   }
 
-  // Bounded sub-batches to respect the 8,192 token limit of the model
-  const SUB_BATCH_SIZE = 8;
-  const allEmbeddings: number[][] = [];
+  // Bounded concurrency pool (6 parallel requests)
+  const CONCURRENCY = 6;
+  const results: number[][] = [];
 
-  for (let i = 0; i < texts.length; i += SUB_BATCH_SIZE) {
-    const subBatch = texts.slice(i, i + SUB_BATCH_SIZE);
-    const subEmbeddings = await callNvidiaSingleBatch(subBatch, inputType);
-    allEmbeddings.push(...subEmbeddings);
+  for (let i = 0; i < texts.length; i += CONCURRENCY) {
+    const slice = texts.slice(i, i + CONCURRENCY);
+    const sliceResults = await Promise.all(
+      slice.map((t) => callNvidiaSingleText(t, inputType, apiKey, model))
+    );
+    results.push(...sliceResults);
   }
 
-  return allEmbeddings;
+  return results;
 }
 
 /** Split clean page/slide text into overlapping semantic chunks with provenance. */

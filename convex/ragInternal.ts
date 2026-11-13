@@ -272,3 +272,101 @@ export const registerMseResource = mutation({
     return { resourceId: resId, remappedChunks: remapped };
   },
 });
+
+/** Insert raw un-embedded document chunks. Embedding remains undefined until processed. */
+export const insertRawChunks = internalMutation({
+  args: {
+    chunks: v.array(
+      v.object({
+        resourceId: v.id("resources"),
+        semesterId: v.optional(v.id("semesters")),
+        subjectId: v.optional(v.id("subjects")),
+        seq: v.number(),
+        text: v.string(),
+        page: v.optional(v.number()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    for (const chunk of args.chunks) {
+      await ctx.db.insert("documentChunks", chunk);
+    }
+    return args.chunks.length;
+  },
+});
+
+/** Query a bounded slice of chunks for embedding generation. */
+export const getChunksSlice = internalQuery({
+  args: {
+    resourceId: v.id("resources"),
+    startSeq: v.number(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("documentChunks")
+      .withIndex("by_resource", (q) =>
+        q.eq("resourceId", args.resourceId).gte("seq", args.startSeq)
+      )
+      .take(args.limit);
+  },
+});
+
+/** Apply generated vector embeddings to existing document chunks. */
+export const applyChunkEmbeddings = internalMutation({
+  args: {
+    updates: v.array(
+      v.object({
+        id: v.id("documentChunks"),
+        embedding: v.array(v.float64()),
+      })
+    ),
+    resourceId: v.id("resources"),
+    progressCount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    for (const update of args.updates) {
+      await ctx.db.patch(update.id, { embedding: update.embedding });
+    }
+    // Update live chunkCount progress on the resource so the student sees immediate progress
+    await ctx.db.patch(args.resourceId, {
+      chunkCount: args.progressCount,
+    });
+    return args.updates.length;
+  },
+});
+
+/** Mark ingestion completely ready after all chunks and embeddings are stored. */
+export const finalizeIngestion = internalMutation({
+  args: {
+    resourceId: v.id("resources"),
+    chunkCount: v.number(),
+    contentHash: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.resourceId, {
+      ingestStatus: "ready",
+      chunkCount: args.chunkCount,
+      contentHash: args.contentHash,
+      ingestedAt: Date.now(),
+      ingestError: undefined,
+    });
+    return null;
+  },
+});
+
+/** Count how many chunks have embeddings generated. */
+export const countEmbeddedChunks = internalQuery({
+  args: { resourceId: v.id("resources") },
+  handler: async (ctx, args) => {
+    let embedded = 0;
+    for await (const chunk of ctx.db
+      .query("documentChunks")
+      .withIndex("by_resource", (q) => q.eq("resourceId", args.resourceId))) {
+      if (chunk.embedding && chunk.embedding.length > 0) {
+        embedded++;
+      }
+    }
+    return embedded;
+  },
+});

@@ -1,38 +1,128 @@
 "use node";
 
 /**
- * Automatic RAG ingestion pipeline. Every resource created with a stored file
+ * Checkpointed RAG ingestion pipeline. Every resource created with a stored file
  * is scheduled here from `resources.create` (and from `resources.update` when
  * the file is replaced). The pipeline:
  *
  *   fetch stored bytes → extract text (PDF pages / PPT slides, provenance kept)
- *   → chunk with page/slide numbers → NVIDIA embeddings in batches
- *   → persist documentChunks with semester + subject filters
- *   → mark the resource ready / failed with a chunk count
+ *   → chunk with page/slide numbers → insert raw un-embedded chunks
+ *   → schedule bounded batch embedding actions (<= 24 chunks per action)
+ *   → apply 2048-dim NVIDIA embeddings via nvidia/nemotron-3.5-embed-1b
+ *   → persist live chunkCount progress
+ *   → finalize resource status to "ready" once all chunks are embedded
  *
  * Duplicate processing is prevented by comparing a SHA-256 fingerprint of the
  * stored bytes against the resource's `contentHash` when chunks already exist.
+ * Monolithic timeout failures are eliminated by chunking embedding generation into
+ * independent, checkpointed background actions that survive browser refreshes.
  */
 // Import order is load-bearing: globals → worker wiring → pdfjs.
 import "./pdfjsPolyfill";
 import "./pdfjsWorkerSetup";
 import { createHash } from "node:crypto";
-import { action, type ActionCtx } from "./_generated/server";
+import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { extractStoredFile } from "./extract";
 import { callNvidiaEmbeddings, chunkPageText } from "./rag";
 
-const EMBED_BATCH_SIZE = 16;
+const CHUNK_BATCH_SIZE = 24;
 const MAX_UNITS = 400; // safety valve against pathological documents
 
 type IngestionOutcome =
-  | { status: "ready"; chunksIndexed: number; message: string }
+  | { status: "ready" | "processing"; chunksIndexed: number; message: string }
   | { status: "failed"; message: string }
   | { status: "skipped"; message: string };
 
-/** Core pipeline, shared by the scheduled auto-run and the public re-index action. */
+/**
+ * Internal action: Checkpointed background job that processes a bounded batch
+ * of document chunks (<= 24 chunks), generates 2048-dim embeddings via
+ * nvidia/nemotron-3.5-embed-1b, updates the database, and schedules the next batch.
+ */
+export const embedBatchStep = internalAction({
+  args: {
+    resourceId: v.id("resources"),
+    startSeq: v.number(),
+    totalChunks: v.number(),
+    contentHash: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // 1. Verify resource is still active and in processing state
+    const resource = await ctx.runQuery(internal.ragInternal.getResourceForIngestion, {
+      resourceId: args.resourceId,
+    });
+    if (!resource || resource.ingestStatus !== "processing") {
+      console.log(`[embedBatchStep] Resource ${args.resourceId} is no longer processing; skipping step.`);
+      return;
+    }
+
+    try {
+      // 2. Fetch the slice of chunks for this batch
+      const chunks = await ctx.runQuery(internal.ragInternal.getChunksSlice, {
+        resourceId: args.resourceId,
+        startSeq: args.startSeq,
+        limit: CHUNK_BATCH_SIZE,
+      });
+
+      if (chunks.length === 0) {
+        // No more chunks: finalize ingestion
+        await ctx.runMutation(internal.ragInternal.finalizeIngestion, {
+          resourceId: args.resourceId,
+          chunkCount: args.totalChunks,
+          contentHash: args.contentHash,
+        });
+        return;
+      }
+
+      // 3. Generate 2048-dimensional embeddings via NVIDIA NIM API
+      const texts = chunks.map((c) => c.text);
+      const embeddings = await callNvidiaEmbeddings(texts, "passage");
+
+      // 4. Persist progress atomically to database
+      const progressCount = Math.min(args.startSeq + chunks.length, args.totalChunks);
+      await ctx.runMutation(internal.ragInternal.applyChunkEmbeddings, {
+        resourceId: args.resourceId,
+        updates: chunks.map((chunk, idx) => ({
+          id: chunk._id,
+          embedding: embeddings[idx],
+        })),
+        progressCount,
+      });
+
+      // 5. Schedule next batch or finalize
+      const nextSeq = args.startSeq + chunks.length;
+      if (nextSeq < args.totalChunks) {
+        await ctx.scheduler.runAfter(0, internal.ingest.embedBatchStep, {
+          resourceId: args.resourceId,
+          startSeq: nextSeq,
+          totalChunks: args.totalChunks,
+          contentHash: args.contentHash,
+        });
+      } else {
+        await ctx.runMutation(internal.ragInternal.finalizeIngestion, {
+          resourceId: args.resourceId,
+          chunkCount: args.totalChunks,
+          contentHash: args.contentHash,
+        });
+      }
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(
+        `[embedBatchStep] Error on resource ${args.resourceId} at seq ${args.startSeq}:`,
+        message
+      );
+      await ctx.runMutation(internal.ragInternal.setIngestStatus, {
+        resourceId: args.resourceId,
+        ingestStatus: "failed",
+        ingestError: message.slice(0, 300),
+      });
+    }
+  },
+});
+
+/** Core pipeline: extracts text, stores raw chunks, and queues background batch embedding. */
 async function runIngestion(
   ctx: ActionCtx,
   resourceId: Id<"resources">,
@@ -113,42 +203,37 @@ async function runIngestion(
       return { status: "failed", message: "No indexable chunks." };
     }
 
-    // 5. Rebuild the index: clear stale chunks, embed, persist with filters.
+    // 5. Clear stale chunks and insert raw un-embedded chunks
     await ctx.runMutation(internal.ragInternal.clearChunks, { resourceId });
 
-    let savedTotal = 0;
-    for (let i = 0; i < allChunks.length; i += EMBED_BATCH_SIZE) {
-      const batch = allChunks.slice(i, i + EMBED_BATCH_SIZE);
-      const embeddings = await callNvidiaEmbeddings(
-        batch.map((c) => c.text),
-        "passage"
-      );
-      await ctx.runMutation(internal.ragInternal.saveChunkBatch, {
-        chunks: batch.map((chunk, idx) => ({
+    const RAW_INSERT_BATCH = 50;
+    for (let i = 0; i < allChunks.length; i += RAW_INSERT_BATCH) {
+      const slice = allChunks.slice(i, i + RAW_INSERT_BATCH);
+      await ctx.runMutation(internal.ragInternal.insertRawChunks, {
+        chunks: slice.map((c) => ({
           resourceId,
           semesterId: resource.semesterId,
           subjectId: resource.subjectId,
-          seq: chunk.seq,
-          page: chunk.page,
-          text: chunk.text,
-          embedding: embeddings[idx],
+          seq: c.seq,
+          page: c.page,
+          text: c.text,
         })),
       });
-      savedTotal += batch.length;
     }
 
-    const kindLabel = fileKind === "pdf" ? "pages" : "slides";
-    await ctx.runMutation(internal.ragInternal.setIngestStatus, {
+    // 6. Schedule checkpointed background embedding batches
+    await ctx.scheduler.runAfter(0, internal.ingest.embedBatchStep, {
       resourceId,
-      ingestStatus: "ready",
-      ingestError: null,
-      chunkCount: savedTotal,
+      startSeq: 0,
+      totalChunks: allChunks.length,
       contentHash,
     });
+
+    const kindLabel = fileKind === "pdf" ? "pages" : "slides";
     return {
-      status: "ready",
-      chunksIndexed: savedTotal,
-      message: `Indexed ${clippedUnits.length} ${kindLabel} into ${savedTotal} vector chunks for "${resource.title}".`,
+      status: "processing",
+      chunksIndexed: allChunks.length,
+      message: `Extracted ${clippedUnits.length} ${kindLabel} into ${allChunks.length} chunks. Background embedding queued.`,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown ingestion error.";
@@ -179,7 +264,7 @@ export const ingestResourceFile = action({
     const outcome = await runIngestion(ctx, args.resourceId, args.force ?? false);
     return {
       status: outcome.status,
-      chunksIndexed: outcome.status === "ready" ? outcome.chunksIndexed : undefined,
+      chunksIndexed: outcome.status === "ready" || outcome.status === "processing" ? outcome.chunksIndexed : undefined,
       message: outcome.message,
     };
   },
@@ -221,7 +306,7 @@ export const backfillPipelineState = action({
     let failed = 0;
     for (const row of stale) {
       const outcome = await runIngestion(ctx, row.id, false);
-      if (outcome.status === "ready") indexed += 1;
+      if (outcome.status === "ready" || outcome.status === "processing") indexed += 1;
       else if (outcome.status === "skipped") skipped += 1;
       else failed += 1;
     }
@@ -231,8 +316,7 @@ export const backfillPipelineState = action({
 
 /**
  * Public action: Re-index all catalogued resources with stored files into the new
- * vector model (nvidia/llama-nemotron-embed-vl-1b-v2, 2048 dims).
- * Full end-to-end extraction, chunking, embedding generation, and status update.
+ * vector model (nvidia/nemotron-3.5-embed-1b, 2048 dims).
  */
 export const reindexAllStoredResources = action({
   args: {
@@ -281,12 +365,12 @@ export const reindexAllStoredResources = action({
 
     for (const item of list) {
       const outcome = await runIngestion(ctx, item.id, force);
-      if (outcome.status === "ready") {
+      if (outcome.status === "ready" || outcome.status === "processing") {
         ready++;
         details.push({
           resourceId: item.id,
           title: item.title,
-          status: "ready",
+          status: outcome.status,
           chunksIndexed: outcome.chunksIndexed,
           message: outcome.message,
         });
