@@ -1,7 +1,7 @@
 # FEATURES.md — StudySyncPlus Feature Inventory
 
-> Snapshot of the implemented product, captured **2026-11-13** after the Revision 2 (editorial refinement) redesign.
-> Purpose: a ground-truth list to plan the next patch against. Everything here is verified in code and runtime — nothing aspirational. Patch ideas are quarantined in §8.
+> Snapshot of the redesigned product, updated **November 2026** after the Complete Product & UX Redesign into a Subject-Centric Academic Workspace and Unified Full-Screen Study Workspace with Custom PDF.js & Slide Deck Engines.
+> Purpose: a ground-truth list of verified capabilities. Everything here is verified in code, build, and live runtime.
 
 ---
 
@@ -9,149 +9,158 @@
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Framework | React 19.3 + TypeScript 7 (strict) | SPA, single route, tab-based navigation via context state |
-| Build | Vite 8 (`tsc -b && vite build`) | GitHub Pages target, `homepage` set, `gh-pages -d dist` deploy script |
-| Styling | Tailwind 3.4 + hand-authored `src/index.css` | Design tokens as CSS custom properties + `@layer components` primitives |
-| State | React Context (`ResourceContext`) + `localStorage` | No external state library, no router |
-| Charts | Chart.js 4.6 via react-chartjs-2 5.3 | Registered once in `AnalyticsCharts.tsx` |
-| Icons | lucide-react 1.72 | Only icon system; no emoji in UI |
-| Effects | canvas-confetti 1.9 | Palette-tuned: ink / lime / stone |
-| Lint | oxlint | One pre-existing fast-refresh warning (ResourceContext) |
-
-**File map**
-
-```
-src/
-  App.tsx                      # shell, library tab (hero/discovery/grid), Toast, overlay mounting
-  main.tsx                     # React root
-  index.css                    # world tokens, stamps, tab-rail, buttons, fields, animations
-  types/index.ts               # StudyResource, UserProfile, ActiveTab, enums, FormErrors
-  context/ResourceContext.tsx  # all app state + persistence + toasts
-  data/initialResources.ts     # 8 seeded resources + OFFICIAL_SEMESTER_3_SCHEME
-  services/apiService.ts       # PDF generator, OpenLibrary fetch, promise/error demos
-  hooks/useOverlayBehavior.ts  # ESC close, focus trap, body scroll lock, focus return
-  components/
-    Navbar.tsx  Footer.tsx  ResourceCard.tsx
-    UploadModal.tsx  ResourceDetailModal.tsx  BookmarksDrawer.tsx
-    AnalyticsCharts.tsx  CurriculumSchemeModal.tsx
-    JsSandboxModal.tsx  SyllabusVivaModal.tsx
-```
+| **Framework** | React 19.3 + React Router 7 + TypeScript 7 (strict) | Full URL-based SPA routing with persistent paths, browser back/forward history, query params, and GitHub Pages fallback |
+| **PDF Rendering Engine** | `pdfjs-dist` 5.4 + Vite Worker | Custom canvas-based PDF.js renderer with high-DPI scaling, virtualized on-demand page streaming, interactive text selection layer, and collapsible thumbnails |
+| **Backend & Database** | Convex 1.49 (Reactive Cloud) | All-TypeScript reactive database, mutations, queries, file storage |
+| **Vector Search & RAG** | Convex Vector Index (`documentChunks.by_embedding`, 1024-d) | NVIDIA Nemotron 1024-d embeddings + NVIDIA Nemotron 30B reasoning chat completion |
+| **File Storage** | Convex File Storage | Real PDF and presentation uploads (50 MB limit), direct upload URLs, signed preview URLs |
+| **Archive Bundler** | `fflate` 0.8 | Zero-dependency high-speed client-side ZIP generation for one-click course downloads |
+| **Build & Tooling** | Vite 8 (`tsc -b && tsc -p tsconfig.convex.json --noEmit && vite build`) | Production build verified clean, zero errors |
+| **Styling** | Tailwind 3.4 + hand-authored `src/index.css` | Paper-and-ink course file design contract, 1px hairlines, zero border-radius, lime accent |
+| **Markdown & Mermaid** | `react-markdown` + `rehype-highlight` + `mermaid` | Code blocks with copy button, clean GFM tables, auto-sanitized flowcharts |
+| **Lint** | `oxlint` | 0 errors |
 
 ---
 
-## 2. App Shell (all tabs)
+## 2. Information Architecture & Navigation
 
-| Feature | Where | Status |
+| Surface | Purpose & Implementation | Status |
 |---|---|---|
-| Sticky header: file-mark logo, wordmark, subtitle "SAKEC · Semester III Course File" | `Navbar.tsx` | Shipped |
-| 5 section tabs (Library / Scheme / Analytics / Async Lab / Syllabus & Viva), active = ink stamp fill + lime base edge, `aria-current` | `Navbar.tsx`, `.tab-rail` in `index.css` | Shipped |
-| Saved button with live bookmark count (tabular numerals) | `Navbar.tsx` | Shipped |
-| Upload primary CTA (lime) | `Navbar.tsx` → `UploadModal` | Shipped |
-| Reset-to-seed-data control (ghost icon) | `Navbar.tsx` → context `resetToDefaults` | Shipped |
-| Toast system: ink block, lime inset rule, 240ms slide, auto-dismiss, `aria-live`, no bounce | `App.tsx` (`Toast`), context `showToast` | Shipped |
-| Footer: single strong-ruled row — brand + descriptor / team + course line | `Footer.tsx` | Shipped (Rev 2) |
-| Themed browser surfaces: lime selection, ink caret, stone scrollbar, 2px ink focus frames | `index.css` | Shipped |
-
-## 3. Tab 1 — Resource Library
-
-| Feature | Where | Status |
-|---|---|---|
-| Editorial hero: display headline with lime highlighter phrase, one support sentence, ruled facts row (credits · institute · catalogued count · VERIFIED stamp with stamp-in animation) | `App.tsx` | Shipped (Rev 2) |
-| Discovery band: subject index rail (9 subjects incl. "All"), active = lime highlighter fill, horizontally scrollable, hidden themed scrollbar | `App.tsx` | Shipped (Rev 2) |
-| Toolbar: live search (title/description/course code/tags/uploader via context), clear-search button | `App.tsx` + context `searchQuery` | Shipped |
-| Resource-type filter (5 types + All) | `App.tsx` + context `selectedType` | Shipped |
-| Sorting: Featured / Most downloaded / Highest rated / Newest first / Title A–Z (local state, memoized) | `App.tsx` | Shipped (Rev 2, new) |
-| Fixed-constraint stamp "Sem 3 · PDF only" (md+) | `App.tsx` | Shipped |
-| Live result count with flash-and-hold animation on change | `App.tsx` | Shipped |
-| Card grid: 1/2/3 columns (mobile/tablet/desktop), `gap-x-6 gap-y-8` | `App.tsx` | Shipped (Rev 2) |
-| Resource card: mono course code, title (clamp-2), subject · type, description (clamp-3), provenance footer (uploader · size · ★rating tabular), compact Download with count, bookmark toggle (lime wash when saved), delete for user uploads only | `ResourceCard.tsx` | Shipped (Rev 2) |
-| Card click / Enter / Space opens detail modal | `ResourceCard.tsx` | Shipped |
-| Empty state: ruled panel + recovery action ("Clear All Filters") | `App.tsx` | Shipped |
-| Row click on scheme table deep-links here pre-filtered by subject | `CurriculumSchemeModal.tsx` → context | Shipped |
-
-## 4. Overlays (shared behavior)
-
-All overlays: ink 40% scrim, zero-radius panel, ESC closes, focus trapped and returned, body scroll locked, click-outside closes. Shared hook: `useOverlayBehavior.ts`.
-
-| Overlay | Capabilities | Status |
-|---|---|---|
-| **UploadModal** | Subject ↔ official course-code auto-pairing (8 subjects), 5 resource types, title/roll/size/description regex + length validation with inline recovery messages, `aria-invalid`/`aria-describedby`, size cap 50 MB, tag parsing, persists to localStorage, fires palette confetti on success | Shipped |
-| **ResourceDetailModal** | Full provenance grid (author/roll, size, downloads, rating), tags, Save/Share (clipboard copy), Download (PDF + counter + confetti) | Shipped |
-| **BookmarksDrawer** | Right sheet listing saved resources, quick download, remove, opens detail, empty state, localStorage note | Shipped |
-
-## 5. Tab 2 — Sem 3 Scheme
-
-| Feature | Where | Status |
-|---|---|---|
-| Official SAKEC Semester III credit matrix (11 columns: SN, category, abbr, code, name, CL, LL, SL/PBL, NH, credits, action) | `CurriculumSchemeModal.tsx` + `OFFICIAL_SEMESTER_3_SCHEME` | Shipped |
-| Row click / View Notes deep-links to filtered Library | `CurriculumSchemeModal.tsx` | Shipped |
-| Totals footer row (660+60* NH, 22+2* credits), lime credit emphasis, sunk table stripes | same | Shipped |
-
-## 6. Tab 3 — Visual Analytics
-
-| Feature | Where | Status |
-|---|---|---|
-| KPI ledger strip: total resources, total downloads, avg rating (all live from state), demo-data honesty label | `AnalyticsCharts.tsx` | Shipped |
-| Bar chart: downloads by subject, ink bars, leading subject gets lime highlighter (scriptable context) | same | Shipped |
-| Doughnut: resource-type distribution, ink/lime/stone series | same | Shipped |
-| Line chart: weekly traffic trend — **synthetic demo data** (labeled as such) | same | Shipped |
-| Ink tooltip blocks, mono axis labels, hairline gridlines | same | Shipped |
-
-## 7. Tab 4 — Async & JS Lab · Tab 5 — Syllabus & Viva
-
-| Feature | Where | Status |
-|---|---|---|
-| Live OpenLibrary REST fetch with latency readout and results list | `JsSandboxModal.tsx`, `apiService.searchExternalAcademicBooks` | Shipped |
-| 3-stage promise-chain demo with console stream | `apiService.simulatePromiseChaining` | Shipped |
-| Simulated 503 error + try/catch trap with status panel | `apiService.simulateNetworkError` | Shipped |
-| localStorage inspector (keys + sizes, refreshable), CORS explainer | `JsSandboxModal.tsx` | Shipped |
-| 4 syllabus modules × CO mapping × outcomes × in-app implementation × source-file references, module rail with stamp-fill active state | `SyllabusVivaModal.tsx` | Shipped |
-
-## 8. Cross-Cutting Systems
-
-| System | Details | Status |
-|---|---|---|
-| Persistence | `studysyncplus_resources_v3` + `studysyncplus_user_profile_v3`; auto-sync on change; JSON-parse guards with console errors; reset restores seed | Shipped |
-| PDF generation | Client-side Blob summary document per resource (not the actual notes file) | Shipped |
-| Download counter | Per-resource, increments on download, feeds analytics | Shipped |
-| Design system | `DESIGN.md` Rev 2 (Course File world, paper/ink/lime) + `.impeccable/design.json` sidecar; mechanical detector: 0 findings | Shipped |
-| Accessibility | Overlay focus traps, keyboard-operable cards/rows, `aria-pressed`/`aria-live`/labels, `prefers-reduced-motion` collapse, AA contrast tokens | Shipped |
-
-**Data model:** `StudyResource` (id, courseCode, title, subject, semester=3, type, uploadedBy, rollNumber, uploadDate, fileSize, downloadCount, rating 1–5, fileFormat 'PDF', description, tags[], externalUrl?, isUserUploaded?) · `UserProfile` (name, rollNumber, studentId, semester, branch, college, savedResourceIds[], studyStreakDays) · 8 seeded resources `res-001…res-008`.
+| **TopBar** | Sticky minimalist header: StudySyncPlus brand, semester mark, adaptive Back button in study mode, "Ask AI", "Add Materials" primary CTA, "Saved" counter, and "More" evaluator menu. | Shipped |
+| **BottomNav** (Mobile) | 4 primary destinations (Home, Ask AI, Add, Saved, More) with safe-area insets; automatically hidden in study mode to maximize reading canvas. | Shipped |
+| **SubjectsHome** | Academic workspace home: editorial hero, factual metrics strip, universal omnisearch across all subjects and documents, subject workspace tiles, and collapsible official curriculum scheme. | Shipped |
+| **SubjectRail** (Desktop) | Sticky left rail inside subject workspaces: instant one-click switching between courses with active ink-stamp indicators and material counts. | Shipped |
+| **SubjectPage** | Comprehensive course workspace: course code, credits, teaching hours, categorized document tabs, subject-scoped search, integrated syllabus & viva guide, and one-click ZIP download. | Shipped |
+| **StudyWorkspace** | Full-screen two-panel study workspace eliminating separate dialog modals and disconnected chatbot pages. Persistent AI assistant on left; custom PDF.js canvas on right. | Shipped |
+| **DocumentViewer** | Canvas area: custom minimal academic toolbar, PDF.js virtualized page renderer, collapsible page thumbnails, zoom controls, fit-to-width, native HTML5 fullscreen, print, download, 5-star peer rating, and metadata drawer. | Shipped |
+| **PdfViewer** | Pure PDF.js continuous scroll viewer with lazy-loaded IntersectionObserver canvases, Retina high-DPI scaling, lime text-selection layer, and cited page badges. | Shipped |
+| **PresentationViewer** | Dedicated presentation deck viewer for PPT/PPTX materials: slide filmstrip, structured slide text/bullet points, slide counter, raw download, and instant slide-specific AI questions. | Shipped |
+| **WorkspaceAssistant** | Persistent AI sidebar: 3-way context scope selector (`This Doc`, `Subject`, `Library`), honesty indicator, saved session drawer, rich GFM tables, Mermaid diagrams, and clickable citations. | Shipped |
+| **BulkUploadModal** | Multi-file drag-and-drop: auto-cleans file titles, category selectors, real-time XHR upload progress, live indexing tracking, and palette confetti. | Shipped |
+| **BookmarksDrawer** | Right-hand slideout: reactively synchronized saved materials for exam revision with 1-click transition to the Study Workspace. | Shipped |
+| **MoreSheet** | Discreet evaluator drawer hosting secondary tools: Scheme & Credit Matrix, Syllabus Alignment Map, Visual Analytics, and Async & JS Lab. | Shipped |
+| **SavedView** (`/saved`) | Dedicated persistent screen for bookmarked revision materials with course-level filtering, search, quick study launcher, and one-click removal. | Shipped |
+| **NotFoundView** (`*`) | Clean academic 404 screen matching paper-and-ink design tokens with one-click return to subjects home. | Shipped |
 
 ---
 
-## 9. Known Limitations (evidence-based)
+## 2.5. URL Routing & Persistent Deep-Linking (React Router 7)
 
-1. **No URL routing** — tabs/filters live in context state only; deep links work in-app (scheme → library) but aren't shareable/bookmarkable URLs.
-2. **No real file storage** — uploads are metadata records; downloads generate a summary PDF, not the uploaded file. `externalUrl` field exists but is never populated by the UI.
-3. **Weekly-traffic line chart is synthetic** — intentionally labeled demo data.
-4. **500 kB bundle warning** — Chart.js is imported eagerly; no code splitting.
-5. **Delete uses `window.confirm`** — native dialog, not the in-world modal system.
-6. **No edit path** for uploaded resources (create + delete only).
-7. **Sort/filter/search state is session-local** — not persisted, resets on reload.
-8. **No data schema migration** — storage keys are versioned by suffix (`_v3`); no migration routine between versions.
-9. **Student credits / profile are hard-coded defaults** — no profile editing UI.
-10. Pre-existing oxlint fast-refresh warning in `ResourceContext.tsx` (export shape, not a bug).
+| Route | Purpose & Behavior | Persistence |
+|---|---|---|
+| `/` | Academic Shelf Home: subject cards, omnisearch, scheme overview. | Persistent |
+| `/subject/:subjectId` | Individual Subject Workspace: course materials, syllabus map, scheme metrics. | Persistent |
+| `/study/:documentId` | Full-Screen Study Workspace: left PDF.js / deck canvas + right AI assistant. Supports `?page=N` and `?scope=document\|subject\|library`. | Persistent |
+| `/assistant` | Study Assistant direct access: opens library or subject AI assistant with full split-screen reading context. | Persistent |
+| `/saved` / `/bookmarks` | Saved Revision Materials: full listing of bookmarked documents. | Persistent |
+| `/syllabus` | Direct persistent URL for Official SAKEC Syllabus & Viva Map. | Persistent |
+| `/scheme` | Direct persistent URL for Curriculum Scheme & Credit Matrix. | Persistent |
+| `/analytics` | Direct persistent URL for Academic Library Usage Analytics. | Persistent |
+| `/async-lab` | Direct persistent URL for Async Promise & Error Lab. | Persistent |
+| `*` | Graceful academic 404 Not Found screen with return navigation. | Persistent |
 
-## 10. Patch Candidates (ideas for planning — not implemented)
-
-Low effort / high polish:
-- Replace `window.confirm` with an in-world confirm modal (reuse overlay hook).
-- Persist sort + type + subject selection (e.g., into the profile record).
-- Code-split Chart.js (`React.lazy`) to kill the 500 kB chunk warning.
-
-Medium:
-- URL routing or hash-sync for tabs + filters (shareable filtered views; complements the existing scheme deep-link).
-- Edit flow for user-uploaded resources.
-- Real file attach: store small PDFs as Blob URLs / IndexedDB, or wire `externalUrl` to a Drive/Repo link field in the upload form.
-- Export/import library JSON (backup + share between students).
-
-Larger:
-- Real backend or GitHub-API-backed store so resources sync between students.
-- Actual past-paper file hosting with preview (first page thumbnail).
-- Search upgrade: debounce, match highlighting, tag chips as clickable filters.
+### Deep-Linking & History Features
+- **Page Number Synchronization**: Scrolling or navigating pages in the PDF viewer synchronizes `?page=N` in the browser address bar via `replaceState` without polluting back/forward history.
+- **Direct Shareable Links**: Copying the browser URL while studying on page 42 shares the exact document and page number.
+- **Conversation State Persistence**: Active AI chat threads are preserved in `localStorage` under `studysyncplus_active_thread_${ownerKey}` across document switching, route changes, and hard page reloads.
+- **GitHub Pages SPA Fallback**: `public/404.html` converts deep URL paths into query strings, and `index.html` restores them via `window.history.replaceState` before React mounts, ensuring zero 404 errors on GitHub Pages deployments.
+- **Graceful Error Handling**: Non-existent subject or document IDs display dedicated academic "Not Found" error cards with single-click return actions, avoiding blank crashes.
 
 ---
 
-*Verified against `npm run build` (clean), `npm run lint` (one pre-existing warning), impeccable detector (0 findings), and live captures at 1440/834/390 on the dev server.*
+## 3. Core Academic Workflows
+
+### A. Subject Workspaces & Discovery
+- **Subject-Centric Organization**: Courses are the primary organizational mental model. Each subject card reflects course code (`CMCOR2PC202`), credit weight (`4 cr`), category, material breakdown by type, and vector indexing status.
+- **Universal Omnisearch**: Typing in the workspace search bar matches both subjects and individual documents (title, description, tags, course code, uploader) with real-time preview and direct click-to-study.
+- **Categorized Tabs**: Inside each subject, materials are categorized into `All`, `Lecture Notes`, `Past Papers / PYQs`, `Lab Manuals`, `Cheat Sheets`, and `Reference Books` with live counts.
+- **Bulk ZIP Download**: One-click "Download All" bundles the entire course file into a timestamped ZIP archive using `fflate` with a generated README manifest and live progress readout.
+
+### B. Custom PDF.js Engine & Presentation Deck Viewer
+- **Custom PDF.js Canvas Architecture**:
+  - Replaced browser-native black embedded toolbars with an authentic paper-and-ink canvas.
+  - Zero browser-specific controls: the toolbar uses StudySyncPlus design tokens (paper white ground, hairline rules, zero radius, lime active accents).
+  - High-DPI crisp rendering on Retina screens via `window.devicePixelRatio`.
+  - Virtualized IntersectionObserver rendering: only pages near the viewport render canvas bitmaps, preventing memory leaks on massive academic textbooks (e.g. 131-page MSE Master Study Guide).
+  - Selectable text layer with signature lime text selection (`::selection { background: #a3e635; color: #111111; }`).
+- **Collapsible Page Thumbnails Rail**:
+  - 140px slideout thumbnail drawer showing lazy-rendered mini page previews with page numbers.
+  - Active page marked with 2px lime indicator and ink border.
+  - 1-click page jumping.
+- **Toolbar Controls & Fit Modes**:
+  - Previous / Next page steppers and direct page number input.
+  - Zoom controls (`-`, `%`, `+`, `Fit to Width`, `Fit to Page`).
+  - Native HTML5 Fullscreen button (`container.requestFullscreen()`) for distraction-free reading.
+  - Print button: triggers clean vector printing without toolbar or sidebar elements.
+  - Download button: fetches stored PDF with celebratory confetti.
+  - Peer review 1–5 star rating widget.
+- **Dedicated PPT/PPTX Slide Viewer**:
+  - Separate slide deck interface rather than forcing binary PowerPoint files through a PDF converter.
+  - Slide-by-slide browsing with slide counter (`Slide X of Total`).
+  - Slide filmstrip sidebar showing all slide titles and text previews.
+  - Action chip: "Ask AI About Slide X" to instantly interrogate specific slides.
+  - Raw deck download action.
+
+### C. Full-Screen Two-Panel AI Workspace
+- **Persistent AI Assistant**: Resizable sidebar (`280px` to `680px`), double-click reset to `420px`, and keyboard shortcut collapse toggle (`Cmd+\` or `Ctrl+\`).
+- **3-Way Context Scope Selector**:
+  - `[ This Doc ]`: Scopes AI retrieval to the currently opened document (`mode: "resource"`).
+  - `[ Subject ]`: Scopes AI retrieval across all documents in the active subject (`mode: "subject"`).
+  - `[ Library ]`: Scopes AI retrieval across the entire academic library (`mode: "semester"`).
+  - Context Honesty Bar displays exact chunk counts and document boundaries.
+  - Preserves the conversation thread across scope switches and document switches.
+- **Compact & Distraction-Free Thinking UI**:
+  - Displays only a compact **"Thinking..."** pulse indicator while the AI generates a response.
+  - Kept collapsed by default with an optional expand/collapse toggle for students to inspect the activity scope and retrieval action.
+  - Strict absence of noisy progress timelines, numbered steps, status descriptions, or tool logs.
+  - Thinking blocks (`<think>...</think>`) from reasoning models are separated into an optional collapsed Thought Process accordion, keeping the final academic answer clean and directly readable.
+- **Full-Width Seamless Conversation Stream**:
+  - Unboxed AI responses that utilize the full available chat width without card borders, backgrounds, shadows, or rounded containers.
+  - User messages stay crisp and visually distinct (right-aligned in solid iron-ink).
+  - Preserved typography, headings, lists, syntax-highlighted code blocks, and scrollable GFM comparison tables.
+- **Optimized NVIDIA Output Limits & Graceful Handling**:
+  - Increased completion token limit from `1800` to `4096` tokens (`NVIDIA_MAX_TOKENS`), giving ample headroom for reasoning models to generate comprehensive academic study guides without midway truncation.
+  - RAG prompt budgets preserved (~2,000 tokens for retrieved chunks, history, and system instructions).
+  - Graceful truncation detection (`finish_reason === "length"`) with resumption advisory if the hard ceiling is ever reached.
+- **Pixel-Perfect PDF.js Text-Layer Synchronization**:
+  - Resolved text-selection duplication and misalignment issues across zoom levels and page dimensions.
+  - Synchronized PDF.js v5 scale variables (`--scale-factor`, `--user-unit`, `--total-scale-factor`, `--scale-round-x/y`) on page containers and text layers.
+  - Wrapped canvas elements in PDF.js-standard `.canvasWrapper` containers with matched physical and CSS pixel boundaries, preventing CSS subpixel stretching.
+  - Strictly isolated text selection styling (`color: transparent !important; -webkit-text-fill-color: transparent !important; background: rgba(163, 230, 53, 0.35) !important;`) so glyphs never render visible duplicate black fonts over the canvas during drag-selection. Text remains 100% searchable, selectable, and copyable.
+- **Page-Mapped Interactive Citations**:
+  - Citations display exact document name and page/slide badge (e.g. `[DSA MSE Guide · Page 20]`).
+  - Clicking a citation smoothly scrolls the PDF viewer directly to Page 20 and highlights an active citation banner.
+  - If cited from another document, the viewer automatically loads that document at the cited page while keeping the conversation intact.
+- **Responsive Mobile Layout**:
+  - On screens `< 768px`, a segmented control (`[ 📄 Document | 💬 Study AI ]`) lets students switch between document reading and AI discussion with one tap.
+
+### D. Multi-File Upload & Document Management
+- **Batch Drag & Drop**: Accepts multiple PDFs, PPT, and PPTX files (up to 50 MB each).
+- **Auto-Title Cleaning**: Strips file extensions, hyphens, and underscores into clean academic titles.
+- **XHR Progress Tracking**: Direct-to-storage signed URL uploads with real progress events (0% → 100%).
+- **Live Pipeline Feedback**: Tracks document status from `uploading` → `filing` → `indexing` → `ready`.
+- **Ownership Model**: Students retain ownership of their uploads via browser `ownerKey` and can edit title, category, description, or replace the stored file.
+
+### E. Integrated Syllabus, Scheme & Viva
+- **In-Subject Syllabus Tab**: Each course workspace includes an integrated Syllabus & Viva section detailing module outcomes, Course Outcome mappings (CO1–CO6), lecture hours, and project implementation references.
+- **Official Scheme Matrix**: 11-column university matrix (Category, Abbr, Code, Name, CL, LL, SL/PBL, NH, Credits) accessible from both the workspace home and course details.
+
+### F. Secondary Tools Relocation
+- **Usage Analytics**: Visual KPI cards, downloads by subject bar chart, and resource-type doughnut chart moved out of primary navigation into the Tools drawer.
+- **Async & JS Lab**: OpenLibrary academic REST API fetch, 3-stage promise-chain simulator, and network error traps maintained for viva evaluation in the Tools drawer.
+
+---
+
+## 4. Verification & Health Record
+
+| Check | Target | Result | Status |
+|---|---|---|---|
+| **Build** | `npm run build` | 0 errors (4,193 modules transformed, Vite production bundle built in 1.43s) | **Pass** |
+| **Lint** | `npm run lint` | 0 errors (oxlint across 65 files) | **Pass** |
+| **Vector Search (Doc Mode)** | `scripts/test_rag_pipeline.mjs` | Retrieved 4 chunks, top hit page 20, score 0.506 | **Pass** |
+| **Vector Search (Semester)** | `scripts/test_rag_pipeline.mjs` | Retrieved 4 chunks in Semester III, top hit page 52 | **Pass** |
+| **Vector Search (Library)** | `scripts/test_rag_pipeline.mjs` | Retrieved 3 hits across catalog, top hit page 113 | **Pass** |
+| **Grounded NVIDIA Generation** | `scripts/test_rag_pipeline.mjs` | 5 citations received, top citation page 31, persisted thread | **Pass** |
+| **Out-of-Domain Refusal** | `scripts/test_rag_pipeline.mjs` | Correctly refused non-CS query (pasta recipe) | **Pass** |
+| **Missing Context Honesty** | `scripts/test_rag_pipeline.mjs` | Identified missing curriculum topic without hallucination | **Pass** |
+| **Duplicate Ingestion Guard** | `scripts/test_rag_pipeline.mjs` | Prevented duplicate chunk creation (status: `already_indexed`) | **Pass** |

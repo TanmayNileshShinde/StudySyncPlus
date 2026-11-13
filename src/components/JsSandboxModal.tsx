@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export const JsSandboxModal: React.FC = () => {
-  const { resources, userProfile } = useResources();
+  const { resources, bookmarkCount } = useResources();
 
   // 1. Fetch API state
   const [bookQuery, setBookQuery] = useState('Data Structures');
@@ -285,7 +285,7 @@ export const JsSandboxModal: React.FC = () => {
 
             <div className="mt-4 pt-3 border-t border-rule flex items-center justify-between text-xs text-ink-2 tabular">
               <span>
-                Saved Bookmarks: <strong className="text-ink font-mono">{userProfile.savedResourceIds.length}</strong>
+                Saved Bookmarks: <strong className="text-ink font-mono">{bookmarkCount}</strong>
               </span>
               <span>
                 Loaded Resources: <strong className="text-ink font-mono">{resources.length}</strong>

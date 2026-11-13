@@ -1,62 +1,70 @@
-export type SubjectCategory = 
-  | 'Web Technology II'
-  | 'Operating System'
-  | 'Data Structures'
-  | 'Discrete Structures'
-  | 'Microprocessor'
-  | 'Foundation of Embedded System'
-  | 'OOP with Java'
-  | 'Engineering Career Navigation';
+/**
+ * Frontend types. Subject/semester data is now dynamic (stored in Convex),
+ * so subject names are plain strings; the fixed set lives in the database,
+ * seeded with the Semester III course file.
+ */
 
 export type ResourceType = 'Lecture Notes' | 'Past Exam Papers' | 'Lab Manual' | 'Cheat Sheet' | 'Reference Book';
 
-export type Semester = 3;
+export type SubjectName = string;
 
 export interface StudyResource {
-  id: string;
-  courseCode: string; // e.g. "CMLOR2VS201", "CMCOR2PC202"
+  id: string; // Convex resource id
+  courseCode: string;
   title: string;
-  subject: SubjectCategory;
-  semester: 3;
+  subjectId: string;
+  subjectName: SubjectName;
+  semester: number;
   type: ResourceType;
   uploadedBy: string;
   rollNumber: string;
-  uploadDate: string;
-  fileSize: string; // e.g. "2.4 MB"
+  uploadDate: string; // YYYY-MM-DD
+  fileSize: string; // display string, derived from fileSizeBytes
+  fileSizeBytes: number;
   downloadCount: number;
-  rating: number; // 1-5
-  fileFormat: 'PDF';
+  rating: number; // aggregate 0..5 (0 = unrated)
+  ratingCount: number;
+  fileFormat: 'PDF' | 'PPT' | 'PPTX';
   description: string;
   tags: string[];
-  externalUrl?: string;
-  isUserUploaded?: boolean;
+  isUserUploaded: boolean; // false = official seeded content
+  ownerKey: string | null; // owner identity for uploads (null = official)
+  hasFile: boolean; // real stored file (vs legacy summary-card fallback)
+  fileName: string | null;
+  /** Underlying document kind — drives "Page N" vs "Slide N" citations. */
+  fileKind: 'pdf' | 'ppt' | 'pptx' | null;
+  /** RAG pipeline state; null = legacy row never ingested. */
+  ingestStatus: 'pending' | 'processing' | 'ready' | 'failed' | null;
+  ingestError: string | null;
+  ingestedAt: number | null;
+  chunkCount: number | null;
+  folderId: string | null; // organizational folder (null = Unorganized root)
 }
 
-export interface UserProfile {
+/** Custom nested folder for scaling a subject to hundreds of documents. */
+export interface Folder {
+  id: string;
+  subjectId: string;
+  semesterId: string;
   name: string;
-  rollNumber: string;
-  studentId: string;
-  semester: 3;
-  branch: string;
-  college: string;
-  savedResourceIds: string[];
-  studyStreakDays: number;
+  parentId: string | null; // nested folders
+  color: string | null;
+  order: number;
+  resourceCount: number;
+  ownerKey: string | null;
+  createdAt: number;
 }
 
-export type ActiveTab = 'library' | 'analytics' | 'async-lab' | 'syllabus-viva' | 'curriculum-scheme';
-
-export interface FormErrors {
-  title?: string;
-  subject?: string;
-  type?: string;
-  uploadedBy?: string;
-  rollNumber?: string;
-  fileSize?: string;
-  fileFormat?: string;
-  description?: string;
+/** Library rail + upload picker entry (active, unarchived courses only). */
+export interface SubjectOption {
+  id: string;
+  name: string;
+  courseCode: string;
 }
 
-export interface OfficialCourseSchemeItem {
+/** Row of the scheme/credit-matrix table (all courses of the semester). */
+export interface SchemeCourse {
+  id: string;
   srNo: number;
   category: string;
   abbreviation: string;
@@ -68,4 +76,103 @@ export interface OfficialCourseSchemeItem {
   slPbl: number;
   nh: number;
   credits: number;
+  inLibrary: boolean;
+  isArchived: boolean;
+}
+
+export interface SemesterInfo {
+  id: string;
+  number: number;
+  label: string;
+  schemeLabel: string;
+}
+
+// ---------------------------------------------------------------------------
+// Navigation — subject-centric information architecture & Study Workspace
+// ---------------------------------------------------------------------------
+
+/**
+ * The three primary destinations. A subject is the catalog workspace;
+ * the study workspace provides full-screen document viewing + integrated AI.
+ */
+export type AppView =
+  | { kind: 'home' }
+  | { kind: 'subject'; subjectId: string }
+  | { kind: 'study'; documentId: string; page?: number }
+  | { kind: 'saved' }
+  | { kind: 'not-found' };
+
+/** The context selector for the AI Assistant within the Study Workspace and Subject Workspace. */
+export type StudyScopeKind = 'document' | 'folder' | 'selected' | 'subject' | 'library';
+
+/**
+ * Retrieval scope for the Study Assistant. The panel derives this from the
+ * current view or context selector — never shown as a technical mode.
+ */
+export type AssistantScope =
+  | { mode: 'semester' }
+  | { mode: 'subject'; subjectId: string; subjectName?: string }
+  | { mode: 'folder'; folderId: string; folderName?: string; subjectId?: string }
+  | { mode: 'selected'; resourceIds: string[]; label?: string; subjectId?: string }
+  | { mode: 'resource'; resourceId: string };
+
+/** Explicitly tagged document or slide/page for dedicated 1:1 AI explanation focus */
+export interface TaggedFocusTarget {
+  resourceId: string;
+  resourceTitle: string;
+  page?: number | null;
+  pages?: number[] | null;
+  fileKind?: 'pdf' | 'ppt' | 'pptx' | null;
+}
+
+/** Secondary features demoted into the top-bar overflow (user decision). */
+export type MoreSheetKind = 'analytics' | 'async-lab' | 'scheme' | 'syllabus';
+
+export interface FormErrors {
+  title?: string;
+  subject?: string;
+  type?: string;
+  uploadedBy?: string;
+  rollNumber?: string;
+  file?: string;
+  description?: string;
+}
+
+export interface ResourceEditInput {
+  title?: string;
+  description?: string;
+  type?: ResourceType;
+  subjectId?: string;
+  tags?: string[];
+  uploadedBy?: string;
+  rollNumber?: string;
+  replaceFile?: File;
+  folderId?: string | null;
+}
+
+/** Input for a single file inside the bulk-upload flow. */
+export interface BulkUploadInput {
+  file: File;
+  title: string;
+  subjectId: string;
+  type: ResourceType;
+  uploadedBy: string;
+  rollNumber: string;
+  description: string;
+  tags: string[];
+  folderId?: string;
+}
+
+export interface NewSubjectInput {
+  name: string;
+  courseCode: string;
+  category: string;
+  abbreviation: string;
+  cl: number;
+  tl: number;
+  ll: number;
+  slPbl: number;
+  nh: number;
+  credits: number;
+  inLibrary: boolean;
 }

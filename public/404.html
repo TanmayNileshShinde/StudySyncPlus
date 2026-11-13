@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>StudySyncPlus — Academic Workspace</title>
+    <script type="text/javascript">
+      // Single Page Apps for GitHub Pages
+      // MIT License: https://github.com/rafgraph/spa-github-pages
+      // Takes current URL, converts path & query into a query parameter,
+      // and redirects to index.html with the parameter preserved.
+      var pathSegmentsToKeep = window.location.hostname.includes('github.io') ? 1 : 0;
+      var l = window.location;
+      var repoSegment = l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/');
+      var routePath = l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~');
+      var searchParam = l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '';
+
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        repoSegment + '/?/' +
+        routePath + searchParam +
+        l.hash
+      );
+    </script>
+  </head>
+  <body style="margin: 0; background-color: #ffffff; color: #111111; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh;">
+    <div style="text-align: center; padding: 24px;">
+      <div style="width: 28px; height: 28px; background: #111111; margin: 0 auto 12px auto; display: flex; align-items: center; justify-content: center;">
+        <div style="width: 14px; height: 3px; background: #a3e635;"></div>
+      </div>
+      <p style="font-size: 13px; font-weight: 500; letter-spacing: -0.01em;">Redirecting to StudySyncPlus workspace...</p>
+    </div>
+  </body>
+</html>

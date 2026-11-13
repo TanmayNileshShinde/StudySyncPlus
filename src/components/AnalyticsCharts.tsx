@@ -63,16 +63,17 @@ const scaleOptions = {
 export const AnalyticsCharts: React.FC = () => {
   const { resources } = useResources();
 
-  // Aggregate metrics dynamically from state
+  // Aggregate metrics dynamically from Convex-backed state
   const totalDownloads = resources.reduce((acc, curr) => acc + curr.downloadCount, 0);
+  const ratedResources = resources.filter((r) => r.ratingCount > 0);
   const avgRating = (
-    resources.reduce((acc, curr) => acc + curr.rating, 0) / (resources.length || 1)
+    ratedResources.reduce((acc, curr) => acc + curr.rating, 0) / (ratedResources.length || 1)
   ).toFixed(1);
 
   // Subject downloads aggregation
   const subjectMap: Record<string, number> = {};
   resources.forEach((r) => {
-    subjectMap[r.subject] = (subjectMap[r.subject] || 0) + r.downloadCount;
+    subjectMap[r.subjectName] = (subjectMap[r.subjectName] || 0) + r.downloadCount;
   });
 
   const subjectLabels = Object.keys(subjectMap);
