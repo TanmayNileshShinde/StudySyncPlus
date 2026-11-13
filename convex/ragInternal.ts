@@ -370,3 +370,63 @@ export const countEmbeddedChunks = internalQuery({
     return embedded;
   },
 });
+
+/** Retrieve all exact chunks for an explicitly tagged page or slide. */
+export const getChunksForPage = internalQuery({
+  args: {
+    resourceId: v.id("resources"),
+    page: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const resource = await ctx.db.get(args.resourceId);
+    if (!resource) return [];
+    const chunks = await ctx.db
+      .query("documentChunks")
+      .withIndex("by_resource", (q) => q.eq("resourceId", args.resourceId))
+      .filter((q) => q.eq(q.field("page"), args.page))
+      .collect();
+
+    return chunks.map((c) => ({
+      chunkId: c._id,
+      resourceId: c.resourceId,
+      resourceTitle: resource.title,
+      courseCode: resource.courseCode,
+      fileKind: resource.fileKind ?? null,
+      page: c.page,
+      text: c.text,
+      score: 1.0,
+    }));
+  },
+});
+
+/** Retrieve all exact chunks for explicitly tagged pages or slides. */
+export const getChunksForPages = internalQuery({
+  args: {
+    resourceId: v.id("resources"),
+    pages: v.array(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const resource = await ctx.db.get(args.resourceId);
+    if (!resource) return [];
+    if (!args.pages || args.pages.length === 0) return [];
+
+    const pageSet = new Set(args.pages);
+    const chunks = await ctx.db
+      .query("documentChunks")
+      .withIndex("by_resource", (q) => q.eq("resourceId", args.resourceId))
+      .collect();
+
+    const matched = chunks.filter((c) => c.page !== undefined && pageSet.has(c.page));
+
+    return matched.map((c) => ({
+      chunkId: c._id,
+      resourceId: c.resourceId,
+      resourceTitle: resource.title,
+      courseCode: resource.courseCode,
+      fileKind: resource.fileKind ?? null,
+      page: c.page,
+      text: c.text,
+      score: 1.0,
+    }));
+  },
+});

@@ -28,7 +28,13 @@ export async function extractPdfPages(bytes: Uint8Array): Promise<ExtractedUnit[
   const result = await parser.getText();
   const pages = result.pages ?? [];
   return pages
-    .map((p: { num: number; text: string }) => ({ num: p.num, text: p.text ?? "" }))
+    .map((p: { num: number; text: string }) => {
+      const text = (p.text ?? "").trim();
+      return {
+        num: p.num,
+        text: text.length > 0 ? text : `Page ${p.num}: [Visual diagram / illustration page]`,
+      };
+    })
     .filter((p: ExtractedUnit) => p.text.trim().length > 0);
 }
 
@@ -81,15 +87,42 @@ export async function extractPptxSlides(bytes: Uint8Array): Promise<ExtractedUni
 
   const decoder = new TextDecoder("utf-8");
   const units: ExtractedUnit[] = [];
+  let lastTopic = "";
+
   for (const key of slideKeys) {
     const num = slideNumberFromKey(key, "slide");
-    let text = textFromSlideXml(decoder.decode(files[key]));
+    const xml = decoder.decode(files[key]);
+    let text = textFromSlideXml(xml);
     const noteKey = noteKeys.get(String(num));
     if (noteKey) {
       const noteText = textFromSlideXml(decoder.decode(files[noteKey]));
       if (noteText.trim().length > 0) text += `\n[Speaker notes] ${noteText}`;
     }
-    if (text.trim().length > 0) units.push({ num, text });
+
+    // Check for images or shape descriptors
+    const descrMatches = Array.from(xml.matchAll(/descr="([^"]+)"/g)).map((m) => m[1]);
+    const validDescrs = descrMatches.filter((d) => d && d !== "Lightbox" && d.trim().length > 2);
+
+    if (validDescrs.length > 0) {
+      text += `\n[Diagram description: ${validDescrs.join("; ")}]`;
+    }
+
+    const trimmed = text.trim();
+    const isOnlyNumber = /^\d+$/.test(trimmed);
+
+    // If the slide text is empty or only a slide number (e.g. an architecture diagram / illustration slide):
+    if (trimmed.length === 0 || isOnlyNumber) {
+      const topicContext = lastTopic ? ` relating to ${lastTopic}` : "";
+      text = `Slide ${num}: Visual diagram / architecture illustration${topicContext}.\n${trimmed}`.trim();
+    } else {
+      // Keep track of the slide's main heading/title for subsequent diagram context
+      const firstLine = trimmed.split("\n")[0]?.replace(/^Slide \d+:\s*/, "").trim();
+      if (firstLine && firstLine.length > 3 && !/^\d+$/.test(firstLine)) {
+        lastTopic = firstLine;
+      }
+    }
+
+    units.push({ num, text });
   }
   return units;
 }

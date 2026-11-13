@@ -116,6 +116,15 @@ export type AssistantScope =
   | { mode: 'selected'; resourceIds: string[]; label?: string; subjectId?: string }
   | { mode: 'resource'; resourceId: string };
 
+/** Explicitly tagged document or slide/page for dedicated 1:1 AI explanation focus */
+export interface TaggedFocusTarget {
+  resourceId: string;
+  resourceTitle: string;
+  page?: number | null;
+  pages?: number[] | null;
+  fileKind?: 'pdf' | 'ppt' | 'pptx' | null;
+}
+
 /** Secondary features demoted into the top-bar overflow (user decision). */
 export type MoreSheetKind = 'analytics' | 'async-lab' | 'scheme' | 'syllabus';
 

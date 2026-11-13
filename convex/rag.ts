@@ -184,7 +184,14 @@ export function chunkPageText(
   startSeq: number
 ): Array<{ seq: number; page: number; text: string }> {
   const normalized = pageText.replace(/\r\n/g, "\n").replace(/\t/g, " ").trim();
-  if (normalized.length < 30) return [];
+  if (normalized.length === 0) return [];
+
+  // Short slides or pages (e.g. diagrams, titles, formula slides < 50 chars)
+  // must still produce a valid chunk with their exact slide/page provenance so they
+  // are indexed, retrievable, and citeable by the AI assistant.
+  if (normalized.length < 50) {
+    return [{ seq: startSeq, page: pageNum, text: normalized }];
+  }
 
   const chunks: Array<{ seq: number; page: number; text: string }> = [];
   const chunkSize = 750; // ~150-200 words
@@ -208,7 +215,7 @@ export function chunkPageText(
     }
 
     const chunkStr = normalized.slice(start, end).trim();
-    if (chunkStr.length >= 40) {
+    if (chunkStr.length > 0) {
       chunks.push({
         seq: currentSeq++,
         page: pageNum,
@@ -218,6 +225,15 @@ export function chunkPageText(
 
     if (end >= normalized.length) break;
     start = Math.max(start + 1, end - overlap);
+  }
+
+  // Fallback guard: if chunking loop didn't capture content, preserve as single chunk
+  if (chunks.length === 0 && normalized.length > 0) {
+    chunks.push({
+      seq: currentSeq,
+      page: pageNum,
+      text: normalized,
+    });
   }
 
   return chunks;
@@ -354,6 +370,9 @@ export const search = action({
       v.literal("resource")
     ),
     resourceId: v.optional(v.id("resources")),
+    taggedResourceId: v.optional(v.id("resources")),
+    taggedPage: v.optional(v.number()),
+    taggedPages: v.optional(v.array(v.number())),
     semesterId: v.optional(v.id("semesters")),
     subjectId: v.optional(v.id("subjects")),
     folderId: v.optional(v.id("folders")),
@@ -453,6 +472,9 @@ export const chat = action({
       v.literal("resource")
     ),
     resourceId: v.optional(v.id("resources")),
+    taggedResourceId: v.optional(v.id("resources")),
+    taggedPage: v.optional(v.number()),
+    taggedPages: v.optional(v.array(v.number())),
     semesterId: v.optional(v.id("semesters")),
     subjectId: v.optional(v.id("subjects")),
     folderId: v.optional(v.id("folders")),
@@ -517,6 +539,31 @@ export const chat = action({
     }>) || [];
 
     // Save current user message to thread (guarding against rapid double-submits)
+    const effectiveTaggedResourceId =
+      args.taggedResourceId || (args.mode === "resource" ? args.resourceId : undefined);
+    let taggedPages =
+      args.taggedPages && args.taggedPages.length > 0
+        ? Array.from(new Set(args.taggedPages)).sort((a, b) => a - b)
+        : args.taggedPage
+          ? [args.taggedPage]
+          : undefined;
+
+    // Natural-language slide/page detection fallback:
+    // If the student asked about specific slides/pages (e.g. "explain slide 15 and slide 23")
+    // without typing @/ tags, automatically extract those slide numbers so exact chunks are retrieved.
+    if ((!taggedPages || taggedPages.length === 0) && effectiveTaggedResourceId) {
+      const detected = new Set<number>();
+      const matches = userText.matchAll(/\b(?:slides?|pages?)\s+(\d+)(?:\s*(?:and|&|,|-)\s*(\d+))?/gi);
+      for (const m of matches) {
+        if (m[1]) detected.add(parseInt(m[1], 10));
+        if (m[2]) detected.add(parseInt(m[2], 10));
+      }
+      if (detected.size > 0) {
+        taggedPages = Array.from(detected).sort((a, b) => a - b);
+      }
+    }
+    const taggedPage = taggedPages && taggedPages.length > 0 ? taggedPages[0] : args.taggedPage;
+
     const lastExisting = existingMessages[existingMessages.length - 1];
     const isDuplicateRecentUserMsg =
       lastExisting &&
@@ -527,6 +574,9 @@ export const chat = action({
       await ctx.runMutation(api.chat.appendUserMessage, {
         threadId,
         content: userText,
+        taggedPage: taggedPage,
+        taggedPages: taggedPages,
+        taggedResourceId: effectiveTaggedResourceId,
       });
     }
 
@@ -564,7 +614,7 @@ export const chat = action({
       }
     }
 
-    // Step 4: Retrieve relevant context chunks using vector search
+    // Step 4: Retrieve relevant context chunks using vector search or exact tagged page chunks
     let citations: Array<{
       chunkId: Id<"documentChunks">;
       resourceId: Id<"resources">;
@@ -576,20 +626,72 @@ export const chat = action({
       score: number;
     }> = [];
 
-    try {
-      citations = await ctx.runAction(api.rag.search, {
-        query: searchQuery,
-        mode: args.mode,
-        resourceId: args.resourceId,
-        semesterId: args.semesterId,
-        subjectId: args.subjectId,
-        folderId: args.folderId,
-        selectedResourceIds: args.selectedResourceIds,
-        limit: 5,
-      });
-    } catch (err) {
-      console.error("Vector search retrieval failed:", err);
-      // Fallback: Proceed without context or indicate search error
+    // If exact page(s) or slide(s) are tagged, fetch all their exact chunks directly
+    if (effectiveTaggedResourceId && taggedPages && taggedPages.length > 0) {
+      try {
+        const pagesChunks = await ctx.runQuery(internal.ragInternal.getChunksForPages, {
+          resourceId: effectiveTaggedResourceId,
+          pages: taggedPages,
+        });
+        if (pagesChunks && pagesChunks.length > 0) {
+          citations = pagesChunks;
+        }
+
+        // Check if any tagged page was missing from direct chunks; supplement with semantic search
+        const foundPages = new Set(pagesChunks.map((c) => c.page).filter(Boolean));
+        const missingPages = taggedPages.filter((p) => !foundPages.has(p));
+        if (missingPages.length > 0) {
+          try {
+            const fallbackHits = await ctx.runAction(api.rag.search, {
+              query: `${searchQuery} slide ${missingPages.join(" ")}`,
+              mode: "resource",
+              resourceId: effectiveTaggedResourceId,
+              limit: 4,
+            });
+            const existingIds = new Set(citations.map((c) => String(c.chunkId)));
+            for (const hit of fallbackHits) {
+              if (!existingIds.has(String(hit.chunkId))) {
+                citations.push(hit);
+                existingIds.add(String(hit.chunkId));
+              }
+            }
+          } catch (err) {
+            console.error("Fallback vector search for missing tagged pages failed:", err);
+          }
+        }
+      } catch (err) {
+        console.error("Direct multi-page chunk retrieval failed:", err);
+      }
+    } else if (effectiveTaggedResourceId && taggedPage) {
+      try {
+        const pageChunks = await ctx.runQuery(internal.ragInternal.getChunksForPage, {
+          resourceId: effectiveTaggedResourceId,
+          page: taggedPage,
+        });
+        if (pageChunks && pageChunks.length > 0) {
+          citations = pageChunks;
+        }
+      } catch (err) {
+        console.error("Direct page chunk retrieval failed:", err);
+      }
+    }
+
+    // If no page chunks found (or not in single-page tagged mode), run semantic vector search
+    if (citations.length === 0) {
+      try {
+        citations = await ctx.runAction(api.rag.search, {
+          query: searchQuery,
+          mode: effectiveTaggedResourceId ? "resource" : args.mode,
+          resourceId: effectiveTaggedResourceId ?? args.resourceId,
+          semesterId: args.semesterId,
+          subjectId: args.subjectId,
+          folderId: args.folderId,
+          selectedResourceIds: args.selectedResourceIds,
+          limit: 5,
+        });
+      } catch (err) {
+        console.error("Vector search retrieval failed:", err);
+      }
     }
 
     // Step 5: Citation Carry-Forward
@@ -661,7 +763,24 @@ export const chat = action({
       contextBlock = "NO RELEVANT COURSE DOCUMENTS FOUND FOR THIS QUERY.";
     }
 
-    const systemPrompt = `You are StudySync AI, the authoritative academic study assistant for Semester III Computer Engineering students at Shah & Anchor Kutchhi Engineering College (SAKEC).
+    let taggedFocusDirective = "";
+    if (effectiveTaggedResourceId && taggedPages && taggedPages.length > 0) {
+      const docTitle = citations[0]?.resourceTitle || "the tagged material";
+      const fileKind = citations[0]?.fileKind || "pdf";
+      const unitLabel = fileKind === "pdf" ? "Page" : "Slide";
+      const pluralLabel = taggedPages.length > 1 ? `${unitLabel}s` : unitLabel;
+      taggedFocusDirective = `\n\n🎯 STRICT TAGGED FOCUS DIRECTIVE (ABSOLUTE PRIORITY):\nThe student has explicitly TAGGED ${pluralLabel} ${taggedPages.join(", ")} of "${docTitle}".\nYou MUST explain and answer based STRICTLY AND ONLY on the contents of these tagged ${pluralLabel.toLowerCase()}.\nDo NOT introduce unmentioned topics from other pages, slides, or documents.\nProvide a comprehensive, high-yield, and crystal-clear explanation of everything on these tagged ${pluralLabel.toLowerCase()}.\n`;
+    } else if (effectiveTaggedResourceId && taggedPage) {
+      const docTitle = citations[0]?.resourceTitle || "the tagged material";
+      const fileKind = citations[0]?.fileKind || "pdf";
+      const unitLabel = fileKind === "pdf" ? "Page" : "Slide";
+      taggedFocusDirective = `\n\n🎯 STRICT TAGGED FOCUS DIRECTIVE (ABSOLUTE PRIORITY):\nThe student has explicitly TAGGED ${unitLabel} ${taggedPage} of "${docTitle}".\nYou MUST explain and answer based STRICTLY AND ONLY on the contents of this tagged ${unitLabel.toLowerCase()}.\nDo NOT introduce unmentioned topics from other pages, slides, or documents.\nProvide a comprehensive, high-yield, and crystal-clear explanation of everything on this tagged ${unitLabel.toLowerCase()}.\n`;
+    } else if (effectiveTaggedResourceId) {
+      const docTitle = citations[0]?.resourceTitle || "the tagged document";
+      taggedFocusDirective = `\n\n🎯 STRICT TAGGED FOCUS DIRECTIVE (ABSOLUTE PRIORITY):\nThe student has explicitly TAGGED the document "${docTitle}".\nYou MUST explain and answer based STRICTLY AND ONLY on the contents of this document.\nDo NOT refer to outside materials.\n`;
+    }
+
+    const systemPrompt = `You are StudySync AI, the authoritative academic study assistant for Semester III Computer Engineering students at Shah & Anchor Kutchhi Engineering College (SAKEC).${taggedFocusDirective}
 
 CRITICAL RESPONSE GUIDELINES (STRICTLY ENFORCED):
 
@@ -800,6 +919,10 @@ ${userText}`;
       threadId,
       content: assistantReply,
       citations: formattedCitations,
+      taggedPage: taggedPage,
+      taggedPages: taggedPages,
+      taggedResourceId: effectiveTaggedResourceId,
+      taggedResourceTitle: citations[0]?.resourceTitle,
     });
 
     return {

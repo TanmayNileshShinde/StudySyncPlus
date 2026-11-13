@@ -91,6 +91,10 @@ export const appendUserMessage = mutation({
   args: {
     threadId: v.id("chatThreads"),
     content: v.string(),
+    taggedPage: v.optional(v.number()),
+    taggedPages: v.optional(v.array(v.number())),
+    taggedResourceId: v.optional(v.id("resources")),
+    taggedResourceTitle: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -99,6 +103,10 @@ export const appendUserMessage = mutation({
       threadId: args.threadId,
       role: "user",
       content: args.content.trim(),
+      taggedPage: args.taggedPage,
+      taggedPages: args.taggedPages,
+      taggedResourceId: args.taggedResourceId,
+      taggedResourceTitle: args.taggedResourceTitle,
       createdAt: now,
     });
   },
@@ -109,6 +117,10 @@ export const appendAssistantMessage = mutation({
   args: {
     threadId: v.id("chatThreads"),
     content: v.string(),
+    taggedPage: v.optional(v.number()),
+    taggedPages: v.optional(v.array(v.number())),
+    taggedResourceId: v.optional(v.id("resources")),
+    taggedResourceTitle: v.optional(v.string()),
     citations: v.optional(
       v.array(
         v.object({
@@ -131,6 +143,10 @@ export const appendAssistantMessage = mutation({
       role: "assistant",
       content: args.content,
       citations: args.citations,
+      taggedPage: args.taggedPage,
+      taggedPages: args.taggedPages,
+      taggedResourceId: args.taggedResourceId,
+      taggedResourceTitle: args.taggedResourceTitle,
       createdAt: now,
     });
   },

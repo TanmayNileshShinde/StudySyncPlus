@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { asResourceId } from '../../lib/convexIds';
+import { useResources } from '../../context/ResourceContext';
 import type { StudyResource } from '../../types';
 import { init as initPptx } from 'pptx-preview';
 import JSZip from 'jszip';
@@ -48,6 +49,7 @@ export const PresentationViewer: React.FC<PresentationViewerProps> = ({
   highlightedCitationPage,
   onClearCitationHighlight
 }) => {
+  const { tagCurrentPage } = useResources();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const slideMountRef = useRef<HTMLDivElement>(null);
   const previewerRef = useRef<PPTXPreviewerInstance | null>(null);
@@ -574,9 +576,12 @@ export const PresentationViewer: React.FC<PresentationViewerProps> = ({
             <>
               <div className="h-4 w-px bg-rule" aria-hidden="true" />
               <button
-                onClick={() => onAskAiAboutSlide(currentSlide)}
+                onClick={() => {
+                  tagCurrentPage();
+                  onAskAiAboutSlide(currentSlide);
+                }}
                 className="btn btn-ghost text-xs px-2 py-0.5 h-7 font-mono flex items-center gap-1 hover:bg-lime/20"
-                title={`Ask Study Assistant about Slide ${currentSlide}`}
+                title={`Ask Study Assistant about Slide ${currentSlide} (Pins Slide ${currentSlide} as AI focus)`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-lime-deep" aria-hidden="true" />
                 <span className="hidden sm:inline">Ask AI</span>

@@ -17,6 +17,7 @@ import type {
   AppView,
   AssistantScope,
   StudyScopeKind,
+  TaggedFocusTarget,
   BulkUploadInput,
   ResourceEditInput,
   NewSubjectInput,
@@ -58,6 +59,11 @@ interface ResourceContextType {
   setViewerZoom: (zoom: number) => void;
   openAssistant: (scope: AssistantScope) => void;
   assistantScope: AssistantScope;
+  taggedTarget: TaggedFocusTarget | null;
+  setTaggedTarget: (target: TaggedFocusTarget | null) => void;
+  tagCurrentPage: () => void;
+  tagCurrentDocument: () => void;
+  clearTaggedTarget: () => void;
 
   // Subject-page filters
   subjectSearch: string;
@@ -301,6 +307,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const [viewerZoom, setViewerZoom] = useState<number>(100);
+  const [taggedTarget, setTaggedTarget] = useState<TaggedFocusTarget | null>(null);
   const [subjectSearch, setSubjectSearch] = useState('');
   const [uploadSubjectId, setUploadSubjectId] = useState<string | null>(null);
   const [uploadFolderId, setUploadFolderId] = useState<string | null>(null);
@@ -770,6 +777,39 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [resources, openStudyWorkspace, navigate]
   );
 
+  const tagCurrentPage = useCallback(() => {
+    if (!activeDocumentId) return;
+    const doc = resources.find((r) => r.id === activeDocumentId);
+    if (!doc) return;
+    const pageNum = viewerPage ?? 1;
+    const unit = doc.fileKind === 'pptx' || doc.fileKind === 'ppt' ? 'Slide' : 'Page';
+    setTaggedTarget({
+      resourceId: doc.id,
+      resourceTitle: doc.title,
+      page: pageNum,
+      fileKind: doc.fileKind,
+    });
+    showToast(`Tagged ${unit} ${pageNum} of "${doc.title}". AI will explain strictly this.`);
+  }, [activeDocumentId, resources, viewerPage, showToast]);
+
+  const tagCurrentDocument = useCallback(() => {
+    if (!activeDocumentId) return;
+    const doc = resources.find((r) => r.id === activeDocumentId);
+    if (!doc) return;
+    setTaggedTarget({
+      resourceId: doc.id,
+      resourceTitle: doc.title,
+      page: null,
+      fileKind: doc.fileKind,
+    });
+    showToast(`Tagged "${doc.title}". AI will explain strictly this document.`);
+  }, [activeDocumentId, resources, showToast]);
+
+  const clearTaggedTarget = useCallback(() => {
+    setTaggedTarget(null);
+    showToast('Removed tagged focus. Returned to general study scope.');
+  }, [showToast]);
+
   const detailResource = useMemo(() => {
     if (detailResourceOverride) return detailResourceOverride;
     if (view.kind === 'study') {
@@ -825,6 +865,11 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setViewerZoom,
       openAssistant,
       assistantScope,
+      taggedTarget,
+      setTaggedTarget,
+      tagCurrentPage,
+      tagCurrentDocument,
+      clearTaggedTarget,
       subjectSearch,
       setSubjectSearch,
       uploadSubjectId,
@@ -883,6 +928,11 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       viewerZoom,
       openAssistant,
       assistantScope,
+      taggedTarget,
+      setTaggedTarget,
+      tagCurrentPage,
+      tagCurrentDocument,
+      clearTaggedTarget,
       subjectSearch,
       uploadSubjectId,
       uploadFolderId,

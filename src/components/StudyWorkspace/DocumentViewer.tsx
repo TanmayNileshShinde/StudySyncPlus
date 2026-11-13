@@ -110,16 +110,25 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
   const displayPage = localPageInput ?? String(viewerPage ?? 1);
 
-  // Close switcher on outside click
+  // Close switcher on outside click or Escape
   useEffect(() => {
     if (!switcherOpen) return;
-    const handleClick = (e: MouseEvent) => {
+    const handleOutsideClick = (e: MouseEvent) => {
       if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
         setSwitcherOpen(false);
       }
     };
-    window.addEventListener('mousedown', handleClick);
-    return () => window.removeEventListener('mousedown', handleClick);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSwitcherOpen(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [switcherOpen]);
 
   // Fullscreen change listener
@@ -317,23 +326,28 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           <span className="h-4 w-px bg-rule shrink-0 hidden sm:inline-block" aria-hidden="true" />
 
           {/* Quick Document Switcher */}
-          <div ref={switcherRef} className="relative shrink-0 z-40">
+          <div ref={switcherRef} className="relative shrink-0 z-40 min-w-[130px] max-w-[180px] sm:max-w-[220px]">
             <button
-              onClick={() => setSwitcherOpen((v) => !v)}
-              className="flex items-center gap-1.5 text-left px-2 py-1 h-8 border border-rule hover:border-ink bg-paper transition-colors group max-w-[140px] sm:max-w-[190px] shrink-0 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSwitcherOpen((v) => !v);
+              }}
+              className="w-full flex items-center justify-between gap-1.5 text-left px-2 py-1 h-8 border border-rule hover:border-ink bg-paper transition-colors group cursor-pointer"
               title={`Switch document (Current: ${activeDoc.title})`}
               aria-expanded={switcherOpen}
             >
-              {isDeck ? (
-                <Presentation className="w-3.5 h-3.5 text-ink-3 group-hover:text-ink shrink-0" aria-hidden="true" />
-              ) : (
-                <FileText className="w-3.5 h-3.5 text-ink-3 group-hover:text-ink shrink-0" aria-hidden="true" />
-              )}
-              <span className="font-bold text-xs text-ink truncate leading-tight">
-                {activeDoc.title}
-              </span>
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                {isDeck ? (
+                  <Presentation className="w-3.5 h-3.5 text-ink-3 group-hover:text-ink shrink-0" aria-hidden="true" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5 text-ink-3 group-hover:text-ink shrink-0" aria-hidden="true" />
+                )}
+                <span className="font-bold text-xs text-ink truncate leading-tight">
+                  {activeDoc.title}
+                </span>
+              </div>
               <ChevronDown
-                className={`w-3 h-3 text-ink-3 group-hover:text-ink shrink-0 ml-0.5 transition-transform duration-150 ${
+                className={`w-3 h-3 text-ink-3 group-hover:text-ink shrink-0 transition-transform duration-150 ${
                   switcherOpen ? 'rotate-180' : ''
                 }`}
                 aria-hidden="true"
@@ -342,7 +356,10 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
             {/* Sibling Documents Dropdown */}
             {switcherOpen && (
-              <div className="absolute top-[calc(100%+4px)] left-0 z-50 w-80 max-h-72 overflow-y-auto bg-paper border border-ink shadow-overlay animate-fadeIn">
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-[calc(100%+4px)] left-0 z-50 w-80 max-h-72 overflow-y-auto bg-paper border border-ink shadow-overlay animate-fadeIn"
+              >
                 <div className="px-3 py-2 border-b border-rule bg-paper-sunk flex items-center justify-between">
                   <span className="text-[10px] font-mono uppercase tracking-[0.08em] font-semibold text-ink-3">
                     Course Materials ({siblingResources.length})

@@ -178,6 +178,10 @@ export default defineSchema({
         })
       )
     ),
+    taggedPage: v.optional(v.number()),
+    taggedPages: v.optional(v.array(v.number())),
+    taggedResourceId: v.optional(v.id("resources")),
+    taggedResourceTitle: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_thread", ["threadId", "createdAt"]),
 });

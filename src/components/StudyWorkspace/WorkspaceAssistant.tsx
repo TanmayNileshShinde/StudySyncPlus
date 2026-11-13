@@ -21,7 +21,9 @@ import {
   ChevronRight,
   ChevronDown,
   AlertCircle,
-  Folder as FolderIcon
+  Folder as FolderIcon,
+  Pin,
+  X
 } from 'lucide-react';
 
 interface CitationChipProps {
@@ -85,6 +87,10 @@ interface Turn {
     page?: number;
     score?: number;
   }>;
+  taggedPage?: number;
+  taggedPages?: number[];
+  taggedResourceId?: string;
+  taggedResourceTitle?: string;
 }
 
 /** Separate thinking/reasoning blocks (<think>...</think>) from the clean markdown answer. */
@@ -111,6 +117,70 @@ function parseAssistantMessage(content: string): { thinking: string | null; answ
   }
 
   return { thinking: null, answer: content };
+}
+
+/**
+ * Extracts tagged slide or page numbers and document references from text.
+ * Matches @slide 2, /slide 4, @slides 1, 3, 5, @slide 2-5, @2, /4, @doc, /document, etc.
+ */
+export function parseTagsFromText(
+  text: string,
+  fallbackTarget?: { page?: number | null } | null
+): {
+  taggedPages: number[];
+  isDocumentTagged: boolean;
+} {
+  const pagesSet = new Set<number>();
+  let isDocumentTagged = false;
+
+  if (fallbackTarget?.page) {
+    pagesSet.add(fallbackTarget.page);
+  }
+
+  if (text) {
+    // 1. Matches @document, /document, @doc, /doc
+    if (/(?:^|\s)[@/](?:document|doc)\b/i.test(text)) {
+      isDocumentTagged = true;
+    }
+
+    // 2. Matches @slide 2, /slide 4, @slides 1, 3, 5, /slide 2-5, @page 4, etc.
+    const keywordRegex = /(?:^|\s)[@/](?:slides?|pages?)\s*([0-9\s,-]+)/gi;
+    let match: RegExpExecArray | null;
+    while ((match = keywordRegex.exec(text)) !== null) {
+      const rawArgs = match[1];
+      const tokens = rawArgs.split(/[\s,]+/);
+      for (const token of tokens) {
+        if (!token) continue;
+        if (token.includes('-')) {
+          const parts = token.split('-');
+          const start = parseInt(parts[0], 10);
+          const end = parseInt(parts[1], 10);
+          if (!isNaN(start) && !isNaN(end) && start > 0 && end >= start && end - start <= 50) {
+            for (let p = start; p <= end; p++) pagesSet.add(p);
+          }
+        } else {
+          const num = parseInt(token, 10);
+          if (!isNaN(num) && num > 0) {
+            pagesSet.add(num);
+          }
+        }
+      }
+    }
+
+    // 3. Direct number mentions: @2, /4
+    const directNumRegex = /(?:^|\s)[@/](\d+)\b/g;
+    while ((match = directNumRegex.exec(text)) !== null) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > 0) {
+        pagesSet.add(num);
+      }
+    }
+  }
+
+  return {
+    taggedPages: Array.from(pagesSet).sort((a, b) => a - b),
+    isDocumentTagged
+  };
 }
 
 /**
@@ -217,6 +287,9 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
     resources,
     subjects,
     semester,
+    viewerPage,
+    taggedTarget,
+    clearTaggedTarget,
     showToast
   } = useResources();
 
@@ -292,10 +365,14 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
 
   // Turns list: persisted messages + optimistic pairs without duplicates
   const turns: Turn[] = useMemo(() => {
-    const rawList: Turn[] = (persisted ?? []).map((m) => ({
+    const rawList: Turn[] = (persisted ?? []).map((m: any) => ({
       role: m.role,
       content: m.content,
-      citations: m.citations?.map((c) => ({
+      taggedPage: m.taggedPage,
+      taggedPages: m.taggedPages,
+      taggedResourceId: m.taggedResourceId,
+      taggedResourceTitle: m.taggedResourceTitle,
+      citations: m.citations?.map((c: any) => ({
         resourceId: c.resourceId,
         resourceTitle: c.resourceTitle,
         fileKind: c.fileKind,
@@ -388,6 +465,153 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
     ];
   }, [studyScope, activeDocument, activeSubject]);
 
+  const isDeck = activeDocument?.fileKind === 'ppt' || activeDocument?.fileKind === 'pptx';
+  const unitWord = isDeck ? 'slide' : 'page';
+  const UnitWord = isDeck ? 'Slide' : 'Page';
+  const totalUnits = Math.max(1, activeDocument?.chunkCount ?? 25);
+
+  const [mentionState, setMentionState] = useState<{
+    open: boolean;
+    trigger: '@' | '/';
+    query: string;
+    startIndex: number;
+  }>({
+    open: false,
+    trigger: '@',
+    query: '',
+    startIndex: -1
+  });
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const mentionMenuRef = useRef<HTMLDivElement>(null);
+
+  // Live parsed tags from draft
+  const liveTags = useMemo(() => {
+    return parseTagsFromText(draft, taggedTarget);
+  }, [draft, taggedTarget]);
+
+  // Options for @ and / mention popup
+  const mentionOptions = useMemo(() => {
+    if (!mentionState.open) return [];
+    const q = mentionState.query.toLowerCase().trim();
+    const trigger = mentionState.trigger;
+
+    const items: Array<{
+      id: string;
+      title: string;
+      subtitle: string;
+      insertText: string;
+      badge?: string;
+    }> = [];
+
+    // 1. Current slide / page at top
+    if (viewerPage && viewerPage > 0 && (!q || String(viewerPage).includes(q) || `${unitWord}${viewerPage}`.includes(q))) {
+      items.push({
+        id: `current-${viewerPage}`,
+        title: `${UnitWord} ${viewerPage}`,
+        badge: 'Current',
+        subtitle: `Focus explanation strictly on current ${unitWord} ${viewerPage}`,
+        insertText: `${trigger}${unitWord} ${viewerPage} `
+      });
+    }
+
+    // 2. Individual slides/pages
+    for (let i = 1; i <= totalUnits; i++) {
+      if (i === viewerPage) continue;
+      const numStr = String(i);
+      const matches =
+        !q ||
+        numStr.includes(q) ||
+        `${unitWord} ${numStr}`.includes(q) ||
+        `${unitWord}${numStr}`.includes(q);
+
+      if (matches) {
+        items.push({
+          id: `unit-${i}`,
+          title: `${UnitWord} ${i}`,
+          subtitle: `Focus explanation strictly on ${unitWord} ${i}`,
+          insertText: `${trigger}${unitWord} ${i} `
+        });
+      }
+    }
+
+    // 3. Document mention
+    if (!q || 'document'.includes(q) || 'this'.includes(q) || 'doc'.includes(q)) {
+      items.push({
+        id: 'doc',
+        title: activeDocument?.title ? `Document (${activeDocument.title.slice(0, 24)}…)` : 'This Document',
+        badge: 'Doc',
+        subtitle: 'Focus explanation on this full document',
+        insertText: `${trigger}document `
+      });
+    }
+
+    return items.slice(0, 8);
+  }, [mentionState.open, mentionState.query, mentionState.trigger, viewerPage, activeDocument, unitWord, UnitWord, totalUnits]);
+
+  // Handle typing & detecting @ or / trigger
+  const handleDraftChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setDraft(val);
+
+    const cursor = e.target.selectionStart ?? val.length;
+    const textBefore = val.slice(0, cursor);
+    const match = textBefore.match(/(?:^|\s)([@/])([a-zA-Z0-9_-]*)$/);
+
+    if (match) {
+      const trigger = match[1] as '@' | '/';
+      const query = match[2];
+      const triggerPos = textBefore.lastIndexOf(trigger);
+      setMentionState({
+        open: true,
+        trigger,
+        query,
+        startIndex: triggerPos
+      });
+      setMentionIndex(0);
+    } else {
+      if (mentionState.open) {
+        setMentionState((prev) => ({ ...prev, open: false }));
+      }
+    }
+  };
+
+  const applyMention = useCallback((insertText: string) => {
+    if (!composerRef.current) return;
+    const textarea = composerRef.current;
+    const currentVal = textarea.value;
+    const cursor = textarea.selectionStart ?? currentVal.length;
+    const start = mentionState.startIndex >= 0 ? mentionState.startIndex : cursor;
+
+    const before = currentVal.slice(0, start);
+    const after = currentVal.slice(cursor);
+    const updated = before + insertText + after;
+
+    setDraft(updated);
+    setMentionState((prev) => ({ ...prev, open: false }));
+
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = before.length + insertText.length;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 0);
+  }, [mentionState.startIndex]);
+
+  const removeTagFromDraft = (pageToRemove: number) => {
+    const regex = new RegExp(`[@/](?:slides?|pages?)?\\s*\\b${pageToRemove}\\b[,\\s]*`, 'gi');
+    const updated = draft.replace(regex, ' ').replace(/\s+/g, ' ').trim();
+    setDraft(updated);
+    if (taggedTarget?.page === pageToRemove) {
+      clearTaggedTarget();
+    }
+  };
+
+  const clearAllTagsFromDraft = () => {
+    const regex = /[@/](?:(?:slides?|pages?)\s*[0-9\s,-]+|\d+\b|document\b|doc\b)/gi;
+    const updated = draft.replace(regex, ' ').replace(/\s+/g, ' ').trim();
+    setDraft(updated);
+    clearTaggedTarget();
+  };
+
   const send = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
@@ -408,8 +632,20 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
         args.threadId = asThreadId(threadId);
       }
 
-      // Map scope to Convex retrieval mode
-      if (studyScope === 'document' && activeDocument) {
+      // Extract tagged slides / pages from input text (e.g. @slide 2, 4 or /slide 1-3)
+      const { taggedPages: parsedTaggedPages, isDocumentTagged } = parseTagsFromText(trimmed, taggedTarget);
+
+      if (parsedTaggedPages.length > 0 && activeDocument) {
+        args.mode = 'resource';
+        args.resourceId = asResourceId(activeDocument.id);
+        args.taggedResourceId = asResourceId(activeDocument.id);
+        args.taggedPages = parsedTaggedPages;
+        args.taggedPage = parsedTaggedPages[0];
+      } else if (isDocumentTagged && activeDocument) {
+        args.mode = 'resource';
+        args.resourceId = asResourceId(activeDocument.id);
+        args.taggedResourceId = asResourceId(activeDocument.id);
+      } else if (studyScope === 'document' && activeDocument) {
         args.mode = 'resource';
         args.resourceId = asResourceId(activeDocument.id);
       } else if (studyScope === 'folder' && activeDocument?.folderId) {
@@ -440,7 +676,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
         setPending(null);
       }
     },
-    [pending, threadId, ownerKey, studyScope, activeDocument, semester, chatAction, setThreadId]
+    [pending, threadId, ownerKey, studyScope, activeDocument, semester, taggedTarget, chatAction, setThreadId]
   );
 
   const startNewChat = () => {
@@ -466,6 +702,29 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
   };
 
   const handleComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionState.open && mentionOptions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev + 1) % mentionOptions.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev - 1 + mentionOptions.length) % mentionOptions.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        applyMention(mentionOptions[mentionIndex]?.insertText ?? mentionOptions[0].insertText);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setMentionState((prev) => ({ ...prev, open: false }));
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !e.repeat) {
       e.preventDefault();
       void send(draft);
@@ -695,6 +954,22 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
                     <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-ink-3">
                       You
                     </span>
+                    {turn.taggedPages && turn.taggedPages.length > 0 ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-paper-sunk border border-rule text-[9.5px] font-mono text-ink-2">
+                        <Pin className="w-2.5 h-2.5 text-lime-deep" aria-hidden="true" />
+                        <span>
+                          {isDeck ? (turn.taggedPages.length > 1 ? 'Slides' : 'Slide') : (turn.taggedPages.length > 1 ? 'Pages' : 'Page')} {turn.taggedPages.join(', ')}
+                        </span>
+                      </span>
+                    ) : (turn.taggedPage || turn.taggedResourceTitle) ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-paper-sunk border border-rule text-[9.5px] font-mono text-ink-2">
+                        <Pin className="w-2.5 h-2.5 text-lime-deep" aria-hidden="true" />
+                        <span>
+                          {turn.taggedResourceTitle}
+                          {turn.taggedPage ? ` · Slide/Page ${turn.taggedPage}` : ''}
+                        </span>
+                      </span>
+                    ) : null}
                   </div>
 
                   {/* Distinct user query bubble */}
@@ -716,6 +991,22 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
                   <span className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-ink-2">
                     StudySync AI
                   </span>
+                  {turn.taggedPages && turn.taggedPages.length > 0 ? (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-lime/15 border border-lime text-[9.5px] font-mono text-ink font-semibold">
+                      <Pin className="w-2.5 h-2.5 text-lime-deep" aria-hidden="true" />
+                      <span>
+                        Focused on {isDeck ? (turn.taggedPages.length > 1 ? 'Slides' : 'Slide') : (turn.taggedPages.length > 1 ? 'Pages' : 'Page')} {turn.taggedPages.join(', ')}
+                      </span>
+                    </span>
+                  ) : (turn.taggedPage || turn.taggedResourceTitle) ? (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-lime/15 border border-lime text-[9.5px] font-mono text-ink font-semibold">
+                      <Pin className="w-2.5 h-2.5 text-lime-deep" aria-hidden="true" />
+                      <span>
+                        Focused on {turn.taggedResourceTitle || 'Document'}
+                        {turn.taggedPage ? ` · Slide/Page ${turn.taggedPage}` : ''}
+                      </span>
+                    </span>
+                  ) : null}
                 </div>
 
                 {/* Seamless message body: full width, directly on background, no card/border/shadow */}
@@ -795,20 +1086,121 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
 
       {/* Composer Area */}
       <div className="p-3 border-t border-ink bg-paper shrink-0">
+        {/* Live Detected Tagged Slides Pill Bar */}
+        {liveTags.taggedPages.length > 0 ? (
+          <div className="mb-2 p-1.5 px-2 bg-lime-wash border border-lime flex items-center justify-between gap-2 text-xs animate-fadeIn">
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0 font-mono text-[11px] text-ink">
+              <Pin className="w-3.5 h-3.5 text-lime-deep shrink-0" aria-hidden="true" />
+              <span className="font-bold shrink-0">TAGGED {isDeck ? 'SLIDES' : 'PAGES'}:</span>
+              {liveTags.taggedPages.map((p) => (
+                <span
+                  key={p}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-paper border border-ink text-xs font-bold text-ink"
+                >
+                  <span>{isDeck ? 'Slide' : 'Page'} {p}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeTagFromDraft(p)}
+                    className="text-ink-3 hover:text-alert cursor-pointer p-0.5"
+                    title={`Remove ${isDeck ? 'Slide' : 'Page'} ${p} tag`}
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </span>
+              ))}
+              <span className="text-ink-3 text-[10px] hidden sm:inline">(AI explains ONLY these)</span>
+            </div>
+            <button
+              type="button"
+              onClick={clearAllTagsFromDraft}
+              className="btn btn-ghost px-1.5 py-0.5 h-5 text-[9.5px] font-mono hover:bg-paper shrink-0 border border-rule hover:border-ink cursor-pointer"
+              title="Clear all tagged slides"
+            >
+              Clear
+            </button>
+          </div>
+        ) : liveTags.isDocumentTagged ? (
+          <div className="mb-2 p-1.5 px-2 bg-lime-wash border border-lime flex items-center justify-between gap-2 text-xs animate-fadeIn">
+            <div className="flex items-center gap-1.5 font-mono text-[11px] text-ink">
+              <Pin className="w-3.5 h-3.5 text-lime-deep shrink-0" aria-hidden="true" />
+              <span className="font-bold shrink-0">TAGGED DOCUMENT:</span>
+              <span className="truncate">{activeDocument?.title}</span>
+              <span className="text-ink-3 text-[10px] hidden sm:inline">(AI explains ONLY this document)</span>
+            </div>
+            <button
+              type="button"
+              onClick={clearAllTagsFromDraft}
+              className="btn btn-ghost px-1.5 py-0.5 h-5 text-[9.5px] font-mono hover:bg-paper shrink-0 border border-rule hover:border-ink cursor-pointer"
+            >
+              Clear
+            </button>
+          </div>
+        ) : (
+          <div className="mb-1.5 flex items-center justify-between text-[10px] font-mono text-ink-3 px-0.5">
+            <span>
+              Type <strong className="text-ink">@slide</strong> or <strong className="text-ink">/slide</strong> to tag multiple slides (e.g. <code className="text-ink">@slide 2, 4</code>)
+            </span>
+          </div>
+        )}
+
         <div className="relative border border-ink bg-paper focus-within:border-ink focus-within:ring-1 focus-within:ring-ink transition-shadow">
+          {/* @ / / Mention Autocomplete Popover */}
+          {mentionState.open && mentionOptions.length > 0 && (
+            <div
+              ref={mentionMenuRef}
+              className="absolute bottom-[calc(100%+6px)] left-0 right-0 z-50 bg-paper border border-ink shadow-overlay max-h-56 overflow-y-auto animate-fadeIn select-none"
+            >
+              <div className="px-2.5 py-1.5 border-b border-rule bg-paper-sunk flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.08em] text-ink-3">
+                <span>Tag {isDeck ? 'Slide' : 'Page'} ({mentionOptions.length} matching)</span>
+                <span className="text-[9px] lowercase hidden sm:inline">↑↓ navigate · enter / tab select</span>
+              </div>
+              <div className="p-1 space-y-0.5">
+                {mentionOptions.map((opt, idx) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      applyMention(opt.insertText);
+                    }}
+                    className={`w-full text-left px-2 py-1.5 flex items-center justify-between gap-2 text-xs font-mono transition-colors cursor-pointer ${
+                      idx === mentionIndex
+                        ? 'bg-lime text-ink font-bold'
+                        : 'hover:bg-paper-sunk text-ink'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-bold shrink-0">{opt.title}</span>
+                      <span className="text-[10px] text-ink-3 truncate hidden sm:inline">{opt.subtitle}</span>
+                    </div>
+                    {opt.badge && (
+                      <span className="px-1 py-0.2 bg-paper text-[9px] border border-ink font-mono shrink-0">
+                        {opt.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <textarea
             ref={composerRef}
             rows={2}
             value={draft}
             disabled={pending !== null}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={handleDraftChange}
             onKeyDown={handleComposerKeyDown}
             placeholder={
-              studyScope === 'document'
-                ? `Ask about "${activeDocument?.title?.slice(0, 30) ?? 'this doc'}…" (Enter to send)`
-                : studyScope === 'subject'
-                  ? `Ask about all materials in ${activeSubject?.name ?? 'this subject'}…`
-                  : 'Ask across the entire academic library…'
+              liveTags.taggedPages.length > 0
+                ? `Ask about tagged ${isDeck ? (liveTags.taggedPages.length > 1 ? 'slides' : 'slide') : (liveTags.taggedPages.length > 1 ? 'pages' : 'page')} ${liveTags.taggedPages.join(', ')} (AI explains ONLY these)…`
+                : liveTags.isDocumentTagged
+                  ? `Ask about tagged document (AI explains ONLY this)…`
+                  : studyScope === 'document'
+                    ? `Ask about "${activeDocument?.title?.slice(0, 30) ?? 'this doc'}…" (type @ or / to tag slides)`
+                    : studyScope === 'subject'
+                      ? `Ask about all materials in ${activeSubject?.name ?? 'this subject'}…`
+                      : 'Ask across the entire academic library…'
             }
             className="w-full p-2.5 pr-10 text-xs bg-transparent border-none outline-none resize-none placeholder:text-ink-3 text-ink leading-snug font-sans disabled:opacity-50"
           />
