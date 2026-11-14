@@ -7,6 +7,7 @@ import { downloadResourcesAsZip } from '../lib/zipDownload';
 import { SYLLABUS_MODULES } from '../data/syllabusData';
 import { asSubjectId } from '../lib/convexIds';
 import { getOwnerKey } from '../lib/owner';
+import { STANDARD_FOLDERS } from '../../convex/seedData';
 import type { StudyResource, MoreSheetKind, ResourceType, Folder } from '../types';
 import {
   ArrowLeft,
@@ -162,12 +163,59 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
   const ownerKey = getOwnerKey();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const subject = useMemo(() => subjects.find((s) => s.id === subjectId || s.courseCode === subjectId), [subjects, subjectId]);
+  const scheme = useMemo(() => schemeCourses.find((c) => c.id === subjectId || c.courseCode === subjectId), [schemeCourses, subjectId]);
+
+  const own = useMemo(() => {
+    return resources.filter((r) => {
+      if (r.subjectId === subjectId) return true;
+      if (scheme) {
+        if (r.courseCode && scheme.courseCode && r.courseCode.toLowerCase() === scheme.courseCode.toLowerCase()) return true;
+        if (r.subjectName && scheme.courseName && r.subjectName.toLowerCase() === scheme.courseName.toLowerCase()) return true;
+      }
+      if (subject) {
+        if (r.courseCode && subject.courseCode && r.courseCode.toLowerCase() === subject.courseCode.toLowerCase()) return true;
+        if (r.subjectName && subject.name && r.subjectName.toLowerCase() === subject.name.toLowerCase()) return true;
+      }
+      return false;
+    });
+  }, [resources, subjectId, scheme, subject]);
+
   // Queries
   const rawFolders = useQuery(
     api.folders.listBySubject,
     subjectId ? { subjectId: asSubjectId(subjectId) } : 'skip'
   );
-  const folders = useMemo(() => (rawFolders ?? []) as Folder[], [rawFolders]);
+
+  const folders = useMemo(() => {
+    const existing = (rawFolders ?? []) as Folder[];
+    const existingNames = new Set(existing.map((f) => f.name.toLowerCase().trim()));
+
+    const courseCode = scheme?.courseCode || subject?.courseCode || subjectId;
+    const stdFolders: Folder[] = STANDARD_FOLDERS.map((sf, idx) => ({
+      id: `std-folder-${courseCode}-${sf.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      subjectId: subjectId,
+      semesterId: 'semester-3',
+      name: sf.name,
+      parentId: null,
+      color: null,
+      order: sf.order ?? idx,
+      resourceCount: 0,
+      ownerKey: null,
+      createdAt: 0,
+    })).filter((sf) => !existingNames.has(sf.name.toLowerCase().trim()));
+
+    const all = [...existing, ...stdFolders];
+    return all.map((f) => {
+      const count = own.filter((r) => {
+        if (r.folderId === f.id) return true;
+        if ((r as any).folderName === f.name) return true;
+        if (f.name === 'Lab Manuals & Code' && (/Experiment|Expt|Lab|Manual/i.test(r.title) || r.type === 'Lab Manual')) return true;
+        return false;
+      }).length;
+      return { ...f, resourceCount: count };
+    });
+  }, [rawFolders, scheme, subject, subjectId, own]);
 
   // Map of folder id -> folder
   const folderMap = useMemo(() => {
@@ -357,10 +405,6 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
     total: 0
   });
 
-  const subject = subjects.find((s) => s.id === subjectId);
-  const own = useMemo(() => resources.filter((r) => r.subjectId === subjectId), [resources, subjectId]);
-  const scheme = schemeCourses.find((c) => c.id === subjectId);
-
   // Unorganized resources count
   const unorganizedCount = useMemo(() => {
     return own.filter((r) => !r.folderId).length;
@@ -407,12 +451,17 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
     } else {
       // Local directory scope
       if (isUnorganizedView) {
-        list = own.filter((r) => !r.folderId);
+        list = own.filter((r) => !r.folderId && !(r as any).folderName);
       } else if (currentFolderId) {
-        list = own.filter((r) => r.folderId === currentFolderId);
+        list = own.filter((r) => {
+          if (r.folderId === currentFolderId) return true;
+          if (activeFolder && (r as any).folderName === activeFolder.name) return true;
+          if (activeFolder?.name === 'Lab Manuals & Code' && (/Experiment|Expt|Lab|Manual/i.test(r.title) || r.type === 'Lab Manual')) return true;
+          return false;
+        });
       } else {
-        // AT ROOT: Show ONLY loose files (files without a folder)!
-        list = own.filter((r) => !r.folderId);
+        // AT ROOT: Show ALL course materials so all experiments and notes are immediately visible!
+        list = own;
       }
 
       // Filter within directory by search query if present
@@ -1482,7 +1531,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                     ? `Files in “${activeFolder?.name ?? 'Folder'}” (${directoryResources.length})`
                     : isUnorganizedView
                     ? `Unorganized Files (${directoryResources.length})`
-                    : `Root Files (${directoryResources.length})`}
+                    : `All Course Files (${directoryResources.length})`}
                 </span>
               </h3>
               <span className="text-xs text-gray-500 font-medium hidden sm:inline">
@@ -1666,10 +1715,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                               <IngestMark resource={resource} />
                             </div>
 
-                            {/* Show folder provenance if searching across course */}
-                            {searchScope === 'subject' && resource.folderId && (
-                              <span className="text-[10px] text-gray-500 block truncate">
-                                in 📁 {folderMap.get(resource.folderId)?.name ?? 'Folder'}
+                            {/* Show folder provenance if viewing root or searching across course */}
+                            {(!currentFolderId || searchScope === 'subject') && (resource.folderId || (resource as any).folderName) && (
+                              <span className="text-[10px] text-gray-500 block truncate font-medium">
+                                in 📁 {folderMap.get(resource.folderId || '')?.name ?? (resource as any).folderName ?? 'Lab Manuals & Code'} {resource.rollNumber ? `· Roll: ${resource.rollNumber}` : ''}
                               </span>
                             )}
                           </div>

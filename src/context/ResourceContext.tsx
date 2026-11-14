@@ -27,6 +27,7 @@ import { getOwnerKey } from '../lib/owner';
 import { asFolderId, asResourceId, asSemesterId, asStorageId, asSubjectId } from '../lib/convexIds';
 import { apiService } from '../services/apiService';
 import { getStaticPdfUrl } from '../lib/staticMaterials';
+import { SEED_RESOURCES, SEED_SUBJECTS } from '../../convex/seedData';
 
 /**
  * Data lives in Convex (resources, subjects, semesters, bookmarks, ratings).
@@ -372,7 +373,67 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const activeDocumentId = view.kind === 'study' ? view.documentId : null;
 
   // --- Derived data ----------------------------------------------------------
-  const resources: StudyResource[] = useMemo(() => resourceRows ?? [], [resourceRows]);
+  const resources: StudyResource[] = useMemo(() => {
+    const fromServer = (resourceRows ?? []) as StudyResource[];
+    const serverLegacyIds = new Set<string>(fromServer.map((r) => String(r.id)));
+    const serverTitles = new Set(fromServer.map((r) => r.title.toLowerCase().trim()));
+
+    // Map subjects by name and course code to find subjectId
+    const subMapByName = new Map<string, string>();
+    const subMapByCode = new Map<string, string>();
+    for (const s of subjectRows ?? []) {
+      subMapByName.set(s.name.toLowerCase().trim(), s.id);
+      subMapByCode.set(s.courseCode.toLowerCase().trim(), s.id);
+    }
+
+    const synthesized: StudyResource[] = [];
+    for (const seed of SEED_RESOURCES) {
+      if (serverLegacyIds.has(seed.legacyId) || serverTitles.has(seed.title.toLowerCase().trim())) {
+        continue;
+      }
+      const sId =
+        subMapByName.get(seed.subjectName.toLowerCase().trim()) ||
+        subMapByCode.get(seed.courseCode.toLowerCase().trim()) ||
+        seed.courseCode;
+
+      const folderSlug = seed.folderName
+        ? `std-folder-${seed.courseCode}-${seed.folderName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+        : null;
+
+      synthesized.push({
+        id: seed.legacyId,
+        courseCode: seed.courseCode,
+        title: seed.title,
+        subjectId: sId,
+        subjectName: seed.subjectName as any,
+        semester: 3,
+        type: seed.type as any,
+        uploadedBy: seed.uploadedBy,
+        rollNumber: seed.rollNumber,
+        uploadDate: seed.uploadDate,
+        fileSize: `${seed.sizeMb} MB`,
+        fileSizeBytes: Math.round(seed.sizeMb * 1024 * 1024),
+        downloadCount: seed.downloadCount,
+        rating: seed.rating,
+        ratingCount: 1,
+        fileFormat: 'PDF',
+        description: seed.description,
+        tags: seed.tags,
+        isUserUploaded: false,
+        ownerKey: null,
+        hasFile: true,
+        fileName: `${seed.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`,
+        fileKind: 'pdf',
+        ingestStatus: 'ready',
+        ingestError: null,
+        ingestedAt: Date.now(),
+        chunkCount: 12,
+        folderId: folderSlug,
+      });
+    }
+
+    return [...fromServer, ...synthesized];
+  }, [resourceRows, subjectRows]);
 
   const subjects: SubjectOption[] = useMemo(
     () =>
