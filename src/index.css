@@ -241,6 +241,62 @@ body {
     ring: 2px solid #1f2937;
   }
 
+  /* Core Field / Input / Select Component - ClassPost Neo-Brutalist Form Style */
+  .field {
+    width: 100%;
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    border: 2px solid #1f2937 !important;
+    border-radius: 0.75rem !important; /* rounded-xl */
+    font-size: 0.8125rem !important;
+    font-weight: 600 !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.15s ease-in-out !important;
+  }
+  .field::placeholder {
+    color: #9ca3af !important;
+  }
+  .field:focus {
+    outline: none !important;
+    border-color: #111827 !important;
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.5) !important; /* Amber highlight */
+  }
+  .field:disabled {
+    background-color: #f3f4f6 !important;
+    color: #6b7280 !important;
+    cursor: not-allowed !important;
+    border-color: #d1d5db !important;
+  }
+  .field-error {
+    border-color: #ef4444 !important;
+    background-color: #fef2f2 !important;
+  }
+
+  select.field {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23111827' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-position: right 0.75rem center !important;
+    background-repeat: no-repeat !important;
+    background-size: 1.25em 1.25em !important;
+    padding-right: 2.5rem !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+  select.field option {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  .btn-ghost {
+    background-color: #ffffff;
+    color: #111827;
+    border: 2px solid #1f2937;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  .btn-ghost:hover {
+    background-color: #f3f4f6;
+  }
+
   /* Generic .btn mapped cleanly */
   .btn {
     display: inline-flex;

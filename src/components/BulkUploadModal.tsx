@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api';
 import { useResources } from '../context/ResourceContext';
 import { useOverlayBehavior } from '../hooks/useOverlayBehavior';
 import { asSubjectId } from '../lib/convexIds';
+import { STANDARD_FOLDERS } from '../../convex/seedData';
 import type { ResourceType, StudyResource } from '../types';
 import { X, UploadCloud, FileText, Presentation, LoaderCircle, CheckCircle2, AlertCircle, Trash2, RotateCcw, ChevronDown, Folder as FolderIcon } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -146,10 +147,26 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
   const [running, setRunning] = useState(false);
   const [confettiDone, setConfettiDone] = useState(false);
 
-  const subjectFolders = useQuery(
+  const rawSubjectFolders = useQuery(
     api.folders.listBySubject,
     selectedSubjectId ? { subjectId: asSubjectId(selectedSubjectId) } : 'skip'
   ) ?? [];
+
+  const subjectFolders = useMemo(() => {
+    const existing = rawSubjectFolders;
+    const existingNames = new Set(existing.map((f) => f.name.toLowerCase().trim()));
+    const matchedSub = subjects.find((s) => s.id === selectedSubjectId);
+    const courseCode = matchedSub?.courseCode || selectedSubjectId;
+
+    const stdFolders = STANDARD_FOLDERS.map((sf, idx) => ({
+      id: `std-folder-${courseCode}-${sf.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      name: sf.name,
+      order: sf.order ?? idx,
+      resourceCount: 0,
+    })).filter((sf) => !existingNames.has(sf.name.toLowerCase().trim()));
+
+    return [...existing, ...stdFolders];
+  }, [rawSubjectFolders, subjects, selectedSubjectId]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const itemsRef = useRef<QueueItem[]>([]);
@@ -361,7 +378,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs animate-fadeIn"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isActivelyUploading) onClose();
       }}
@@ -372,42 +389,42 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
         role="dialog"
         aria-modal="true"
         aria-labelledby="bulk-upload-title"
-        className="ruled w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-overlay animate-fadeIn bg-paper"
+        className="w-full max-w-2xl max-h-[92vh] overflow-y-auto bg-white border-2 border-gray-800 rounded-2xl shadow-neo flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 px-6 py-5 border-b border-ink sticky top-0 bg-paper z-10">
+        <div className="flex items-start justify-between gap-3 px-6 py-5 border-b-2 border-gray-800 sticky top-0 bg-white z-10">
           <div className="min-w-0">
-            <h2 id="bulk-upload-title" className="text-lg font-extrabold text-ink leading-tight">
+            <h2 id="bulk-upload-title" className="text-lg font-black text-gray-900 tracking-tight">
               Add materials
             </h2>
-            <p className="text-xs text-ink-2 mt-0.5">
+            <p className="text-xs text-gray-600 font-medium mt-0.5">
               PDFs, PPTs and PPTX decks. Uploads save instantly; AI indexing runs seamlessly in the background.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="btn btn-ghost px-2 shrink-0"
+            className="w-9 h-9 rounded-xl border-2 border-gray-800 flex items-center justify-center bg-white hover:bg-neutral-100 transition-colors shadow-2xs cursor-pointer shrink-0"
             aria-label="Close"
             disabled={isActivelyUploading}
           >
-            <X className="w-5 h-5" aria-hidden="true" />
+            <X className="w-5 h-5 text-gray-800" aria-hidden="true" />
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-5 text-[13px]">
+        <div className="px-6 py-5 space-y-5 text-[13px] bg-white">
           {/* Asynchronous indexing banner when files are saved to Convex */}
           {uploadedCount > 0 && (
-            <div className="p-3 bg-lime/10 border border-lime text-xs text-ink flex items-center justify-between gap-3">
+            <div className="p-3 bg-amber-50 border-2 border-amber-300 rounded-xl text-xs text-gray-900 flex items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-2 min-w-0">
-                <CheckCircle2 className="w-4 h-4 text-lime-deep shrink-0" aria-hidden="true" />
-                <span className="truncate">
+                <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" aria-hidden="true" />
+                <span className="truncate font-medium">
                   <strong>{uploadedCount} file{uploadedCount === 1 ? '' : 's'} saved to storage.</strong> Background AI indexing continues while you study.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="btn btn-secondary px-3 py-1 text-xs shrink-0"
+                className="px-3 py-1 bg-white hover:bg-neutral-50 text-gray-900 border-2 border-gray-800 rounded-lg text-xs font-bold shadow-2xs shrink-0 transition-all active:scale-95 cursor-pointer"
               >
                 Done / Close
               </button>
@@ -417,7 +434,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
           {/* Subject & Folder pickers */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="bulk-subject" className="block font-semibold text-ink mb-1">
+              <label htmlFor="bulk-subject" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
                 Subject
               </label>
               <select
@@ -428,7 +445,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                   setSelectedFolderId('');
                 }}
                 disabled={isActivelyUploading}
-                className="field w-full pl-3 pr-8 py-2.5"
+                className="field w-full pl-3.5 pr-8 py-2.5 bg-white text-gray-900 font-semibold text-xs border-2 border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-300 shadow-2xs cursor-pointer"
               >
                 {subjects.length === 0 && <option value="">No subjects available</option>}
                 {subjects.map((s) => (
@@ -440,8 +457,8 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
             </div>
 
             <div>
-              <label htmlFor="bulk-folder" className="block font-semibold text-ink mb-1 flex items-center gap-1.5">
-                <FolderIcon className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
+              <label htmlFor="bulk-folder" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1.5">
+                <FolderIcon className="w-3.5 h-3.5 text-gray-600" aria-hidden="true" />
                 <span>Target Folder (Optional)</span>
               </label>
               <select
@@ -449,12 +466,12 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                 value={selectedFolderId}
                 onChange={(e) => setSelectedFolderId(e.target.value)}
                 disabled={isActivelyUploading}
-                className="field w-full pl-3 pr-8 py-2.5"
+                className="field w-full pl-3.5 pr-8 py-2.5 bg-white text-gray-900 font-semibold text-xs border-2 border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-300 shadow-2xs cursor-pointer"
               >
                 <option value="">Unorganized (Subject root)</option>
                 {subjectFolders.map((f) => (
                   <option key={f.id} value={f.id}>
-                    📁 {f.name} ({f.resourceCount} {f.resourceCount === 1 ? 'file' : 'files'})
+                    📁 {f.name}
                   </option>
                 ))}
               </select>
@@ -484,13 +501,13 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                 }
               }}
               aria-label="Choose files to add"
-              className={`p-8 sm:p-10 text-center cursor-pointer transition-colors border border-dashed ${
-                dragOver ? 'border-ink bg-lime-wash' : 'border-rule hover:border-ink hover:bg-paper-sunk'
+              className={`border-2 border-dashed rounded-xl p-8 sm:p-10 text-center cursor-pointer transition-all ${
+                dragOver ? 'border-gray-900 bg-amber-100/70 scale-[0.99]' : 'border-gray-300 hover:border-gray-800 bg-neutral-50/70 hover:bg-amber-50/40 shadow-2xs'
               }`}
             >
-              <UploadCloud className="w-8 h-8 text-ink-3 mx-auto mb-3" aria-hidden="true" />
-              <p className="text-sm font-semibold text-ink">Drop files here, or click to browse</p>
-              <p className="font-mono text-[11px] text-ink-3 mt-1">PDF · PPT · PPTX — up to 50 MB each</p>
+              <UploadCloud className="w-9 h-9 text-gray-600 mx-auto mb-2" aria-hidden="true" />
+              <p className="text-sm font-bold text-gray-900">Drop files here, or click to browse</p>
+              <p className="font-mono text-xs text-gray-500 mt-1">PDF · PPT · PPTX — up to 50 MB each</p>
             </div>
           ) : null}
           <input
@@ -625,7 +642,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
           {/* Uploader identity */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div>
-              <label htmlFor="bulk-author" className="block font-semibold text-ink mb-1">
+              <label htmlFor="bulk-author" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
                 Uploader name
               </label>
               <input
@@ -634,11 +651,11 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                 value={uploaderName}
                 onChange={(e) => setUploaderName(e.target.value)}
                 placeholder="Tanmay Shinde"
-                className="field w-full px-3 py-2"
+                className="field w-full px-3.5 py-2.5 bg-white text-gray-900 font-semibold text-xs border-2 border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-300 shadow-2xs"
               />
             </div>
             <div>
-              <label htmlFor="bulk-roll" className="block font-semibold text-ink mb-1">
+              <label htmlFor="bulk-roll" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
                 Roll / seat no
               </label>
               <input
@@ -647,26 +664,30 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
                 value={uploaderRoll}
                 onChange={(e) => setUploaderRoll(e.target.value)}
                 placeholder="126BTCM2008"
-                className="field w-full px-3 py-2 font-mono"
+                className="field w-full px-3.5 py-2.5 bg-white text-gray-900 font-mono font-semibold text-xs border-2 border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-300 shadow-2xs"
               />
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-ink flex flex-wrap items-center justify-between gap-3 sticky bottom-0 bg-paper">
-          <p className="font-mono text-[11px] text-ink-2 tabular" aria-live="polite">
+        <div className="px-6 py-4 border-t-2 border-gray-800 flex flex-wrap items-center justify-between gap-3 sticky bottom-0 bg-white">
+          <p className="font-mono text-xs font-semibold text-gray-600 tabular" aria-live="polite">
             {summary ?? (subject ? `Filing under ${subject.name}` : 'Select a subject')}
           </p>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="btn btn-ghost px-4"
+              className="px-5 py-2.5 bg-white hover:bg-neutral-100 text-gray-900 border-2 border-gray-800 rounded-xl font-bold text-xs shadow-2xs transition-all active:scale-95 cursor-pointer"
               disabled={isActivelyUploading}
             >
               {settled || uploadedCount > 0 ? 'Close' : 'Cancel'}
             </button>
-            <button onClick={() => void startUpload()} disabled={!canStart} className="btn btn-primary px-5">
+            <button
+              onClick={() => void startUpload()}
+              disabled={!canStart}
+              className="px-6 py-2.5 bg-gray-900 hover:bg-black text-white border-2 border-gray-900 rounded-xl font-bold text-xs shadow-2xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
+            >
               {isActivelyUploading ? (
                 <>
                   <LoaderCircle className="w-4 h-4 animate-spin" aria-hidden="true" />
