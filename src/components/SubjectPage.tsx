@@ -39,8 +39,10 @@ import {
   LayoutGrid,
   ChevronDown,
   ChevronUp,
-  File
+  File,
+  Star
 } from 'lucide-react';
+import { DocumentCardThumbnail } from './DocumentCardThumbnail';
 
 const CATEGORIES: Array<{ label: string; type: ResourceType | 'ALL' }> = [
   { label: 'All Categories', type: 'ALL' },
@@ -312,12 +314,12 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
   // View state: 'materials' | 'syllabus' | 'scheme'
   const [activeTab, setActiveTab] = useState<'materials' | 'syllabus' | 'scheme'>('materials');
 
-  // File Manager View Options: List vs Grid (persisted in localStorage)
+  // File Manager View Options: List vs Grid (defaults to Grid for visual document thumbnails)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
     try {
-      return (localStorage.getItem('studysyncplus_file_view_mode') as 'list' | 'grid') || 'list';
+      return (localStorage.getItem('studysyncplus_file_view_mode') as 'list' | 'grid') || 'grid';
     } catch {
-      return 'list';
+      return 'grid';
     }
   });
 
@@ -1523,7 +1525,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-gray-900 flex items-center gap-2">
-                <File className="w-4 h-4 text-gray-700" aria-hidden="true" />
+                <span className="text-gray-500 font-bold text-sm">≡</span>
                 <span>
                   {searchScope === 'subject' && subjectSearch.trim()
                     ? `Matching Course Files (${directoryResources.length})`
@@ -1531,11 +1533,11 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                     ? `Files in “${activeFolder?.name ?? 'Folder'}” (${directoryResources.length})`
                     : isUnorganizedView
                     ? `Unorganized Files (${directoryResources.length})`
-                    : `All Course Files (${directoryResources.length})`}
+                    : `Files (${directoryResources.length})`}
                 </span>
               </h3>
               <span className="text-xs text-gray-500 font-medium hidden sm:inline">
-                Drag to move · Right-click for options
+                Sorted in study order
               </span>
             </div>
 
@@ -1777,13 +1779,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
               </div>
             ) : (
               /* Grid View Cards - EXACT CLASSPOST 1:1 CARD DESIGN */
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {directoryResources.length === 0 ? (
-                  <div className="col-span-full p-8 border-2 border-gray-800 rounded-xl bg-white text-center text-xs text-gray-500 shadow-2xs">
+                  <div className="col-span-full p-8 border-2 border-gray-800 rounded-2xl bg-white text-center text-xs text-gray-500 shadow-2xs">
                     No files found in this directory.
                   </div>
                 ) : (
-                  directoryResources.map((resource) => {
+                  directoryResources.map((resource, index) => {
                     const isSelected = selectedResourceIds.has(resource.id);
                     const bookmarked = isBookmarked(resource.id);
                     const isDeck = resource.fileKind === 'pptx' || resource.fileKind === 'ppt';
@@ -1801,69 +1803,78 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                         }}
                         onClick={() => openDetail(resource)}
                         onContextMenu={(e) => handleOpenContextMenu(e, 'resource', resource)}
-                        className={`group relative bg-white border-2 border-gray-800 rounded-xl p-3.5 text-left hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 flex flex-col justify-between cursor-pointer shadow-2xs min-h-[220px] ${
+                        className={`group relative bg-white border-2 border-gray-800 rounded-2xl p-3.5 text-left hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 flex flex-col justify-between cursor-pointer shadow-2xs ${
                           isSelected ? 'ring-2 ring-blue-600 bg-blue-50/20' : ''
                         }`}
                       >
                         <div>
-                          {/* Card Top: Tag + Bookmark + Options */}
+                          {/* Card Top: Tag + Order Index + Bookmark Star */}
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
-                              <span>📄</span>
-                              <span>{resource.fileKind?.toUpperCase() || 'PDF'}</span>
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {isDeck ? (
+                                <Presentation className="w-3.5 h-3.5 text-amber-600" />
+                              ) : (
+                                <FileText className="w-3.5 h-3.5 text-red-500" />
+                              )}
+                              <span className="text-[11px] font-black uppercase text-red-600 tracking-wider">
+                                {resource.fileKind?.toUpperCase() || 'PDF'}
+                              </span>
+                              <span className="text-gray-400 font-mono text-xs font-bold">
+                                #{index + 1}
+                              </span>
+                            </div>
+
                             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                               <button
                                 type="button"
                                 onClick={() => void toggleBookmark(resource.id)}
-                                className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${
-                                  bookmarked ? 'bg-amber-50 border-amber-300 text-amber-500' : 'bg-gray-50 border-gray-300 text-gray-400 hover:text-amber-500 hover:bg-amber-50'
-                                }`}
-                                title={bookmarked ? 'Bookmarked' : 'Bookmark'}
+                                className="p-1 text-gray-300 hover:text-amber-500 transition-colors cursor-pointer"
+                                title={bookmarked ? 'Saved for revision' : 'Save for revision'}
+                                aria-label="Save resource"
                               >
-                                <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
+                                <Star
+                                  className={`w-4 h-4 ${
+                                    bookmarked ? 'fill-amber-400 text-amber-500' : 'text-gray-300 hover:text-amber-400'
+                                  }`}
+                                />
                               </button>
                               <button
                                 type="button"
                                 onClick={(e) => handleOpenContextMenu(e, 'resource', resource)}
-                                className="w-7 h-7 rounded-lg border bg-gray-50 border-gray-300 text-gray-500 hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
+                                className="p-1 text-gray-400 hover:text-gray-900 rounded transition-colors cursor-pointer"
                                 title="More options"
+                                aria-label="More options"
                               >
                                 <MoreVertical className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
 
-                          {/* Thumbnail Container */}
-                          <div className="w-full h-24 bg-neutral-100 rounded-lg overflow-hidden border border-neutral-200 mb-2.5 relative flex items-center justify-center group-hover:bg-neutral-50 transition-colors">
-                            {isDeck ? (
-                              <Presentation className="w-8 h-8 text-neutral-400 group-hover:text-neutral-600 transition-colors" />
-                            ) : (
-                              <FileText className="w-8 h-8 text-neutral-400 group-hover:text-neutral-600 transition-colors" />
-                            )}
-                            <span className="absolute bottom-1 right-1 text-[9px] font-mono px-1 rounded bg-white/90 text-neutral-600 border border-neutral-200">
-                              {resource.fileSize}
-                            </span>
-                          </div>
+                          {/* Visual Document Preview Thumbnail */}
+                          <DocumentCardThumbnail resource={resource} index={index} />
 
                           {/* Title */}
-                          <h4 className="text-xs sm:text-sm font-bold text-gray-900 group-hover:text-blue-900 line-clamp-2 leading-snug mb-1">
-                            {resource.title}
-                          </h4>
-
-                          {/* Metadata */}
-                          <div className="flex items-center justify-between text-[10px] text-gray-500 font-medium">
-                            <span className="truncate max-w-[140px]">{resource.type}</span>
-                            <IngestMark resource={resource} />
+                          <div className="my-2.5">
+                            <h4
+                              className="text-xs sm:text-sm font-bold text-gray-900 group-hover:text-blue-900 line-clamp-1 leading-snug truncate"
+                              title={resource.title}
+                            >
+                              {resource.fileName || `${resource.title}.pdf`}
+                            </h4>
+                            {(!currentFolderId || searchScope === 'subject') && (resource.folderId || (resource as any).folderName) && (
+                              <span className="text-[10px] text-gray-500 block truncate font-medium mt-0.5">
+                                in 📁 {folderMap.get(resource.folderId || '')?.name ?? (resource as any).folderName ?? 'Course'}
+                              </span>
+                            )}
                           </div>
                         </div>
 
                         {/* Card Footer: Read -> + Download */}
-                        <div className="pt-2.5 border-t border-gray-100 mt-2.5 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                        <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             onClick={() => openDetail(resource)}
-                            className="text-xs font-bold text-gray-800 hover:text-black flex items-center gap-1 group-hover:translate-x-0.5 transition-transform cursor-pointer"
+                            className="text-xs sm:text-sm font-bold text-gray-800 hover:text-black flex items-center gap-1 group-hover:translate-x-0.5 transition-transform cursor-pointer"
                           >
                             <span>Read</span>
                             <span>→</span>
@@ -1871,9 +1882,9 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                           <button
                             type="button"
                             onClick={() => void downloadResource(resource)}
-                            className="px-2.5 py-1 bg-gray-900 hover:bg-black text-white text-[11px] font-bold rounded-lg border border-gray-900 shadow-2xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                            className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg border border-gray-900 shadow-2xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
                           >
-                            <Download className="w-3 h-3" />
+                            <Download className="w-3.5 h-3.5" />
                             <span>Download</span>
                           </button>
                         </div>
