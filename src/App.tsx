@@ -106,6 +106,14 @@ function Shell() {
     }
   }, [navigate, sheetFromPath]);
 
+  const handleOpenSubjectFromSheet = useCallback(
+    (subjectId: string) => {
+      setSheetOverride(null);
+      openSubject(subjectId);
+    },
+    [openSubject]
+  );
+
   const handleOpenBookmarks = useCallback(() => {
     navigate('/saved');
   }, [navigate]);
@@ -163,7 +171,7 @@ function Shell() {
 
       {sheet && (
         <MoreSheet title={SHEET_META[sheet].title} subtitle={SHEET_META[sheet].subtitle} onClose={handleCloseSheet}>
-          {sheet === 'scheme' && <CurriculumSchemeModal onOpenSubject={(id) => { handleCloseSheet(); openSubject(id); }} />}
+          {sheet === 'scheme' && <CurriculumSchemeModal onOpenSubject={handleOpenSubjectFromSheet} />}
           {sheet === 'syllabus' && <SyllabusVivaModal />}
           {sheet === 'analytics' && <AnalyticsCharts />}
           {sheet === 'async-lab' && <JsSandboxModal />}

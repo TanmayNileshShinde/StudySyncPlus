@@ -35,16 +35,17 @@ export const CurriculumSchemeModal: React.FC<{ onOpenSubject?: (subjectId: strin
 
   const semesterLabel = semester?.label ?? 'Semester III';
 
-  const handleFilterByCourse = (course: { id: string; courseName: string; inLibrary: boolean; isArchived: boolean }) => {
-    if (course.inLibrary && !course.isArchived) {
+  const handleFilterByCourse = (course: { id: string; courseCode?: string; courseName: string; inLibrary?: boolean; isArchived?: boolean }) => {
+    if (!course.isArchived) {
+      const targetId = course.id || course.courseCode || '';
       if (onOpenSubject) {
-        onOpenSubject(course.id);
+        onOpenSubject(targetId);
       } else {
-        openSubject(course.id);
+        openSubject(targetId);
       }
       showToast(`Opened: ${course.courseName}`);
     } else {
-      showToast(`No shelf section for "${course.courseName}" yet.`);
+      showToast(`Course "${course.courseName}" is archived.`);
     }
   };
 
@@ -229,7 +230,7 @@ export const CurriculumSchemeModal: React.FC<{ onOpenSubject?: (subjectId: strin
                 <tr
                   key={item.id}
                   className={`transition-colors hover:bg-lime-wash group cursor-pointer ${item.isArchived ? 'opacity-50' : ''}`}
-                  onClick={() => handleFilterByCourse({ id: item.id, courseName: item.courseName, inLibrary: item.inLibrary, isArchived: item.isArchived })}
+                  onClick={() => handleFilterByCourse({ id: item.id, courseCode: item.courseCode, courseName: item.courseName, inLibrary: item.inLibrary, isArchived: item.isArchived })}
                 >
                   <td className="py-3 px-3 font-mono text-ink-3 tabular">{item.srNo}</td>
                   <td className="py-3 px-3 font-medium text-ink-2">
@@ -258,7 +259,7 @@ export const CurriculumSchemeModal: React.FC<{ onOpenSubject?: (subjectId: strin
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleFilterByCourse(item);
+                            handleFilterByCourse({ id: item.id, courseCode: item.courseCode, courseName: item.courseName, inLibrary: item.inLibrary, isArchived: item.isArchived });
                           }}
                           className="btn btn-secondary px-2.5 py-1.5 text-[11px] min-h-0"
                           aria-label={`View notes for ${item.courseName}`}

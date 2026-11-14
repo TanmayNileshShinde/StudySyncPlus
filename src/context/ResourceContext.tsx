@@ -436,16 +436,24 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [resourceRows, subjectRows]);
 
   const subjects: SubjectOption[] = useMemo(
-    () =>
-      (subjectRows ?? [])
-        .filter((s) => s.inLibrary && !s.isArchived)
-        .map((s) => ({ id: s.id, name: s.name, courseCode: s.courseCode })),
+    () => {
+      const fromServer = (subjectRows ?? []).filter((s) => s.inLibrary && !s.isArchived);
+      if (fromServer.length > 0) {
+        return fromServer.map((s) => ({ id: s.id, name: s.name, courseCode: s.courseCode }));
+      }
+      return SEED_SUBJECTS.filter((s) => s.inLibrary).map((s) => ({
+        id: s.courseCode,
+        name: s.name,
+        courseCode: s.courseCode
+      }));
+    },
     [subjectRows]
   );
 
-  const schemeCourses: SchemeCourse[] = useMemo(
-    () =>
-      (subjectRows ?? []).map((s) => ({
+  const schemeCourses: SchemeCourse[] = useMemo(() => {
+    const fromServer = subjectRows ?? [];
+    if (fromServer.length > 0) {
+      return fromServer.map((s) => ({
         id: s.id,
         srNo: s.srNo,
         category: s.category,
@@ -460,9 +468,25 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         credits: s.credits,
         inLibrary: s.inLibrary,
         isArchived: s.isArchived
-      })),
-    [subjectRows]
-  );
+      }));
+    }
+    return SEED_SUBJECTS.map((s) => ({
+      id: s.courseCode,
+      srNo: s.srNo,
+      category: s.category,
+      abbreviation: s.abbreviation,
+      courseCode: s.courseCode,
+      courseName: s.name,
+      cl: s.cl,
+      tl: s.tl,
+      ll: s.ll,
+      slPbl: s.slPbl,
+      nh: s.nh,
+      credits: s.credits,
+      inLibrary: s.inLibrary,
+      isArchived: false
+    }));
+  }, [subjectRows]);
 
   const bookmarkIds: string[] = useMemo(() => bookmarkRows ?? [], [bookmarkRows]);
   const bookmarkIdSet = useMemo(() => new Set(bookmarkIds), [bookmarkIds]);
