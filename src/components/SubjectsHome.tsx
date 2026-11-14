@@ -216,39 +216,39 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
 
   return (
     <div className="px-4 sm:px-8 pb-28 md:pb-16 max-w-[1360px] mx-auto animate-fadeIn">
-      {/* 1. ClassPost Neo-Brutalist Greeting Banner */}
+      {/* 1. ClassPost Greeting Banner */}
       <section className="pt-6 sm:pt-8 pb-5">
-        <div className="card-neo bg-white p-5 sm:p-7 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-5 border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a]">
+        <div className="bg-white border-2 border-gray-800 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-2xs">
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="px-3 py-1 rounded-full bg-yellow-400 border-2 border-slate-900 font-mono text-xs font-black text-slate-900 shadow-[2px_2px_0px_#0f172a] flex items-center gap-1.5">
+              <span className="px-3 py-1 rounded-lg bg-amber-300 border-2 border-gray-800 font-mono text-xs font-black text-gray-900 shadow-2xs flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
                 SYCM1 · SAKEC
               </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-900 font-mono text-xs font-bold text-slate-700">
+              <span className="px-2.5 py-1 rounded-lg bg-gray-100 border border-gray-300 font-mono text-xs font-bold text-gray-700">
                 70 Students
               </span>
-              <span className="text-xs font-mono text-slate-500 font-semibold">
+              <span className="text-xs font-mono text-gray-500 font-semibold">
                 Autonomous Curriculum
               </span>
             </div>
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900 leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 leading-tight">
               {greeting} 👋
             </h1>
-            <p className="text-sm text-slate-600 font-medium mt-1">
+            <p className="text-xs sm:text-sm text-gray-600 font-medium mt-1">
               {formattedDate} • SAKEC Department of Computer Engineering
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 bg-yellow-50 p-3.5 rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_#0f172a]">
+          <div className="flex flex-col sm:flex-row md:flex-col gap-1.5 shrink-0 bg-amber-50 p-3 rounded-xl border-2 border-gray-800 shadow-2xs">
             <div className="flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-slate-900 shrink-0 stroke-[2.5]" />
-              <span className="text-xs font-mono uppercase tracking-wider font-extrabold text-slate-900">
+              <UserCheck className="w-4 h-4 text-gray-900 shrink-0 stroke-[2.5]" />
+              <span className="text-[11px] font-mono uppercase tracking-wider font-extrabold text-gray-900">
                 Class Representatives
               </span>
             </div>
-            <p className="text-xs text-slate-800 font-semibold leading-relaxed">
-              Tanmay Shinde <span className="font-mono font-bold text-slate-500">(Roll 67)</span> &amp; Aditya Shah <span className="font-mono font-bold text-slate-500">(Roll 68)</span>
+            <p className="text-xs text-gray-800 font-semibold leading-relaxed">
+              Tanmay Shinde <span className="font-mono font-bold text-gray-500">(Roll 67)</span> &amp; Aditya Shah <span className="font-mono font-bold text-gray-500">(Roll 68)</span>
             </p>
           </div>
         </div>
@@ -268,23 +268,26 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
                 onOpenTimetable?.();
               }
             }}
-            className="card-neo bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#0f172a] transition-all cursor-pointer flex flex-col justify-between group"
+            className="group bg-white border-2 border-gray-800 rounded-xl p-4 sm:p-5 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex flex-col justify-between shadow-2xs"
           >
             <div>
-              <div className="w-10 h-10 rounded-xl bg-yellow-400 border-2 border-slate-900 shadow-[2px_2px_0px_#0f172a] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                <Calendar className="w-5 h-5 text-slate-900 stroke-[2.5]" />
+              <div className="w-11 h-11 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform text-2xl">
+                📅
               </div>
-              <h3 className="font-black text-base text-slate-900 tracking-tight">
+              <h3 className="font-bold text-base text-gray-900 tracking-tight">
                 Weekly Timetable
               </h3>
-              <p className="text-xs text-slate-600 mt-1 font-medium">
+              <p className="text-xs text-gray-500 mt-1 font-medium">
                 Live daily lectures, lab batches and classroom slots
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-900 font-mono">
-              <span className="text-yellow-600 font-black">● LIVE TODAY</span>
-              <span className="flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                View ➔
+            <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-900">
+              <span className="text-amber-700 font-black flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                LIVE TODAY
+              </span>
+              <span className="flex items-center gap-1 text-gray-700 group-hover:text-blue-900 group-hover:translate-x-1 transition-transform">
+                View →
               </span>
             </div>
           </div>
@@ -300,23 +303,23 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
                 onOpenSheet?.('scheme');
               }
             }}
-            className="card-neo bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#0f172a] transition-all cursor-pointer flex flex-col justify-between group"
+            className="group bg-white border-2 border-gray-800 rounded-xl p-4 sm:p-5 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex flex-col justify-between shadow-2xs"
           >
             <div>
-              <div className="w-10 h-10 rounded-xl bg-blue-400 border-2 border-slate-900 shadow-[2px_2px_0px_#0f172a] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                <Award className="w-5 h-5 text-slate-900 stroke-[2.5]" />
+              <div className="w-11 h-11 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform text-2xl">
+                🏆
               </div>
-              <h3 className="font-black text-base text-slate-900 tracking-tight">
+              <h3 className="font-bold text-base text-gray-900 tracking-tight">
                 Exam Timetable &amp; MSE
               </h3>
-              <p className="text-xs text-slate-600 mt-1 font-medium">
+              <p className="text-xs text-gray-500 mt-1 font-medium">
                 Mid-Semester Exams, Internal Assessments &amp; Dates
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-900 font-mono">
+            <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-900">
               <span className="text-blue-700 font-black">MSE SCHEDULE</span>
-              <span className="flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                Check ➔
+              <span className="flex items-center gap-1 text-gray-700 group-hover:text-blue-900 group-hover:translate-x-1 transition-transform">
+                Check →
               </span>
             </div>
           </div>
@@ -332,23 +335,23 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
                 onOpenSheet?.('scheme');
               }
             }}
-            className="card-neo bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#0f172a] transition-all cursor-pointer flex flex-col justify-between group"
+            className="group bg-white border-2 border-gray-800 rounded-xl p-4 sm:p-5 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex flex-col justify-between shadow-2xs"
           >
             <div>
-              <div className="w-10 h-10 rounded-xl bg-purple-400 border-2 border-slate-900 shadow-[2px_2px_0px_#0f172a] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                <TableProperties className="w-5 h-5 text-slate-900 stroke-[2.5]" />
+              <div className="w-11 h-11 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform text-2xl">
+                📋
               </div>
-              <h3 className="font-black text-base text-slate-900 tracking-tight">
+              <h3 className="font-bold text-base text-gray-900 tracking-tight">
                 Academic Scheme
               </h3>
-              <p className="text-xs text-slate-600 mt-1 font-medium">
+              <p className="text-xs text-gray-500 mt-1 font-medium">
                 Official course structure, credit matrix &amp; lecture hours
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-900 font-mono">
+            <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-900">
               <span className="text-purple-700 font-black">22 CREDITS</span>
-              <span className="flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                Scheme ➔
+              <span className="flex items-center gap-1 text-gray-700 group-hover:text-blue-900 group-hover:translate-x-1 transition-transform">
+                Scheme →
               </span>
             </div>
           </div>
@@ -364,23 +367,23 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
                 onOpenSheet?.('syllabus');
               }
             }}
-            className="card-neo bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#0f172a] transition-all cursor-pointer flex flex-col justify-between group"
+            className="group bg-white border-2 border-gray-800 rounded-xl p-4 sm:p-5 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex flex-col justify-between shadow-2xs"
           >
             <div>
-              <div className="w-10 h-10 rounded-xl bg-green-400 border-2 border-slate-900 shadow-[2px_2px_0px_#0f172a] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                <BookOpen className="w-5 h-5 text-slate-900 stroke-[2.5]" />
+              <div className="w-11 h-11 rounded-lg bg-green-50 border border-green-200 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform text-2xl">
+                📚
               </div>
-              <h3 className="font-black text-base text-slate-900 tracking-tight">
+              <h3 className="font-bold text-base text-gray-900 tracking-tight">
                 Syllabus &amp; Viva Map
               </h3>
-              <p className="text-xs text-slate-600 mt-1 font-medium">
+              <p className="text-xs text-gray-500 mt-1 font-medium">
                 Autonomous NEP syllabus, course outcomes &amp; viva questions
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-900 font-mono">
+            <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-900">
               <span className="text-green-700 font-black">CO1 – CO6</span>
-              <span className="flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                Viva ➔
+              <span className="flex items-center gap-1 text-gray-700 group-hover:text-blue-900 group-hover:translate-x-1 transition-transform">
+                Viva →
               </span>
             </div>
           </div>
@@ -391,7 +394,7 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
       <section className="pt-1 pb-6">
         <div className="relative">
           <Search
-            className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none stroke-[2.5]"
+            className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none stroke-[2.5]"
             aria-hidden="true"
           />
           <input
@@ -406,20 +409,20 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
             }}
             placeholder="Search courses, topics (e.g. 'Binary Search Tree', 'Fetch API', '8086 Microprocessor'), PYQs, notes…"
             aria-label="Search courses and study materials"
-            className="w-full pl-12 pr-16 py-3.5 text-sm font-semibold bg-white border-2 border-slate-900 rounded-2xl shadow-[3px_3px_0px_#0f172a] focus:shadow-[5px_5px_0px_#0f172a] outline-none transition-all placeholder:text-slate-400 text-slate-900"
+            className="w-full pl-11 pr-16 py-2.5 text-sm font-medium bg-white border-2 border-gray-800 rounded-xl shadow-xs outline-none transition-all placeholder:text-gray-400 text-gray-900 focus:ring-2 focus:ring-gray-800"
           />
           <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {query ? (
               <button
                 onClick={() => setQuery('')}
-                className="p-1 text-slate-500 hover:text-slate-900"
+                className="p-1 text-gray-400 hover:text-gray-900 cursor-pointer"
                 aria-label="Clear search"
               >
                 <X className="w-4 h-4 stroke-[2.5]" />
               </button>
             ) : (
               <kbd
-                className="hidden sm:inline-flex items-center font-mono text-xs font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-900 pointer-events-none"
+                className="hidden sm:inline-flex items-center font-mono text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-300 pointer-events-none"
                 title="Press '/' to focus search"
               >
                 /
@@ -431,14 +434,14 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
         {/* Quick Subject Jump Rail when search is inactive */}
         {!trimmedQuery && subjects.length > 0 && (
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3 pb-1">
-            <span className="font-mono text-xs text-slate-500 uppercase font-black tracking-wider shrink-0 mr-1">
+            <span className="font-mono text-[11px] text-gray-500 uppercase font-bold tracking-wider shrink-0 mr-1">
               Courses:
             </span>
             {subjects.map((sub) => (
               <button
                 key={sub.id}
                 onClick={() => openSubject(sub.id)}
-                className="btn-neo bg-white hover:bg-yellow-400 text-slate-900 border-2 border-slate-900 px-2.5 py-1 text-xs font-mono font-bold rounded-xl shadow-[2px_2px_0px_#0f172a] shrink-0 transition-all"
+                className="bg-white hover:bg-amber-300 text-gray-900 border-2 border-gray-800 px-3 py-1 text-xs font-mono font-bold rounded-xl shadow-2xs shrink-0 transition-all active:scale-95 cursor-pointer"
                 title={`Open ${sub.name}`}
               >
                 {sub.courseCode}
@@ -563,98 +566,70 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
       {/* 6. Subject Workspaces Grid — Primary Focus */}
       <section className="pt-1 pb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-mono uppercase tracking-[0.08em] font-black text-slate-700">
-            Course Workspaces
-            <span className="font-bold text-slate-500 tabular ml-2">
-              ({filteredSubjects.length} of {subjects.length})
-            </span>
-          </h2>
+          <div>
+            <h2 className="text-xs font-mono uppercase tracking-[0.08em] font-black text-gray-700">
+              📂 Google Drive / Course Workspaces
+              <span className="font-bold text-gray-500 tabular ml-2">
+                ({filteredSubjects.length} of {subjects.length})
+              </span>
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Click any subject to open its verified module folders and lecture materials
+            </p>
+          </div>
         </div>
 
         {filteredSubjects.length === 0 ? (
-          <div className="card-neo bg-white rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a] p-10 text-center">
-            <Library className="w-8 h-8 text-slate-400 mx-auto mb-3" aria-hidden="true" />
-            <h3 className="text-sm font-bold text-slate-900 mb-1">No Subjects Match “{query}”</h3>
-            <p className="text-xs text-slate-600 max-w-[40ch] mx-auto mb-4 font-medium">
+          <div className="bg-white rounded-xl border-2 border-gray-800 shadow-2xs p-10 text-center">
+            <Library className="w-8 h-8 text-gray-400 mx-auto mb-3" aria-hidden="true" />
+            <h3 className="text-sm font-bold text-gray-900 mb-1">No Subjects Match “{query}”</h3>
+            <p className="text-xs text-gray-600 max-w-[40ch] mx-auto mb-4 font-medium">
               Try searching by course code (e.g. CMCOR2PC202) or clear your search query.
             </p>
             <button
               onClick={() => setQuery('')}
-              className="btn-neo bg-yellow-400 text-slate-900 px-4 py-1.5 text-xs font-mono font-bold"
+              className="px-4 py-2 bg-amber-300 hover:bg-amber-400 text-gray-900 border-2 border-gray-800 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-2xs cursor-pointer"
             >
               Clear Search Query
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredSubjects.map((tile) => (
-              <div
+              <button
                 key={tile.id}
-                role="button"
-                tabIndex={0}
+                type="button"
                 onClick={() => openSubject(tile.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    openSubject(tile.id);
-                  }
-                }}
-                className="card-neo bg-white p-5 rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#0f172a] transition-all cursor-pointer flex flex-col justify-between group"
+                className="group bg-white border-2 border-gray-800 rounded-xl p-5 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex flex-col justify-between shadow-2xs text-left"
               >
                 <div>
                   {/* Top: Folder Icon + Course Code + Scheme Credits */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-yellow-400 border border-slate-900 flex items-center justify-center font-black text-slate-900 shadow-[1px_1px_0px_#0f172a]">
-                        <Folder className="w-4 h-4 fill-slate-900/10" />
-                      </div>
-                      <span className="px-2 py-0.5 rounded-lg bg-slate-900 text-white font-mono text-xs font-bold">
-                        {tile.courseCode}
-                      </span>
+                    <div className="w-11 h-11 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform">
+                      📁
                     </div>
-                    <div className="font-mono text-xs text-slate-600 font-bold tabular">
-                      {tile.credits ? `${tile.credits} cr` : ''}
-                      {tile.category ? ` · ${tile.category}` : ''}
-                    </div>
+                    <span className="px-2 py-0.5 rounded-lg bg-gray-900 text-white font-mono text-[11px] font-bold">
+                      {tile.courseCode}
+                    </span>
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-snug group-hover:text-amber-600 transition-colors">
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight leading-snug group-hover:text-blue-900 transition-colors line-clamp-2">
                     {tile.name}
                   </h3>
 
                   {/* Concise Materials Summary */}
-                  <p className="font-mono text-xs text-slate-600 mt-2.5 tabular font-medium">
-                    <span className="font-extrabold text-slate-900">
-                      {tile.materials} {tile.materials === 1 ? 'material' : 'materials'}
-                    </span>
-                    {tile.kinds.length > 0 && (
-                      <span className="text-slate-500">
-                        {' '}· {tile.kinds.map((k) => `${k.label} (${k.count})`).join(', ')}
-                      </span>
-                    )}
+                  <p className="text-xs text-gray-500 mt-2 font-medium">
+                    {tile.materials} {tile.materials === 1 ? 'material' : 'materials'} · {tile.credits ? `${tile.credits} Credits` : 'Theory + Lab'}
                   </p>
                 </div>
 
-                {/* Footer: AI Status & Enter Affordance */}
-                <div className="pt-3.5 mt-4 border-t-2 border-slate-100 flex items-center justify-between text-xs">
-                  <div className="font-mono text-[11px] flex items-center gap-1.5 font-bold">
-                    {tile.indexed > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 text-green-700 font-bold">
-                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" aria-hidden="true" />
-                        AI Assistant
-                      </span>
-                    ) : (
-                      <span className="text-slate-400">Class Folder</span>
-                    )}
-                  </div>
-
-                  <span className="btn-neo bg-slate-900 group-hover:bg-yellow-400 text-white group-hover:text-slate-900 px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1 transition-colors border border-slate-900">
-                    <span>Open</span>
-                    <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" aria-hidden="true" />
-                  </span>
+                {/* Footer: Open Folder indicator */}
+                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-700 group-hover:text-blue-900">
+                  <span>Open folder</span>
+                  <span className="transition-transform group-hover:translate-x-1">→</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}

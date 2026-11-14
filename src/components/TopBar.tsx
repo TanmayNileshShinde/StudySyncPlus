@@ -169,14 +169,14 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet, on
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xs border-b-2 border-slate-900 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white border-b-2 border-gray-800 shadow-2xs">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
         {/* Left: Identity or Back Button when in Study Mode */}
         {view.kind === 'study' ? (
           <div className="flex items-center gap-2.5 min-w-0">
             <button
               onClick={handleBack}
-              className="btn-neo bg-white hover:bg-slate-100 text-slate-900 px-3 py-1.5 text-xs flex items-center gap-1.5 shrink-0"
+              className="flex items-center gap-2 px-3.5 sm:px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 shadow-2xs border-2 border-gray-900 cursor-pointer"
               title="Return to course catalog"
             >
               <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
@@ -184,13 +184,13 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet, on
             </button>
             {activeStudyDoc && (
               <div className="hidden sm:flex items-center gap-2 min-w-0">
-                <span className="px-2 py-0.5 rounded-lg bg-slate-900 text-white font-mono text-xs font-bold shrink-0">
+                <span className="px-2 py-0.5 rounded-lg bg-gray-900 text-white font-mono text-xs font-bold shrink-0">
                   {activeStudyDoc.courseCode}
                 </span>
-                <span className="font-bold text-xs truncate text-slate-900 max-w-[240px] lg:max-w-md">
+                <span className="font-bold text-xs truncate text-gray-900 max-w-[240px] lg:max-w-md">
                   {activeStudyDoc.title}
                 </span>
-                <span className="px-2 py-0.5 rounded-lg bg-yellow-400 text-slate-900 font-mono text-[11px] font-bold border border-slate-900 shrink-0">
+                <span className="px-2 py-0.5 rounded-lg bg-amber-300 text-gray-900 font-mono text-[11px] font-bold border border-gray-800 shrink-0">
                   {activeStudyDoc.fileFormat}
                 </span>
               </div>
@@ -198,25 +198,25 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet, on
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <button onClick={openHome} className="flex items-center gap-3 min-w-0 text-left group" aria-label="Go to subjects home">
-              <span className="w-10 h-10 rounded-xl bg-yellow-400 border-2 border-slate-900 flex items-center justify-center font-black text-slate-900 shadow-[2px_2px_0px_#0f172a] shrink-0 group-hover:scale-105 transition-transform" aria-hidden="true">
+            <button onClick={openHome} className="flex items-center gap-3 min-w-0 text-left group cursor-pointer" aria-label="Go to subjects home">
+              <span className="w-10 h-10 rounded-xl bg-amber-300 border-2 border-gray-800 flex items-center justify-center font-black text-gray-900 shadow-2xs shrink-0 group-hover:scale-105 transition-transform" aria-hidden="true">
                 <span className="font-mono text-lg font-black tracking-tighter">S+</span>
               </span>
               <span className="min-w-0">
-                <span className="font-black text-base sm:text-lg tracking-tight text-slate-900 leading-none whitespace-nowrap block">
+                <span className="font-bold text-base sm:text-lg tracking-tight text-gray-900 leading-none whitespace-nowrap block">
                   StudySyncPlus
                 </span>
-                <span className="text-[11px] text-slate-500 font-bold truncate block mt-0.5 font-mono">
+                <span className="text-[11px] text-gray-500 font-medium truncate block mt-0.5 font-mono">
                   {semester ? semester.label.toUpperCase() : 'SEMESTER III'} · SAKEC
                 </span>
               </span>
             </button>
 
             {/* SYCM1 Live Pill */}
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border-2 border-slate-900 font-mono text-xs font-extrabold text-slate-900 shadow-[2px_2px_0px_#0f172a]">
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 border-2 border-gray-800 font-mono text-xs font-bold text-gray-900 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
               <span>SYCM1</span>
-              <span className="text-[10px] text-slate-500 font-semibold">• SAKEC Live</span>
+              <span className="text-[10px] text-gray-500 font-semibold">• SAKEC Live</span>
             </div>
           </div>
         )}
@@ -228,17 +228,17 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet, on
               {onOpenTimetable && (
                 <button
                   onClick={onOpenTimetable}
-                  className="btn-neo bg-yellow-400 hover:bg-yellow-300 text-slate-900 px-3 py-1.5 text-xs flex items-center gap-1.5 font-black"
+                  className="px-3.5 py-1.5 bg-amber-300 hover:bg-amber-400 text-gray-900 rounded-xl text-xs font-bold border-2 border-gray-800 transition-all active:scale-95 shadow-2xs flex items-center gap-1.5 cursor-pointer"
                   title="Open Weekly Timetable"
                 >
-                  <Calendar className="w-4 h-4 text-slate-900 stroke-[2.5]" aria-hidden="true" />
+                  <Calendar className="w-4 h-4 text-gray-900 stroke-[2.5]" aria-hidden="true" />
                   <span className="hidden sm:inline">Timetable</span>
                 </button>
               )}
 
               <button
                 onClick={askAi}
-                className="btn-neo bg-white hover:bg-slate-50 text-slate-900 px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold"
+                className="px-3.5 py-1.5 bg-neutral-100 hover:bg-white text-gray-900 rounded-xl text-xs font-bold border-2 border-gray-800 transition-all active:scale-95 shadow-2xs flex items-center gap-1.5 cursor-pointer"
                 title="Ask the Study Assistant"
               >
                 <Sparkles className="w-4 h-4 text-amber-500 stroke-[2.5]" aria-hidden="true" />
@@ -247,10 +247,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet, on
 
               <button
                 onClick={addMaterials}
-                className="btn-neo bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold"
+                className="px-3.5 py-1.5 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold border-2 border-gray-900 transition-all active:scale-95 shadow-2xs flex items-center gap-1.5 cursor-pointer"
                 title="Add materials to a subject"
               >
-                <PlusCircle className="w-4 h-4 text-yellow-400 stroke-[2.5]" aria-hidden="true" />
+                <PlusCircle className="w-4 h-4 text-amber-300 stroke-[2.5]" aria-hidden="true" />
                 <span className="hidden sm:inline">Add materials</span>
                 <span className="sm:hidden">Add</span>
               </button>
@@ -259,15 +259,15 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet, on
 
           <button
             onClick={onOpenBookmarks}
-            className="btn-neo bg-white hover:bg-slate-50 text-slate-900 px-2.5 py-1.5 text-xs hidden sm:inline-flex items-center gap-1.5 font-bold"
+            className="px-2.5 py-1.5 bg-neutral-100 hover:bg-white text-gray-900 rounded-xl text-xs hidden sm:inline-flex items-center gap-1.5 font-bold border-2 border-gray-800 transition-all active:scale-95 shadow-2xs cursor-pointer"
             title="Saved for revision"
             aria-label={`Saved resources: ${bookmarkCount}`}
           >
             <span className="relative">
-              <Bookmark className="w-4 h-4 text-slate-900 stroke-[2.5]" aria-hidden="true" />
+              <Bookmark className="w-4 h-4 text-gray-900 stroke-[2.5]" aria-hidden="true" />
               {bookmarkCount > 0 && (
                 <span
-                  className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-0.5 bg-yellow-400 text-slate-900 border border-slate-900 font-mono text-[9px] font-black leading-[13px] text-center rounded-full"
+                  className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-0.5 bg-amber-300 text-gray-900 border border-gray-800 font-mono text-[9px] font-black leading-[13px] text-center rounded-full"
                   aria-hidden="true"
                 >
                   {bookmarkCount}
@@ -280,12 +280,12 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet, on
           <div className="relative">
             <button
               onClick={() => setMoreOpen((v) => !v)}
-              className="btn-neo bg-white hover:bg-slate-50 text-slate-900 p-2 text-xs"
+              className="p-2 bg-neutral-100 hover:bg-white text-gray-900 rounded-xl text-xs border-2 border-gray-800 transition-all active:scale-95 shadow-2xs cursor-pointer"
               aria-haspopup="menu"
               aria-expanded={moreOpen}
               aria-label="More features"
             >
-              <MoreHorizontal className="w-4 h-4 text-slate-900 stroke-[2.5]" aria-hidden="true" />
+              <MoreHorizontal className="w-4 h-4 text-gray-900 stroke-[2.5]" aria-hidden="true" />
             </button>
             <MorePopover open={moreOpen} onClose={() => setMoreOpen(false)} className="right-0 top-[calc(100%+8px)]">
               <MoreMenuItems onOpenSheet={onOpenSheet} onDone={() => setMoreOpen(false)} />

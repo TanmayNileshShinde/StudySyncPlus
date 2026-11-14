@@ -755,30 +755,42 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       {/* Mobile Back Link */}
       <button
         onClick={openHome}
-        className="md:hidden flex items-center gap-1.5 pt-4 pb-2 text-[12.5px] font-semibold text-ink-2 hover:text-ink"
+        className="md:hidden inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-100 hover:bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 transition-all active:scale-95 shadow-2xs mt-4 mb-2"
       >
         <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
-        <span>All Subjects</span>
+        <span>All Courses</span>
       </button>
 
       {/* Subject Header */}
-      <header className="pt-6 sm:pt-8 pb-6 border-b border-ink">
+      <header className="pt-4 sm:pt-6 pb-6 border-b-2 border-gray-800">
         <div className="flex flex-wrap items-center gap-2 mb-2.5">
-          <span className="stamp stamp-ink font-mono text-[11px]">{subject.courseCode}</span>
-          {scheme && <span className="stamp stamp-outline text-[11px] font-bold">{scheme.credits} Credits</span>}
-          {scheme && <span className="stamp stamp-outline text-[11px] hidden sm:inline-flex">{scheme.category}</span>}
-          <span className="stamp stamp-verified bg-lime text-ink text-[10px] hidden sm:inline-flex">Official Course File</span>
+          <span className="px-2.5 py-0.5 rounded-lg border-2 border-gray-800 bg-amber-300 text-gray-900 text-xs font-black shadow-2xs">
+            {subject.courseCode}
+          </span>
+          {scheme && (
+            <span className="px-2.5 py-0.5 rounded-lg border-2 border-gray-800 bg-white text-gray-900 text-xs font-bold shadow-2xs">
+              {scheme.credits} Credits
+            </span>
+          )}
+          {scheme && (
+            <span className="px-2.5 py-0.5 rounded-lg border-2 border-gray-800 bg-white text-gray-700 text-xs font-semibold shadow-2xs hidden sm:inline-flex">
+              {scheme.category}
+            </span>
+          )}
+          <span className="px-2 py-0.5 rounded-lg border-2 border-gray-800 bg-emerald-100 text-emerald-900 text-xs font-extrabold shadow-2xs hidden sm:inline-flex">
+            SYCM1 Course
+          </span>
         </div>
 
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5">
           <div className="min-w-0">
-            <h1 className="text-[2.2rem] sm:text-[3rem] font-black tracking-[-0.03em] leading-[1.04] text-ink">
+            <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight text-gray-900">
               {subject.name}
             </h1>
-            <p className="font-mono text-[12px] text-ink-2 tabular mt-2.5 flex items-center gap-2 flex-wrap">
-              <span>{own.length} {own.length === 1 ? 'material' : 'materials'}</span>
+            <p className="text-xs sm:text-sm text-gray-600 font-medium mt-2 flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-gray-900">{own.length} {own.length === 1 ? 'material' : 'materials'}</span>
               <span>·</span>
-              <span className="text-lime-text font-bold">{indexedCount} indexed for AI</span>
+              <span className="text-emerald-700 font-bold">{indexedCount} indexed for AI</span>
               <span>·</span>
               <span>{folders.length} {folders.length === 1 ? 'folder' : 'folders'}</span>
               {scheme && (
@@ -794,7 +806,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               onClick={() => openUploadModal(subjectId, currentFolderId ?? undefined)}
-              className="btn btn-primary px-4"
+              className="px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 shadow-2xs border-2 border-gray-900 flex items-center gap-2 cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" aria-hidden="true" />
               <span>Upload Material</span>
@@ -803,13 +815,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
             <button
               onClick={() => void handleZipAll()}
               disabled={zipState.busy || own.length === 0}
-              className="btn btn-secondary px-3.5"
+              className="px-4 py-2 bg-neutral-100 hover:bg-white text-gray-900 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 shadow-2xs border-2 border-gray-800 flex items-center gap-2 cursor-pointer disabled:opacity-50"
               title="Download all subject files in a clean ZIP"
             >
               {zipState.busy ? (
                 <>
                   <LoaderCircle className="w-4 h-4 animate-spin" aria-hidden="true" />
-                  <span className="tabular">Packing {zipState.done}/{zipState.total}…</span>
+                  <span>Packing {zipState.done}/{zipState.total}…</span>
                 </>
               ) : (
                 <>
@@ -819,31 +831,35 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
               )}
             </button>
 
-            <button onClick={askSubject} className="btn btn-secondary px-3.5" title="Ask Study Assistant about this subject">
-              <Sparkles className="w-4 h-4 text-lime-deep" aria-hidden="true" />
+            <button
+              onClick={askSubject}
+              className="px-4 py-2 bg-amber-300 hover:bg-amber-400 text-gray-900 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 shadow-2xs border-2 border-gray-800 flex items-center gap-2 cursor-pointer"
+              title="Ask Study Assistant about this subject"
+            >
+              <Sparkles className="w-4 h-4 text-gray-900" aria-hidden="true" />
               <span>Ask Subject AI</span>
             </button>
           </div>
         </div>
 
         {/* View Switcher Tabs */}
-        <div className="mt-6 flex items-center gap-1 border-b border-rule pt-2">
+        <div className="mt-6 flex items-center gap-2 border-b-2 border-gray-200 pb-2">
           <button
             onClick={() => setActiveTab('materials')}
-            className={`px-4 py-2 font-mono text-[12px] font-bold uppercase tracking-[0.06em] border-b-2 transition-colors ${
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
               activeTab === 'materials'
-                ? 'border-ink text-ink bg-paper'
-                : 'border-transparent text-ink-3 hover:text-ink'
+                ? 'bg-gray-900 text-white shadow-2xs border-2 border-gray-900'
+                : 'bg-neutral-100 text-gray-700 hover:text-gray-900 border-2 border-transparent hover:bg-neutral-200'
             }`}
           >
-            File Manager ({own.length})
+            Drive & Files ({own.length})
           </button>
           <button
             onClick={() => setActiveTab('syllabus')}
-            className={`px-4 py-2 font-mono text-[12px] font-bold uppercase tracking-[0.06em] border-b-2 transition-colors ${
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
               activeTab === 'syllabus'
-                ? 'border-ink text-ink bg-paper'
-                : 'border-transparent text-ink-3 hover:text-ink'
+                ? 'bg-gray-900 text-white shadow-2xs border-2 border-gray-900'
+                : 'bg-neutral-100 text-gray-700 hover:text-gray-900 border-2 border-transparent hover:bg-neutral-200'
             }`}
           >
             Syllabus &amp; Viva Map
@@ -851,10 +867,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           {scheme && (
             <button
               onClick={() => setActiveTab('scheme')}
-              className={`px-4 py-2 font-mono text-[12px] font-bold uppercase tracking-[0.06em] border-b-2 transition-colors ${
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
                 activeTab === 'scheme'
-                  ? 'border-ink text-ink bg-paper'
-                  : 'border-transparent text-ink-3 hover:text-ink'
+                  ? 'bg-gray-900 text-white shadow-2xs border-2 border-gray-900'
+                  : 'bg-neutral-100 text-gray-700 hover:text-gray-900 border-2 border-transparent hover:bg-neutral-200'
               }`}
             >
               Course Scheme
@@ -867,15 +883,24 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       {activeTab === 'materials' && (
         <section className="pt-6 space-y-4">
           {/* 1. Breadcrumbs & Directory Header Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-paper border border-rule">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white border-2 border-gray-800 rounded-xl shadow-2xs">
             {/* Interactive Breadcrumb Trail with Drop Targets & Up Button */}
             <div className="flex items-center gap-1.5 flex-wrap text-xs">
+              <button
+                type="button"
+                onClick={openHome}
+                className="px-3 py-1.5 bg-neutral-100 hover:bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 transition-all active:scale-95 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Courses</span>
+              </button>
+
               {/* Up to Parent Button (Active when not at root) */}
               {(currentFolderId || isUnorganizedView) && (
                 <button
                   type="button"
                   onClick={navigateToParent}
-                  className="btn btn-secondary px-2 py-1 text-xs font-mono mr-1 flex items-center gap-1"
+                  className="px-2.5 py-1.5 bg-neutral-100 hover:bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 transition-all active:scale-95 shadow-2xs flex items-center gap-1 cursor-pointer"
                   title="Go up to parent folder"
                 >
                   <ArrowUp className="w-3.5 h-3.5" aria-hidden="true" />
@@ -884,103 +909,95 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
               )}
 
               {/* Course Root Crumb */}
-              <button
-                type="button"
-                onClick={navigateToRoot}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                  setDragOverFolderId('CRUMB_ROOT');
-                }}
-                onDragLeave={() => setDragOverFolderId(null)}
-                onDrop={async (e) => {
-                  e.preventDefault();
-                  setDragOverFolderId(null);
-                  const resId =
-                    e.dataTransfer.getData('application/x-resource-id') ||
-                    e.dataTransfer.getData('text/plain');
-                  if (resId) {
-                    await moveToFolder(resId, null);
-                    showToast('Moved file to Subject Root (Unorganized)');
-                  }
-                }}
-                className={`font-mono text-xs transition-colors flex items-center gap-1.5 px-2 py-1 ${
-                  dragOverFolderId === 'CRUMB_ROOT'
-                    ? 'border-2 border-lime bg-lime-wash text-ink font-bold'
-                    : !currentFolderId && !isUnorganizedView
-                    ? 'font-bold text-ink bg-paper-sunk border border-rule'
-                    : 'text-ink-2 hover:text-ink hover:underline'
-                }`}
-                title="Navigate to course root"
-              >
-                <Layers className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>{subject.name}</span>
-              </button>
+              <div className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">
+                <button
+                  type="button"
+                  onClick={navigateToRoot}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    setDragOverFolderId('CRUMB_ROOT');
+                  }}
+                  onDragLeave={() => setDragOverFolderId(null)}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    setDragOverFolderId(null);
+                    const resId =
+                      e.dataTransfer.getData('application/x-resource-id') ||
+                      e.dataTransfer.getData('text/plain');
+                    if (resId) {
+                      await moveToFolder(resId, null);
+                      showToast('Moved file to Course Root (Unorganized)');
+                    }
+                  }}
+                  className={`hover:text-gray-900 transition-colors cursor-pointer ${
+                    dragOverFolderId === 'CRUMB_ROOT'
+                      ? 'text-emerald-700 underline font-black'
+                      : !currentFolderId && !isUnorganizedView
+                      ? 'text-gray-900 font-extrabold'
+                      : 'text-gray-600'
+                  }`}
+                  title="Navigate to course root"
+                >
+                  {subject.name}
+                </button>
 
-              {isUnorganizedView && (
-                <>
-                  <ChevronRight className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
-                  <span className="font-mono text-xs font-bold text-ink bg-paper-sunk px-2 py-1 border border-rule flex items-center gap-1.5">
-                    <FolderOpen className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
-                    <span>Unorganized Materials</span>
-                  </span>
-                </>
-              )}
+                {isUnorganizedView && (
+                  <>
+                    <span>/</span>
+                    <span className="text-gray-900 font-extrabold">Unorganized</span>
+                  </>
+                )}
 
-              {breadcrumbs.map((crumb, idx) => {
-                const isCurrent = idx === breadcrumbs.length - 1;
-                const isDropTarget = dragOverFolderId === `CRUMB_${crumb.id}`;
-                return (
-                  <React.Fragment key={crumb.id}>
-                    <ChevronRight className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
-                    <button
-                      type="button"
-                      onClick={() => navigateToFolder(crumb.id)}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                        setDragOverFolderId(`CRUMB_${crumb.id}`);
-                      }}
-                      onDragLeave={() => setDragOverFolderId(null)}
-                      onDrop={async (e) => {
-                        e.preventDefault();
-                        setDragOverFolderId(null);
-                        const resId =
-                          e.dataTransfer.getData('application/x-resource-id') ||
-                          e.dataTransfer.getData('text/plain');
-                        if (resId) {
-                          await moveToFolder(resId, crumb.id);
-                          showToast(`Moved file to "${crumb.name}"`);
-                        }
-                      }}
-                      className={`font-mono text-xs transition-colors flex items-center gap-1 px-2 py-1 ${
-                        isDropTarget
-                          ? 'border-2 border-lime bg-lime-wash text-ink font-bold'
-                          : isCurrent
-                          ? 'font-bold text-ink bg-paper-sunk border border-rule'
-                          : 'text-ink-2 hover:text-ink hover:underline'
-                      }`}
-                      title={`Navigate to ${crumb.name}`}
-                    >
-                      <FolderIcon className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
-                      <span>{crumb.name}</span>
-                    </button>
-                  </React.Fragment>
-                );
-              })}
+                {breadcrumbs.map((crumb) => {
+                  const isDropTarget = dragOverFolderId === `CRUMB_${crumb.id}`;
+                  return (
+                    <React.Fragment key={crumb.id}>
+                      <span>/</span>
+                      <button
+                        type="button"
+                        onClick={() => navigateToFolder(crumb.id)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDragOverFolderId(`CRUMB_${crumb.id}`);
+                        }}
+                        onDragLeave={() => setDragOverFolderId(null)}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          setDragOverFolderId(null);
+                          const resId =
+                            e.dataTransfer.getData('application/x-resource-id') ||
+                            e.dataTransfer.getData('text/plain');
+                          if (resId) {
+                            await moveToFolder(resId, crumb.id);
+                            showToast(`Moved file to "${crumb.name}"`);
+                          }
+                        }}
+                        className={`hover:text-gray-900 transition-colors cursor-pointer ${
+                          isDropTarget ? 'text-emerald-700 underline font-black' : 'text-gray-600'
+                        }`}
+                        title={`Navigate to ${crumb.name}`}
+                      >
+                        {crumb.name}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Directory Controls Right */}
-            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
               {activeFolder && (
                 <button
                   type="button"
                   onClick={askActiveFolder}
-                  className="btn btn-secondary px-2.5 py-1 text-xs font-mono flex items-center gap-1 text-ink"
+                  className="px-3 py-1.5 bg-amber-300 hover:bg-amber-400 border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 transition-all active:scale-95 shadow-2xs flex items-center gap-1.5 cursor-pointer"
                   title={`Ask Study Assistant about materials in ${activeFolder.name}`}
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-lime-deep" aria-hidden="true" />
-                  <span>Ask Folder AI</span>
+                  <Sparkles className="w-3.5 h-3.5 text-gray-900" aria-hidden="true" />
+                  <span>Folder AI</span>
                 </button>
               )}
 
@@ -990,7 +1007,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                   setNewFolderParentId(currentFolderId ?? '');
                   setNewFolderOpen(true);
                 }}
-                className="btn btn-secondary px-3 py-1 text-xs font-mono flex items-center gap-1.5 border-ink hover:bg-lime-wash"
+                className="px-3 py-1.5 bg-neutral-100 hover:bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 transition-all active:scale-95 shadow-2xs flex items-center gap-1.5 cursor-pointer"
               >
                 <FolderPlus className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>{currentFolderId ? 'New Subfolder' : 'New Folder'}</span>
@@ -999,50 +1016,50 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
               <button
                 type="button"
                 onClick={() => openUploadModal(subjectId, currentFolderId ?? undefined)}
-                className="btn btn-primary px-3 py-1 text-xs font-mono flex items-center gap-1.5"
+                className="px-3.5 py-1.5 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-2xs border-2 border-gray-900 flex items-center gap-1.5 cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Upload File</span>
+                <span>Upload</span>
               </button>
 
               {/* View Mode Toggle: List vs Grid */}
-              <div className="flex items-center border border-rule ml-1">
-                <button
-                  type="button"
-                  onClick={() => handleSetViewMode('list')}
-                  className={`p-1.5 transition-colors ${
-                    viewMode === 'list'
-                      ? 'bg-ink text-paper'
-                      : 'bg-paper text-ink-3 hover:text-ink'
-                  }`}
-                  title="List view"
-                  aria-label="List view"
-                >
-                  <LayoutList className="w-3.5 h-3.5" />
-                </button>
+              <div className="flex items-center bg-neutral-100 p-0.5 border-2 border-gray-800 rounded-xl shadow-2xs">
                 <button
                   type="button"
                   onClick={() => handleSetViewMode('grid')}
-                  className={`p-1.5 transition-colors ${
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                     viewMode === 'grid'
-                      ? 'bg-ink text-paper'
-                      : 'bg-paper text-ink-3 hover:text-ink'
+                      ? 'bg-white shadow-2xs text-gray-900 font-bold'
+                      : 'text-gray-500 hover:text-gray-900'
                   }`}
                   title="Grid view"
                   aria-label="Grid view"
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode('list')}
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                    viewMode === 'list'
+                      ? 'bg-white shadow-2xs text-gray-900 font-bold'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                  title="List view"
+                  aria-label="List view"
+                >
+                  <LayoutList className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           </div>
 
           {/* 2. File Manager Filter & Search Toolbar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-2 bg-paper border border-rule text-xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 p-3 bg-white border-2 border-gray-800 rounded-xl shadow-2xs">
             {/* Search Input with Scope Selector */}
-            <div className="flex items-center gap-1.5 flex-1 min-w-[260px]">
-              <div className="flex items-center gap-2 px-2.5 py-1.5 bg-paper-sunk border border-rule flex-1">
-                <Search className="w-3.5 h-3.5 text-ink-3 shrink-0" aria-hidden="true" />
+            <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
                 <input
                   type="search"
                   value={subjectSearch}
@@ -1055,12 +1072,12 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                       : 'Search in this folder…'
                   }
                   aria-label="Search materials"
-                  className="w-full bg-transparent text-xs text-ink placeholder:text-ink-3 focus:outline-none"
+                  className="w-full pl-9 pr-8 py-2 bg-neutral-50 focus:bg-white border-2 border-gray-800 rounded-xl text-xs font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-800 shadow-xs"
                 />
                 {subjectSearch && (
                   <button
                     onClick={() => setSubjectSearch('')}
-                    className="p-0.5 text-ink-3 hover:text-ink"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-800 p-0.5 cursor-pointer"
                     aria-label="Clear filter"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -1073,7 +1090,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 value={searchScope}
                 onChange={(e) => setSearchScope(e.target.value as 'current' | 'subject')}
                 aria-label="Search scope"
-                className="field text-xs py-1.5 pl-2.5 pr-8 bg-paper-sunk border border-rule text-ink cursor-pointer font-mono"
+                className="px-3 py-2 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
               >
                 <option value="current">Current folder</option>
                 <option value="subject">Entire course</option>
@@ -1087,7 +1104,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value as ResourceType | 'ALL')}
                 aria-label="Filter by material category"
-                className="field text-xs py-1.5 pl-2.5 pr-8 bg-paper-sunk border border-rule text-ink cursor-pointer"
+                className="px-3 py-2 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat.type} value={cat.type}>
@@ -1101,7 +1118,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 value={selectedFormat}
                 onChange={(e) => setSelectedFormat(e.target.value as 'ALL' | 'pdf' | 'ppt')}
                 aria-label="Filter by file format"
-                className="field text-xs py-1.5 pl-2.5 pr-8 bg-paper-sunk border border-rule text-ink cursor-pointer"
+                className="px-3 py-2 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
               >
                 <option value="ALL">All Formats</option>
                 <option value="pdf">PDF only</option>
@@ -1113,7 +1130,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 value={selectedIndexStatus}
                 onChange={(e) => setSelectedIndexStatus(e.target.value as 'ALL' | 'ready' | 'processing' | 'failed')}
                 aria-label="Filter by AI indexing status"
-                className="field text-xs py-1.5 pl-2.5 pr-8 bg-paper-sunk border border-rule text-ink cursor-pointer"
+                className="px-3 py-2 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
               >
                 <option value="ALL">All Index States</option>
                 <option value="ready">Indexed for AI</option>
@@ -1126,10 +1143,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 <button
                   type="button"
                   onClick={() => setShowTagBar((v) => !v)}
-                  className={`btn px-2.5 py-1.5 text-xs font-mono flex items-center gap-1 border transition-colors ${
+                  className={`px-3 py-2 text-xs font-bold rounded-xl border-2 border-gray-800 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
                     showTagBar || selectedTags.length > 0
-                      ? 'bg-ink text-paper border-ink'
-                      : 'bg-paper text-ink-2 border-rule hover:border-ink hover:text-ink'
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-white text-gray-900 hover:bg-neutral-100'
                   }`}
                   title="Toggle tag filter drawer"
                 >
@@ -1139,10 +1156,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
               )}
 
               {/* Directory Count */}
-              <div className="font-mono text-[11px] text-ink-3 pl-1 shrink-0 tabular">
-                <span className="text-ink font-bold">{directoryResources.length}</span> files
+              <div className="text-xs text-gray-600 font-bold px-2 tabular-nums">
+                <span className="text-gray-900">{directoryResources.length}</span> files
                 {directoryFolders.length > 0 && (
-                  <span> · <strong className="text-ink">{directoryFolders.length}</strong> folders</span>
+                  <span> · <strong className="text-gray-900">{directoryFolders.length}</strong> folders</span>
                 )}
               </div>
             </div>
@@ -1150,8 +1167,8 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
 
           {/* 3. Secondary Tag Drawer (when active) */}
           {showTagBar && availableTags.length > 0 && (
-            <div className="p-3 bg-paper-sunk border border-rule flex items-center gap-1.5 flex-wrap text-xs animate-fadeIn">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-ink-3 shrink-0 mr-1">
+            <div className="p-3 bg-white border-2 border-gray-800 rounded-xl shadow-2xs flex items-center gap-1.5 flex-wrap text-xs animate-fadeIn">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 shrink-0 mr-1">
                 Filter by tag:
               </span>
               {availableTags.map((tag) => {
@@ -1160,10 +1177,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                   <button
                     key={tag}
                     onClick={() => toggleTagFilter(tag)}
-                    className={`px-2 py-0.5 font-mono text-[10.5px] transition-colors border ${
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg border-2 transition-all cursor-pointer ${
                       active
-                        ? 'bg-lime text-ink border-lime font-bold'
-                        : 'bg-paper text-ink-2 border-rule hover:border-ink hover:text-ink'
+                        ? 'bg-amber-300 border-gray-800 text-gray-900 shadow-2xs'
+                        : 'bg-neutral-100 border-neutral-300 text-gray-700 hover:border-gray-800'
                     }`}
                   >
                     #{tag}
@@ -1173,7 +1190,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
               {selectedTags.length > 0 && (
                 <button
                   onClick={() => setSelectedTags([])}
-                  className="text-[10px] font-mono text-ink-3 hover:text-alert underline underline-offset-2 ml-2"
+                  className="text-xs font-bold text-gray-500 hover:text-red-600 underline ml-2 cursor-pointer"
                 >
                   Clear tags
                 </button>
@@ -1183,18 +1200,18 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
 
           {/* 4. Active Location Notice if in Unorganized */}
           {isUnorganizedView && (
-            <div className="p-3.5 bg-paper-sunk border border-rule flex items-center justify-between gap-3 text-xs animate-fadeIn">
+            <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-xl shadow-2xs flex items-center justify-between gap-3 text-xs animate-fadeIn">
               <div className="flex items-center gap-2.5">
-                <FolderOpen className="w-4 h-4 text-ink-3 shrink-0" aria-hidden="true" />
-                <span className="text-ink-2">
+                <FolderOpen className="w-5 h-5 text-amber-700 shrink-0" aria-hidden="true" />
+                <span className="text-amber-900 font-medium">
                   Showing <strong>{unorganizedCount}</strong> loose materials not filed into any folder.
-                  Drag rows onto folder cards or select files to bulk move them.
+                  Drag cards or select files to move them into course folders.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={navigateToRoot}
-                className="btn btn-ghost text-xs px-2.5 py-1 font-mono shrink-0 hover:underline"
+                className="px-3 py-1 bg-white hover:bg-neutral-50 border-2 border-amber-400 rounded-lg text-xs font-bold text-amber-900 shadow-2xs shrink-0 cursor-pointer"
               >
                 Return to Course Root
               </button>
@@ -1205,22 +1222,22 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           {(directoryFolders.length > 0 || (!currentFolderId && !isUnorganizedView && unorganizedCount > 0)) && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-mono text-xs font-bold uppercase tracking-[0.08em] text-ink flex items-center gap-2">
-                  <FolderIcon className="w-3.5 h-3.5 text-ink-2" aria-hidden="true" />
+                <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-gray-900 flex items-center gap-2">
+                  <FolderIcon className="w-4 h-4 text-gray-700" aria-hidden="true" />
                   <span>
                     {currentFolderId
                       ? `Subfolders (${directoryFolders.length})`
                       : `Folders (${directoryFolders.length + (unorganizedCount > 0 ? 1 : 0)})`}
                   </span>
                 </h3>
-                <span className="font-mono text-[10.5px] text-ink-3 hidden sm:inline">
+                <span className="text-xs text-gray-500 font-medium hidden sm:inline">
                   Click to open · Drag files to move
                 </span>
               </div>
 
               {/* Grid view for folders */}
               {viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
                   {/* Unorganized system folder card at root */}
                   {!currentFolderId && !isUnorganizedView && unorganizedCount > 0 && (
                     <div
@@ -1251,29 +1268,24 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                           showToast('Moved file to Unorganized');
                         }
                       }}
-                      className={`group p-4 border transition-all cursor-pointer flex flex-col justify-between min-h-[105px] ${
-                        dragOverFolderId === 'UNORGANIZED_CARD'
-                          ? 'border-2 border-lime bg-lime-wash/60 shadow-xs'
-                          : 'border-dashed border-rule bg-paper-sunk/20 hover:border-ink hover:bg-paper'
+                      className={`group bg-neutral-50 border-2 border-dashed border-gray-800 rounded-xl p-4 text-left hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 flex items-start gap-3.5 shadow-2xs cursor-pointer ${
+                        dragOverFolderId === 'UNORGANIZED_CARD' ? 'ring-2 ring-amber-500 bg-amber-50' : ''
                       }`}
                     >
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <FolderOpen className="w-4 h-4 text-ink-3 group-hover:text-ink transition-colors" />
-                          <span className="font-bold text-[13.5px] text-ink group-hover:underline">
-                            Unorganized
-                          </span>
-                        </div>
-                        <p className="font-mono text-[11px] text-ink-3 tabular">
+                      <div className="w-11 h-11 rounded-lg bg-neutral-200 border border-neutral-300 flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform">
+                        📂
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-bold text-sm text-gray-900 group-hover:text-blue-900 truncate">
+                          Unorganized
+                        </h4>
+                        <p className="text-[11px] text-gray-500 font-medium">
                           {unorganizedCount} {unorganizedCount === 1 ? 'material' : 'materials'} needing filing
                         </p>
-                      </div>
-
-                      <div className="pt-2 border-t border-rule mt-2.5 flex items-center justify-between text-[11px] font-mono text-ink-3">
-                        <span className="text-[10px] uppercase tracking-wider text-ink-3 group-hover:text-ink transition-colors">
-                          {dragOverFolderId === 'UNORGANIZED_CARD' ? 'Drop to un-file' : 'Open folder'}
-                        </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-ink-3 group-hover:translate-x-0.5 group-hover:text-ink transition-transform" />
+                        <div className="mt-2 text-[11px] font-bold text-gray-700 flex items-center gap-1 group-hover:text-black">
+                          <span>{dragOverFolderId === 'UNORGANIZED_CARD' ? 'Drop to un-file' : 'Open folder'}</span>
+                          <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1313,46 +1325,39 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                             showToast(`Moved file to "${folder.name}"`);
                           }
                         }}
-                        className={`group p-4 border transition-all cursor-pointer bg-paper flex flex-col justify-between min-h-[105px] ${
-                          isDragTarget
-                            ? 'border-2 border-lime bg-lime-wash/60 shadow-xs'
-                            : 'border-rule hover:border-ink hover:bg-paper-sunk/40'
+                        className={`group bg-white border-2 border-gray-800 rounded-xl p-4 text-left hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 flex items-start gap-3.5 shadow-2xs cursor-pointer ${
+                          isDragTarget ? 'ring-2 ring-emerald-500 bg-emerald-50/40' : ''
                         }`}
                       >
-                        <div>
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <FolderIcon className="w-4 h-4 text-ink-2 group-hover:text-lime-deep shrink-0 transition-colors" />
-                              <span className="font-bold text-[13.5px] text-ink truncate group-hover:underline">
-                                {folder.name}
-                              </span>
-                            </div>
-
-                            {/* Three dots / action button */}
+                        <div className="w-11 h-11 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform">
+                          📁
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <h4 className="font-bold text-sm text-gray-900 truncate group-hover:text-blue-900">
+                              {folder.name}
+                            </h4>
                             <button
                               type="button"
-                              onClick={(e) => handleOpenContextMenu(e, 'folder', folder)}
-                              className="p-1 text-ink-3 hover:text-ink hover:bg-paper-sunk transition-colors shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenContextMenu(e, 'folder', folder);
+                              }}
+                              className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors shrink-0"
                               title="Folder actions"
                               aria-label="Folder actions"
                             >
                               <MoreVertical className="w-3.5 h-3.5" />
                             </button>
                           </div>
-
-                          <div className="font-mono text-[11px] text-ink-3 tabular flex items-center gap-2">
-                            <span>
-                              {folder.resourceCount} {folder.resourceCount === 1 ? 'file' : 'files'}
-                            </span>
-                            {subCount > 0 && <span>· {subCount} subfolders</span>}
+                          <p className="text-[11px] text-gray-500 font-medium">
+                            {folder.resourceCount} {folder.resourceCount === 1 ? 'file' : 'files'}
+                            {subCount > 0 ? ` · ${subCount} subfolders` : ''}
+                          </p>
+                          <div className="mt-2 text-[11px] font-bold text-gray-700 flex items-center gap-1 group-hover:text-black">
+                            <span>Click to open folder</span>
+                            <span className="transition-transform group-hover:translate-x-0.5">→</span>
                           </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-rule mt-2.5 flex items-center justify-between text-[11px] font-mono text-ink-3">
-                          <span className="text-[10px] uppercase tracking-wider text-ink-3 group-hover:text-ink transition-colors">
-                            {isDragTarget ? 'Drop to move here' : 'Open folder'}
-                          </span>
-                          <ChevronRight className="w-3.5 h-3.5 text-ink-3 group-hover:translate-x-0.5 group-hover:text-ink transition-transform" />
                         </div>
                       </div>
                     );
@@ -1360,7 +1365,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 </div>
               ) : (
                 /* List view for folders */
-                <div className="border border-rule bg-paper divide-y divide-rule">
+                <div className="border-2 border-gray-800 rounded-xl bg-white divide-y-2 divide-gray-100 overflow-hidden shadow-2xs">
                   {/* Unorganized row at root */}
                   {!currentFolderId && !isUnorganizedView && unorganizedCount > 0 && (
                     <div
@@ -1384,19 +1389,19 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                           showToast('Moved file to Unorganized');
                         }
                       }}
-                      className={`px-4 py-2.5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                      className={`px-4 py-3 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
                         dragOverFolderId === 'UNORGANIZED_ROW'
-                          ? 'border-2 border-lime bg-lime-wash/60'
-                          : 'hover:bg-paper-sunk/60'
+                          ? 'bg-amber-100'
+                          : 'hover:bg-neutral-50'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <FolderOpen className="w-4 h-4 text-ink-3 shrink-0" />
-                        <span className="font-bold text-[13px] text-ink">Unorganized Files</span>
+                        <FolderOpen className="w-5 h-5 text-gray-500 shrink-0" />
+                        <span className="font-bold text-sm text-gray-900">Unorganized Files</span>
                       </div>
-                      <div className="flex items-center gap-3 font-mono text-xs text-ink-3 tabular">
+                      <div className="flex items-center gap-3 text-xs text-gray-500 tabular font-medium">
                         <span>{unorganizedCount} loose files</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-ink-3" />
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
                       </div>
                     </div>
                   )}
@@ -1429,28 +1434,29 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                             showToast(`Moved file to "${folder.name}"`);
                           }
                         }}
-                        className={`px-4 py-2.5 flex items-center justify-between gap-3 cursor-pointer transition-colors group ${
-                          isDragTarget
-                            ? 'border-2 border-lime bg-lime-wash/60'
-                            : 'hover:bg-paper-sunk/60'
+                        className={`px-4 py-3 flex items-center justify-between gap-3 cursor-pointer transition-colors group ${
+                          isDragTarget ? 'bg-emerald-50' : 'hover:bg-neutral-50'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <FolderIcon className="w-4 h-4 text-ink-2 group-hover:text-lime-deep shrink-0 transition-colors" />
-                          <span className="font-bold text-[13px] text-ink group-hover:underline truncate">
+                          <span className="text-xl shrink-0">📁</span>
+                          <span className="font-bold text-sm text-gray-900 group-hover:text-blue-900 truncate">
                             {folder.name}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3 font-mono text-xs text-ink-3 tabular shrink-0">
+                        <div className="flex items-center gap-3 text-xs text-gray-500 tabular shrink-0 font-medium">
                           <span>
                             {folder.resourceCount} {folder.resourceCount === 1 ? 'file' : 'files'}
                           </span>
                           {subCount > 0 && <span>· {subCount} subfolders</span>}
                           <button
                             type="button"
-                            onClick={(e) => handleOpenContextMenu(e, 'folder', folder)}
-                            className="p-1 text-ink-3 hover:text-ink hover:bg-paper transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenContextMenu(e, 'folder', folder);
+                            }}
+                            className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
                             aria-label="Folder actions"
                           >
                             <MoreVertical className="w-3.5 h-3.5" />
@@ -1467,8 +1473,8 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           {/* 6. FILES SECTION (Strict directory contents) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-mono text-xs font-bold uppercase tracking-[0.08em] text-ink flex items-center gap-2">
-                <File className="w-3.5 h-3.5 text-ink-2" aria-hidden="true" />
+              <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-gray-900 flex items-center gap-2">
+                <File className="w-4 h-4 text-gray-700" aria-hidden="true" />
                 <span>
                   {searchScope === 'subject' && subjectSearch.trim()
                     ? `Matching Course Files (${directoryResources.length})`
@@ -1479,38 +1485,38 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                     : `Root Files (${directoryResources.length})`}
                 </span>
               </h3>
-              <span className="font-mono text-[10.5px] text-ink-3 hidden sm:inline">
+              <span className="text-xs text-gray-500 font-medium hidden sm:inline">
                 Drag to move · Right-click for options
               </span>
             </div>
 
             {/* List View Table */}
             {viewMode === 'list' ? (
-              <div className="border border-rule bg-paper divide-y divide-rule overflow-hidden">
+              <div className="border-2 border-gray-800 rounded-xl bg-white divide-y-2 divide-gray-100 overflow-hidden shadow-2xs">
                 {/* Table Header with interactive column sort & Select All */}
-                <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-paper-sunk font-mono text-[11px] text-ink-3 select-none items-center">
+                <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-neutral-100 text-xs font-bold text-gray-700 select-none items-center border-b-2 border-gray-200">
                   <div className="col-span-6 flex items-center gap-2 min-w-0">
                     <button
                       type="button"
                       onClick={handleToggleSelectAll}
-                      className="text-ink-3 hover:text-ink transition-colors p-0.5"
+                      className="text-gray-400 hover:text-gray-900 transition-colors p-0.5 cursor-pointer"
                       aria-label="Select all files in directory"
                     >
                       {selectedResourceIds.size > 0 &&
                       selectedResourceIds.size === directoryResources.length ? (
-                        <CheckSquare className="w-4 h-4 text-ink fill-lime/30" />
+                        <CheckSquare className="w-4 h-4 text-gray-900" />
                       ) : (
-                        <Square className="w-4 h-4 text-ink-3" />
+                        <Square className="w-4 h-4 text-gray-300" />
                       )}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleToggleSort('name')}
-                      className="font-bold uppercase tracking-[0.06em] text-ink flex items-center gap-1 hover:underline"
+                      className="font-extrabold uppercase tracking-wider text-gray-900 flex items-center gap-1 hover:underline cursor-pointer"
                     >
                       <span>Name</span>
                       {sortField === 'name' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
                       )}
                     </button>
                   </div>
@@ -1519,11 +1525,11 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                     <button
                       type="button"
                       onClick={() => handleToggleSort('type')}
-                      className="font-bold uppercase tracking-[0.06em] text-ink flex items-center gap-1 hover:underline"
+                      className="font-extrabold uppercase tracking-wider text-gray-900 flex items-center gap-1 hover:underline cursor-pointer"
                     >
                       <span>Type</span>
                       {sortField === 'type' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
                       )}
                     </button>
                   </div>
@@ -1532,11 +1538,11 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                     <button
                       type="button"
                       onClick={() => handleToggleSort('size')}
-                      className="font-bold uppercase tracking-[0.06em] text-ink flex items-center gap-1 hover:underline"
+                      className="font-extrabold uppercase tracking-wider text-gray-900 flex items-center gap-1 hover:underline cursor-pointer"
                     >
                       <span>Size</span>
                       {sortField === 'size' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
                       )}
                     </button>
                   </div>
@@ -1545,11 +1551,11 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                     <button
                       type="button"
                       onClick={() => handleToggleSort('date')}
-                      className="font-bold uppercase tracking-[0.06em] text-ink inline-flex items-center gap-1 hover:underline ml-auto"
+                      className="font-extrabold uppercase tracking-wider text-gray-900 inline-flex items-center gap-1 hover:underline ml-auto cursor-pointer"
                     >
                       <span>Date Added</span>
                       {sortField === 'date' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
                       )}
                     </button>
                   </div>
@@ -1557,17 +1563,17 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
 
                 {/* Rows or Empty States */}
                 {directoryResources.length === 0 ? (
-                  <div className="p-10 text-center text-xs text-ink-2">
+                  <div className="p-10 text-center text-xs text-gray-500">
                     {activeFolder ? (
                       <>
-                        <FolderOpen className="w-8 h-8 text-ink-3 mx-auto mb-2" aria-hidden="true" />
-                        <h4 className="text-sm font-bold text-ink mb-1">This folder has no files</h4>
+                        <div className="text-3xl mb-2">📁</div>
+                        <h4 className="text-sm font-bold text-gray-900 mb-1">This folder has no files</h4>
                         <p className="max-w-[42ch] mx-auto mb-4">
-                          Drag files here from other locations or upload new study materials into “{activeFolder.name}”.
+                          Upload new study materials or move existing files into “{activeFolder.name}”.
                         </p>
                         <button
                           onClick={() => openUploadModal(subjectId, activeFolder.id)}
-                          className="btn btn-secondary text-xs px-3 py-1.5"
+                          className="px-3.5 py-1.5 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-2xs border-2 border-gray-900 inline-flex items-center gap-1.5 cursor-pointer"
                         >
                           <PlusCircle className="w-3.5 h-3.5" />
                           <span>Upload File into Folder</span>
@@ -1575,22 +1581,22 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                       </>
                     ) : isUnorganizedView ? (
                       <>
-                        <Check className="w-8 h-8 text-lime-deep mx-auto mb-2" aria-hidden="true" />
-                        <h4 className="text-sm font-bold text-ink mb-1">All Materials Are Organized</h4>
+                        <Check className="w-8 h-8 text-emerald-600 mx-auto mb-2" aria-hidden="true" />
+                        <h4 className="text-sm font-bold text-gray-900 mb-1">All Materials Are Organized</h4>
                         <p className="max-w-[42ch] mx-auto mb-4">
                           No loose files remain. Every document in this course is filed into a folder.
                         </p>
                         <button
                           onClick={navigateToRoot}
-                          className="btn btn-secondary text-xs px-3 py-1.5"
+                          className="px-3.5 py-1.5 bg-neutral-100 hover:bg-white text-gray-900 border-2 border-gray-800 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-2xs cursor-pointer"
                         >
                           Return to Course Root
                         </button>
                       </>
                     ) : (
                       <>
-                        <FileText className="w-8 h-8 text-ink-3 mx-auto mb-2" aria-hidden="true" />
-                        <h4 className="text-sm font-bold text-ink mb-1">No Loose Files at Root</h4>
+                        <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" aria-hidden="true" />
+                        <h4 className="text-sm font-bold text-gray-900 mb-1">No Loose Files at Root</h4>
                         <p className="max-w-[42ch] mx-auto mb-4">
                           All files are neatly filed in the folders above, or no files match the current filters.
                         </p>
@@ -1622,8 +1628,8 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                             openDetail(resource);
                           }
                         }}
-                        className={`grid grid-cols-12 gap-2 px-4 py-2.5 items-center cursor-pointer transition-colors border-b border-rule last:border-b-0 group ${
-                          isSelected ? 'bg-lime-wash' : 'bg-paper hover:bg-paper-sunk/60'
+                        className={`grid grid-cols-12 gap-2 px-4 py-3 items-center text-xs cursor-pointer transition-colors group ${
+                          isSelected ? 'bg-blue-50/50' : 'hover:bg-neutral-50'
                         }`}
                       >
                         {/* Name Column */}
@@ -1634,27 +1640,27 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                               e.stopPropagation();
                               handleToggleSelect(resource.id);
                             }}
-                            className="p-0.5 text-ink-3 hover:text-ink shrink-0"
+                            className="p-0.5 text-gray-400 hover:text-gray-900 shrink-0 cursor-pointer"
                             aria-label={isSelected ? `Deselect ${resource.title}` : `Select ${resource.title}`}
                           >
                             {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-ink fill-lime/30" />
+                              <CheckSquare className="w-4 h-4 text-gray-900" />
                             ) : (
-                              <Square className="w-4 h-4 text-ink-3 group-hover:text-ink" />
+                              <Square className="w-4 h-4 text-gray-300" />
                             )}
                           </button>
 
-                          <div className="shrink-0 text-ink-3 group-hover:text-ink">
+                          <div className="shrink-0">
                             {isDeck ? (
-                              <Presentation className="w-4 h-4" />
+                              <Presentation className="w-4 h-4 text-amber-600" />
                             ) : (
-                              <FileText className="w-4 h-4" />
+                              <FileText className="w-4 h-4 text-red-600" />
                             )}
                           </div>
 
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-[13px] text-ink group-hover:underline truncate max-w-sm">
+                              <span className="font-bold text-gray-900 truncate group-hover:text-blue-900">
                                 {resource.title}
                               </span>
                               <IngestMark resource={resource} />
@@ -1662,7 +1668,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
 
                             {/* Show folder provenance if searching across course */}
                             {searchScope === 'subject' && resource.folderId && (
-                              <span className="font-mono text-[10px] text-ink-3 block truncate">
+                              <span className="text-[10px] text-gray-500 block truncate">
                                 in 📁 {folderMap.get(resource.folderId)?.name ?? 'Folder'}
                               </span>
                             )}
@@ -1670,20 +1676,20 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                         </div>
 
                         {/* Kind Column */}
-                        <div className="col-span-2 hidden md:block font-mono text-[11px] text-ink-2 truncate">
-                          <span className="stamp stamp-outline text-[9px] py-0 px-1 font-mono">
+                        <div className="col-span-2 hidden md:block text-gray-600 truncate font-medium">
+                          <span className="px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 text-[10px] font-bold">
                             {resource.type}
                           </span>
                         </div>
 
                         {/* Size Column */}
-                        <div className="col-span-2 hidden sm:block font-mono text-[11px] text-ink-3 tabular">
+                        <div className="col-span-2 hidden sm:block text-gray-500 tabular font-medium">
                           {resource.fileSize}
                         </div>
 
                         {/* Date & Actions Column */}
                         <div
-                          className="col-span-2 flex items-center justify-end gap-1.5 font-mono text-[11px] text-ink-3 tabular"
+                          className="col-span-2 flex items-center justify-end gap-1.5 text-gray-500 tabular font-medium"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <span className="hidden sm:inline">{resource.uploadDate}</span>
@@ -1691,7 +1697,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                           <button
                             type="button"
                             onClick={() => void downloadResource(resource)}
-                            className="p-1 text-ink-3 hover:text-ink hover:bg-paper transition-colors hidden md:inline-flex"
+                            className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors hidden md:inline-flex cursor-pointer"
                             title="Download file"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -1700,16 +1706,16 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                           <button
                             type="button"
                             onClick={() => void toggleBookmark(resource.id)}
-                            className="p-1 text-ink-3 hover:text-ink hover:bg-paper transition-colors hidden md:inline-flex"
+                            className="p-1 text-gray-400 hover:text-amber-500 hover:bg-gray-100 rounded transition-colors hidden md:inline-flex cursor-pointer"
                             title={bookmarked ? 'Saved' : 'Save'}
                           >
-                            <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? 'fill-lime-deep text-lime-deep' : ''}`} />
+                            <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
                           </button>
 
                           <button
                             type="button"
                             onClick={(e) => handleOpenContextMenu(e, 'resource', resource)}
-                            className="p-1 text-ink-3 hover:text-ink hover:bg-paper transition-colors"
+                            className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors cursor-pointer"
                             aria-label="File options"
                           >
                             <MoreVertical className="w-3.5 h-3.5" />
@@ -1721,15 +1727,16 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 )}
               </div>
             ) : (
-              /* Grid View Cards */
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              /* Grid View Cards - EXACT CLASSPOST 1:1 CARD DESIGN */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
                 {directoryResources.length === 0 ? (
-                  <div className="col-span-full p-8 border border-rule bg-paper-sunk text-center text-xs text-ink-3">
+                  <div className="col-span-full p-8 border-2 border-gray-800 rounded-xl bg-white text-center text-xs text-gray-500 shadow-2xs">
                     No files found in this directory.
                   </div>
                 ) : (
                   directoryResources.map((resource) => {
                     const isSelected = selectedResourceIds.has(resource.id);
+                    const bookmarked = isBookmarked(resource.id);
                     const isDeck = resource.fileKind === 'pptx' || resource.fileKind === 'ppt';
 
                     return (
@@ -1745,46 +1752,81 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                         }}
                         onClick={() => openDetail(resource)}
                         onContextMenu={(e) => handleOpenContextMenu(e, 'resource', resource)}
-                        className={`group p-4 border transition-all cursor-pointer flex flex-col justify-between min-h-[120px] ${
-                          isSelected
-                            ? 'border-2 border-lime bg-lime-wash'
-                            : 'border-rule bg-paper hover:border-ink hover:bg-paper-sunk/40'
+                        className={`group relative bg-white border-2 border-gray-800 rounded-xl p-3.5 text-left hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 flex flex-col justify-between cursor-pointer shadow-2xs min-h-[220px] ${
+                          isSelected ? 'ring-2 ring-blue-600 bg-blue-50/20' : ''
                         }`}
                       >
                         <div>
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              {isDeck ? (
-                                <Presentation className="w-4 h-4 text-ink-3 shrink-0" />
-                              ) : (
-                                <FileText className="w-4 h-4 text-ink-3 shrink-0" />
-                              )}
-                              <span className="font-bold text-[13px] text-ink truncate group-hover:underline">
-                                {resource.title}
-                              </span>
+                          {/* Card Top: Tag + Bookmark + Options */}
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
+                              <span>📄</span>
+                              <span>{resource.fileKind?.toUpperCase() || 'PDF'}</span>
+                            </span>
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => void toggleBookmark(resource.id)}
+                                className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${
+                                  bookmarked ? 'bg-amber-50 border-amber-300 text-amber-500' : 'bg-gray-50 border-gray-300 text-gray-400 hover:text-amber-500 hover:bg-amber-50'
+                                }`}
+                                title={bookmarked ? 'Bookmarked' : 'Bookmark'}
+                              >
+                                <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleOpenContextMenu(e, 'resource', resource)}
+                                className="w-7 h-7 rounded-lg border bg-gray-50 border-gray-300 text-gray-500 hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
+                                title="More options"
+                              >
+                                <MoreVertical className="w-3.5 h-3.5" />
+                              </button>
                             </div>
-
-                            <button
-                              type="button"
-                              onClick={(e) => handleOpenContextMenu(e, 'resource', resource)}
-                              className="p-1 text-ink-3 hover:text-ink shrink-0"
-                              aria-label="File options"
-                            >
-                              <MoreVertical className="w-3.5 h-3.5" />
-                            </button>
                           </div>
 
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="stamp stamp-outline text-[9px] py-0 px-1 font-mono">
-                              {resource.type}
+                          {/* Thumbnail Container */}
+                          <div className="w-full h-24 bg-neutral-100 rounded-lg overflow-hidden border border-neutral-200 mb-2.5 relative flex items-center justify-center group-hover:bg-neutral-50 transition-colors">
+                            {isDeck ? (
+                              <Presentation className="w-8 h-8 text-neutral-400 group-hover:text-neutral-600 transition-colors" />
+                            ) : (
+                              <FileText className="w-8 h-8 text-neutral-400 group-hover:text-neutral-600 transition-colors" />
+                            )}
+                            <span className="absolute bottom-1 right-1 text-[9px] font-mono px-1 rounded bg-white/90 text-neutral-600 border border-neutral-200">
+                              {resource.fileSize}
                             </span>
+                          </div>
+
+                          {/* Title */}
+                          <h4 className="text-xs sm:text-sm font-bold text-gray-900 group-hover:text-blue-900 line-clamp-2 leading-snug mb-1">
+                            {resource.title}
+                          </h4>
+
+                          {/* Metadata */}
+                          <div className="flex items-center justify-between text-[10px] text-gray-500 font-medium">
+                            <span className="truncate max-w-[140px]">{resource.type}</span>
                             <IngestMark resource={resource} />
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-rule mt-3 flex items-center justify-between font-mono text-[10.5px] text-ink-3 tabular">
-                          <span>{resource.fileSize}</span>
-                          <span>{resource.uploadDate}</span>
+                        {/* Card Footer: Read -> + Download */}
+                        <div className="pt-2.5 border-t border-gray-100 mt-2.5 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => openDetail(resource)}
+                            className="text-xs font-bold text-gray-800 hover:text-black flex items-center gap-1 group-hover:translate-x-0.5 transition-transform cursor-pointer"
+                          >
+                            <span>Read</span>
+                            <span>→</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void downloadResource(resource)}
+                            className="px-2.5 py-1 bg-gray-900 hover:bg-black text-white text-[11px] font-bold rounded-lg border border-gray-900 shadow-2xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>Download</span>
+                          </button>
                         </div>
                       </div>
                     );
@@ -1796,19 +1838,19 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
 
           {/* 7. Floating Multi-Select Action Bar */}
           {selectedResourceIds.size > 0 && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-paper border-2 border-ink shadow-overlay px-4 py-2.5 flex items-center gap-3 flex-wrap animate-fadeIn max-w-[95vw]">
-              <div className="font-mono text-xs font-bold text-ink">
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white border-2 border-gray-800 rounded-2xl shadow-xl px-4 py-2.5 flex items-center gap-3 flex-wrap animate-fadeIn max-w-[95vw]">
+              <div className="text-xs font-bold text-gray-900">
                 {selectedResourceIds.size} files selected
               </div>
 
-              <div className="h-4 w-[1px] bg-rule hidden sm:block" />
+              <div className="h-4 w-[1px] bg-gray-300 hidden sm:block" />
 
               {/* Bulk Move into Folder */}
               <div className="flex items-center gap-1.5">
                 <select
                   value={bulkTargetFolderId}
                   onChange={(e) => setBulkTargetFolderId(e.target.value)}
-                  className="field text-xs py-1.5 pl-2.5 pr-8 bg-paper-sunk border border-rule text-ink cursor-pointer font-mono"
+                  className="px-2.5 py-1.5 bg-neutral-50 border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
                   aria-label="Select destination folder"
                 >
                   <option value="">Move to folder…</option>
@@ -1829,13 +1871,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                     setSelectedResourceIds(new Set());
                     setBulkTargetFolderId('');
                   }}
-                  className="btn btn-secondary text-xs px-2.5 py-1 disabled:opacity-40"
+                  className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold shadow-2xs transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
                 >
                   Move
                 </button>
               </div>
 
-              <div className="h-4 w-[1px] bg-rule hidden sm:block" />
+              <div className="h-4 w-[1px] bg-gray-300 hidden sm:block" />
 
               {/* Ask AI About Selected */}
               <button
@@ -1847,10 +1889,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                     subjectId
                   });
                 }}
-                className="btn btn-primary text-xs px-3 py-1 flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-amber-300 hover:bg-amber-400 text-gray-900 border-2 border-gray-800 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                 title="Synthesize an answer using exclusively these selected documents"
               >
-                <Sparkles className="w-3.5 h-3.5 text-lime" />
+                <Sparkles className="w-3.5 h-3.5 text-gray-900" />
                 <span>Ask AI About Selected</span>
               </button>
 
@@ -1859,7 +1901,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 type="button"
                 onClick={handleDownloadSelectedZip}
                 disabled={zipState.busy}
-                className="btn btn-secondary text-xs px-2.5 py-1 flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-neutral-100 hover:bg-white text-gray-900 border-2 border-gray-800 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>ZIP</span>
@@ -1870,7 +1912,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 <button
                   type="button"
                   onClick={handleDeleteSelected}
-                  className="btn btn-ghost text-alert hover:bg-alert/10 text-xs px-2 py-1 flex items-center gap-1"
+                  className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border-2 border-red-300 rounded-xl text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
                   title="Delete user-uploaded files you authored"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1882,7 +1924,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
               <button
                 type="button"
                 onClick={() => setSelectedResourceIds(new Set())}
-                className="btn btn-ghost text-ink-3 hover:text-ink text-xs px-2 py-1"
+                className="px-2 py-1 text-xs font-bold text-gray-500 hover:text-gray-900 cursor-pointer"
               >
                 Clear
               </button>
@@ -1894,11 +1936,11 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       {/* Syllabus Tab */}
       {activeTab === 'syllabus' && (
         <section className="pt-6 space-y-6">
-          <div className="border border-rule p-5 bg-paper">
-            <h2 className="text-base font-extrabold text-ink mb-1">
+          <div className="border-2 border-gray-800 rounded-xl p-5 bg-white shadow-2xs">
+            <h2 className="text-base font-extrabold text-gray-900 mb-1">
               Curriculum Modules &amp; Viva Voce Guide
             </h2>
-            <p className="text-xs text-ink-2 max-w-2xl leading-relaxed">
+            <p className="text-xs text-gray-600 max-w-2xl leading-relaxed">
               Official module outcomes mapped to SAKEC Semester III syllabus. Evaluators examine student understanding
               across these modules during internal and oral viva examinations.
             </p>
@@ -1910,11 +1952,11 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 key={mod.moduleNumber}
                 onClick={() => setActiveModuleNumber(mod.moduleNumber)}
                 aria-pressed={activeModuleNumber === mod.moduleNumber}
-                className={`tab-rail-item flex flex-col items-start gap-1 ${
+                className={`tab-rail-item flex flex-col items-start gap-1 cursor-pointer ${
                   activeModuleNumber === mod.moduleNumber ? 'is-active' : ''
                 }`}
               >
-                <span className="font-mono text-[10px] uppercase tracking-[0.08em] opacity-80">
+                <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
                   Module {mod.moduleNumber} · {mod.mappedCO}
                 </span>
                 <span className="font-bold text-xs sm:text-sm">{mod.name}</span>
@@ -1922,13 +1964,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
             ))}
           </nav>
 
-          <div className="border border-rule p-5 sm:p-6 space-y-5 bg-paper">
-            <div className="flex items-start justify-between gap-3 pb-3 border-b border-ink">
+          <div className="border-2 border-gray-800 rounded-xl p-5 sm:p-6 space-y-5 bg-white shadow-2xs">
+            <div className="flex items-start justify-between gap-3 pb-3 border-b-2 border-gray-800">
               <div>
-                <p className="font-mono text-[11px] font-semibold text-ink-3 uppercase tracking-[0.08em] mb-1">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
                   Module {activeModule.moduleNumber} · {activeModule.mappedCO} · {activeModule.hours} Lecture Hours
                 </p>
-                <h3 className="text-xl font-black text-ink tracking-tight">{activeModule.name}</h3>
+                <h3 className="text-xl font-black text-gray-900 tracking-tight">{activeModule.name}</h3>
               </div>
               <button
                 onClick={() =>
@@ -1937,43 +1979,43 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                     subjectId
                   })
                 }
-                className="btn btn-secondary px-3 py-1.5 text-xs font-mono shrink-0 flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-amber-300 hover:bg-amber-400 border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-2xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
               >
-                <Sparkles className="w-3.5 h-3.5 text-lime-deep" aria-hidden="true" />
+                <Sparkles className="w-3.5 h-3.5 text-gray-900" aria-hidden="true" />
                 <span>Ask Viva AI</span>
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <h4 className="text-[11px] font-mono font-semibold text-ink-3 uppercase tracking-[0.08em] mb-2 flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-lime-deep" aria-hidden="true" />
+                <h4 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Check className="w-4 h-4 text-emerald-600" aria-hidden="true" />
                   Key Topics &amp; Course Outcomes
                 </h4>
                 <ul className="space-y-2">
                   {activeModule.outcomes.map((topic, i) => (
-                    <li key={i} className="flex items-start gap-2.5 p-3 bg-paper-sunk border border-rule text-xs sm:text-sm text-ink-2">
-                      <span className="w-1.5 h-1.5 bg-lime-deep mt-2 shrink-0" aria-hidden="true" />
+                    <li key={i} className="flex items-start gap-2.5 p-3 bg-neutral-50 border-2 border-gray-800 rounded-xl text-xs sm:text-sm text-gray-800 shadow-2xs">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600 mt-1.5 shrink-0" aria-hidden="true" />
                       <span>{topic}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="p-4 bg-paper-sunk border border-rule">
-                <h4 className="text-[11px] font-mono font-semibold text-ink uppercase tracking-[0.08em] mb-1 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
+              <div className="p-4 bg-neutral-50 border-2 border-gray-800 rounded-xl shadow-2xs">
+                <h4 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-gray-700" aria-hidden="true" />
                   Engineering Implementation
                 </h4>
-                <p className="text-xs sm:text-sm text-ink-2 leading-relaxed">{activeModule.implementationInApp}</p>
+                <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">{activeModule.implementationInApp}</p>
               </div>
 
-              <div className="bg-ink text-paper font-mono text-xs p-4 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-ink-3">Code Reference:</span>
-                  <span className="font-bold break-all">{activeModule.codeReference}</span>
+              <div className="bg-gray-900 text-white rounded-xl p-4 flex flex-wrap items-center justify-between gap-2 shadow-2xs border-2 border-gray-900">
+                <div className="flex items-center gap-2 min-w-0 text-xs">
+                  <span className="text-gray-400 font-medium">Code Reference:</span>
+                  <span className="font-mono font-bold break-all">{activeModule.codeReference}</span>
                 </div>
-                <span className="text-lime font-bold uppercase text-[10px] tracking-[0.08em] shrink-0">
+                <span className="px-2 py-0.5 rounded bg-emerald-400 text-gray-900 font-extrabold uppercase text-[10px] tracking-wider shrink-0">
                   Verified &amp; Active
                 </span>
               </div>
@@ -1985,24 +2027,24 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       {/* Scheme Tab */}
       {activeTab === 'scheme' && scheme && (
         <section className="pt-6">
-          <div className="border border-rule p-5 sm:p-6 bg-paper space-y-4">
-            <h2 className="text-base font-extrabold text-ink mb-1">Official Course Structure</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-xs">
-              <div className="p-3 bg-paper-sunk border border-rule">
-                <span className="text-[10px] text-ink-3 uppercase block">Course Code</span>
-                <span className="font-bold text-ink">{subject.courseCode}</span>
+          <div className="border-2 border-gray-800 rounded-xl p-5 sm:p-6 bg-white shadow-2xs space-y-4">
+            <h2 className="text-base font-extrabold text-gray-900 mb-1">Official Course Structure</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <div className="p-3 bg-neutral-50 border-2 border-gray-800 rounded-xl shadow-2xs">
+                <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Course Code</span>
+                <span className="font-extrabold text-gray-900 text-sm">{subject.courseCode}</span>
               </div>
-              <div className="p-3 bg-paper-sunk border border-rule">
-                <span className="text-[10px] text-ink-3 uppercase block">Credits</span>
-                <span className="font-bold text-ink">{scheme.credits} Credits</span>
+              <div className="p-3 bg-neutral-50 border-2 border-gray-800 rounded-xl shadow-2xs">
+                <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Credits</span>
+                <span className="font-extrabold text-gray-900 text-sm">{scheme.credits} Credits</span>
               </div>
-              <div className="p-3 bg-paper-sunk border border-rule">
-                <span className="text-[10px] text-ink-3 uppercase block">Total Hours</span>
-                <span className="font-bold text-ink">{scheme.nh} Hours</span>
+              <div className="p-3 bg-neutral-50 border-2 border-gray-800 rounded-xl shadow-2xs">
+                <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Total Hours</span>
+                <span className="font-extrabold text-gray-900 text-sm">{scheme.nh} Hours</span>
               </div>
-              <div className="p-3 bg-paper-sunk border border-rule">
-                <span className="text-[10px] text-ink-3 uppercase block">Teaching Scheme</span>
-                <span className="font-bold text-ink">CL {scheme.cl} / TL {scheme.tl} / LL {scheme.ll}</span>
+              <div className="p-3 bg-neutral-50 border-2 border-gray-800 rounded-xl shadow-2xs">
+                <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Teaching Scheme</span>
+                <span className="font-extrabold text-gray-900 text-sm">CL {scheme.cl} / TL {scheme.tl} / LL {scheme.ll}</span>
               </div>
             </div>
           </div>

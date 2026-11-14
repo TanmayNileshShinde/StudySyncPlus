@@ -5,15 +5,15 @@
 :root {
   --paper: #ffffff;
   --paper-sunk: #f8fafc;
-  --ink: #0f172a;
-  --ink-2: #334155;
-  --ink-3: #64748b;
-  --rule: #cbd5e1;
-  --rule-dark: #0f172a;
-  --lime: #facc15;
-  --lime-text: #713f12;
-  --lime-wash: #fef9c3;
-  --lime-deep: #eab308;
+  --ink: #111827;
+  --ink-2: #374151;
+  --ink-3: #6b7280;
+  --rule: #e5e7eb;
+  --rule-dark: #1f2937;
+  --lime: #fcd34d;
+  --lime-text: #78350f;
+  --lime-wash: #fef3c7;
+  --lime-deep: #f59e0b;
   --alert: #ef4444;
 
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -23,32 +23,27 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #f8fafc;
-  background-image: 
-    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
-  color: var(--ink);
-  font-size: 16px;
+  background-color: #f3f4f6; /* ClassPost clean light neutral background */
+  color: #111827;
+  font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  caret-color: var(--ink);
 }
 
-/* ---- Notebook Grid Texture ---- */
+/* ---- Subtle Background Pattern ---- */
 .bg-notebook {
-  background-color: #f8fafc;
+  background-color: #f3f4f6;
   background-image: 
-    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
+    linear-gradient(to right, rgba(31, 41, 55, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(31, 41, 55, 0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 /* ---- Selection ---- */
 ::selection {
-  background: #facc15;
-  color: #0f172a;
+  background: #fcd34d;
+  color: #111827;
 }
 
 /* ---- PDF.js Text Layer Synchronization ---- */
@@ -78,7 +73,7 @@ body {
 
 .textLayer ::selection,
 .textLayer span::selection {
-  background: rgba(250, 204, 21, 0.45) !important;
+  background: rgba(252, 211, 77, 0.45) !important;
   color: transparent !important;
   -webkit-text-fill-color: transparent !important;
 }
@@ -90,270 +85,201 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-left: 2px solid #0f172a;
+  background: #f3f4f6;
+  border-left: 1px solid #e5e7eb;
 }
 ::-webkit-scrollbar-thumb {
-  background: #0f172a;
-  border: 2px solid #f1f5f9;
+  background: #1f2937;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #111827;
 }
 
 ::placeholder {
-  color: #94a3b8;
+  color: #9ca3af;
   opacity: 1;
 }
 
 :focus-visible {
-  outline: 2px solid #0f172a;
+  outline: 2px solid #1f2937;
   outline-offset: 2px;
 }
 
-/* ---- Typography helpers ---- */
-.font-display {
-  letter-spacing: -0.025em;
-  font-weight: 800;
-}
-
-.tabular {
-  font-variant-numeric: tabular-nums;
-}
-
-/* ---- Neo-Brutalist Surface Primitives ---- */
+/* ---- ClassPost Component Classes ---- */
 @layer components {
-  .ruled {
-    background: #ffffff;
-    border: 2px solid #0f172a;
-    border-radius: 1rem;
-    box-shadow: 4px 4px 0px #0f172a;
+  /* ClassPost Core Card */
+  .cp-card {
+    background-color: #ffffff;
+    border: 2px solid #1f2937;
+    border-radius: 0.75rem; /* rounded-xl */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .cp-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  }
+  .cp-card:active {
+    transform: translateY(0);
   }
 
-  .ruled-sunk {
-    background: #f8fafc;
-    border: 2px solid #0f172a;
-    border-radius: 1rem;
-  }
-
-  .rule-strong {
-    border-color: #0f172a;
-  }
-
+  /* Legacy card-neo mapped to ClassPost standard */
   .card-neo {
-    background: #ffffff;
-    border: 2px solid #0f172a;
-    border-radius: 1rem;
-    box-shadow: 4px 4px 0px #0f172a;
+    background-color: #ffffff;
+    border: 2px solid #1f2937;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .card-neo:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  .card-neo:active {
+    transform: translateY(0);
+  }
+
+  /* ClassPost Primary Dark Button */
+  .cp-btn-dark,
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #111827;
+    color: #ffffff;
+    border: 2px solid #111827;
+    border-radius: 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    cursor: pointer;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-  .card-neo:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: 6px 6px 0px #0f172a;
+  .cp-btn-dark:hover,
+  .btn-primary:hover {
+    background-color: #000000;
+    border-color: #000000;
+  }
+  .cp-btn-dark:active,
+  .btn-primary:active {
+    transform: scale(0.96);
   }
 
-  .card-neo:active {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0px #0f172a;
-  }
-
-  /* ---- Field primitive ---- */
-  .field {
-    background: #ffffff;
-    border: 2px solid #0f172a;
+  /* ClassPost Secondary Light Button */
+  .cp-btn-light,
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #f5f5f5;
+    color: #111827;
+    border: 2px solid #1f2937;
     border-radius: 0.75rem;
-    color: #0f172a;
-    box-shadow: 2px 2px 0px #0f172a;
-    transition: all 0.15s ease-out;
-  }
-
-  .field:focus {
-    outline: none;
-    background: #ffffff;
-    border-color: #0f172a;
-    box-shadow: 3px 3px 0px #facc15, 0 0 0 2px #0f172a;
-  }
-
-  .field-error {
-    border-color: #ef4444;
-    box-shadow: 3px 3px 0px #ef4444;
-  }
-
-  /* ---- Select primitive ---- */
-  select,
-  select.field {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-color: #ffffff;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    background-size: 14px 14px;
-    padding-right: 36px !important;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .cp-btn-light:hover,
+  .btn-secondary:hover {
+    background-color: #ffffff;
+  }
+  .cp-btn-light:active,
+  .btn-secondary:active {
+    transform: scale(0.96);
   }
 
-  select::-ms-expand {
-    display: none;
+  /* ClassPost Amber/Yellow Accent Button */
+  .cp-btn-yellow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #fcd34d;
+    color: #111827;
+    border: 2px solid #1f2937;
+    border-radius: 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .cp-btn-yellow:hover {
+    background-color: #fbbf24;
+  }
+  .cp-btn-yellow:active {
+    transform: scale(0.96);
   }
 
-  /* ---- Button primitives (Neo-Brutalist) ---- */
+  /* ClassPost Form Input */
+  .cp-input {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background-color: #ffffff;
+    border: 2px solid #1f2937;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #111827;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.15s ease-in-out;
+  }
+  .cp-input:focus {
+    outline: none;
+    ring: 2px solid #1f2937;
+  }
+
+  /* Generic .btn mapped cleanly */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 2.5rem;
-    padding: 0 1rem;
-    font-size: 0.875rem;
+    min-height: 2.25rem;
+    padding: 0.4rem 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 700;
-    line-height: 1;
-    border: 2px solid #0f172a;
+    border: 2px solid #1f2937;
     border-radius: 0.75rem;
-    box-shadow: 3px 3px 0px #0f172a;
     cursor: pointer;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-  .btn:hover {
-    transform: translate(-1px, -1px);
-    box-shadow: 4px 4px 0px #0f172a;
-  }
-
   .btn:active {
-    transform: translate(2px, 2px);
-    box-shadow: 0px 0px 0px #0f172a;
+    transform: scale(0.96);
   }
 
-  .btn-primary {
-    background: #0f172a;
-    color: #ffffff;
-  }
-  .btn-primary:hover {
-    background: #1e293b;
-  }
-  .btn-primary:active {
-    background: #0f172a;
-  }
-  .btn-primary:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: 3px 3px 0px #0f172a;
-  }
-
-  .btn-secondary {
-    background: #ffffff;
-    color: #0f172a;
-  }
-  .btn-secondary:hover {
-    background: #fef9c3;
-  }
-
-  .btn-yellow {
-    background: #facc15;
-    color: #0f172a;
-  }
-  .btn-yellow:hover {
-    background: #fde047;
-  }
-
-  .btn-ghost {
-    background: transparent;
-    color: #475569;
-    border-color: transparent;
-    box-shadow: none;
-  }
-  .btn-ghost:hover {
-    background: #f1f5f9;
-    color: #0f172a;
-    border-color: #cbd5e1;
-    box-shadow: 2px 2px 0px #0f172a;
-  }
-
-  /* ---- Stamp / Badge marks ---- */
+  /* Legacy stamps */
   .stamp {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.2rem 0.6rem;
+    padding: 0.125rem 0.5rem;
     font-size: 0.6875rem;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-weight: 700;
     border-radius: 0.5rem;
-    border: 1.5px solid #0f172a;
-    box-shadow: 2px 2px 0px #0f172a;
-    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid #1f2937;
   }
-
   .stamp-ink {
-    background: #0f172a;
+    background: #111827;
     color: #ffffff;
   }
-
   .stamp-outline {
-    border: 1.5px solid #0f172a;
-    color: #0f172a;
     background: #ffffff;
+    color: #111827;
   }
-
-  .stamp-yellow {
-    background: #facc15;
-    color: #0f172a;
+  .stamp-verified {
+    background: #fcd34d;
+    color: #111827;
   }
-
-  .stamp-green {
-    background: #dcfce7;
-    color: #166534;
-    border-color: #166534;
-  }
-
-  .stamp-red {
-    background: #fee2e2;
-    color: #991b1b;
-    border-color: #991b1b;
-  }
-
-  .stamp-blue {
-    background: #dbeafe;
-    color: #1e40af;
-    border-color: #1e40af;
-  }
-}
-
-/* ---- Animations ---- */
-@keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 12px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-}
-
-.animate-toast {
-  animation: toastIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes pulseGlow {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
-
-.animate-pulse-slow {
-  animation: pulseGlow 2s ease-in-out infinite;
 }
