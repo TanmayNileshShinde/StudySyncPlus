@@ -26,6 +26,7 @@ import type {
 import { getOwnerKey } from '../lib/owner';
 import { asFolderId, asResourceId, asSemesterId, asStorageId, asSubjectId } from '../lib/convexIds';
 import { apiService } from '../services/apiService';
+import { getStaticPdfUrl } from '../lib/staticMaterials';
 
 /**
  * Data lives in Convex (resources, subjects, semesters, bookmarks, ratings).
@@ -539,6 +540,13 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   /** Signed URL for preview/ZIP consumers. Null for legacy summary-card rows. */
   const collectDownloadArtifact = useCallback(
     async (resource: StudyResource): Promise<{ url: string; fileName: string } | null> => {
+      const staticUrl = getStaticPdfUrl(resource);
+      if (staticUrl) {
+        return {
+          url: staticUrl,
+          fileName: `${resource.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
+        };
+      }
       if (!resource.hasFile) return null;
       try {
         const result = await downloadMut({ id: asResourceId(resource.id) });
@@ -554,6 +562,18 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const downloadResource = useCallback(
     async (resource: StudyResource) => {
       try {
+        const staticUrl = getStaticPdfUrl(resource);
+        if (staticUrl) {
+          const anchor = document.createElement('a');
+          anchor.href = staticUrl;
+          anchor.download = `${resource.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+          document.body.appendChild(anchor);
+          anchor.click();
+          document.body.removeChild(anchor);
+          showToast(`Downloading "${resource.title.slice(0, 25)}..."`);
+          return;
+        }
+
         const result = await collectDownloadArtifact(resource);
         if (result) {
           // Stored file: fetch the signed URL and hand the real file to the user.

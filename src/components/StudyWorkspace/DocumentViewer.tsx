@@ -7,6 +7,7 @@ import { getOwnerKey } from '../../lib/owner';
 import type { StudyResource } from '../../types';
 import { PdfViewer } from './PdfViewer';
 import { PresentationViewer } from './PresentationViewer';
+import { getStaticPdfUrl } from '../../lib/staticMaterials';
 import confetti from 'canvas-confetti';
 import {
   FileText,
@@ -166,6 +167,10 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     api.resources.fileUrl,
     activeDoc && activeDoc.hasFile ? { id: asResourceId(activeDoc.id) } : 'skip'
   );
+
+  const staticPdfUrl = useMemo(() => getStaticPdfUrl(activeDoc), [activeDoc]);
+  const resolvedPdfUrl = fileData?.url || staticPdfUrl;
+  const hasVisualFile = Boolean(activeDoc?.hasFile || staticPdfUrl);
 
   const bookmarked = activeDoc ? isBookmarked(activeDoc.id) : false;
   const isDeck = activeDoc?.fileKind === 'ppt' || activeDoc?.fileKind === 'pptx';
@@ -575,12 +580,12 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
       {/* Main Canvas Area */}
       <div className="flex-1 relative min-h-0 w-full overflow-hidden flex bg-paper-sunk">
         {/* PDF Mode -> Custom PDF.js Viewer */}
-        {!isDeck && activeDoc.hasFile && (
+        {!isDeck && hasVisualFile && (
           <div className="w-full h-full relative">
-            {fileData?.url ? (
+            {resolvedPdfUrl ? (
               <PdfViewer
-                key={fileData.url}
-                fileUrl={fileData.url}
+                key={resolvedPdfUrl}
+                fileUrl={resolvedPdfUrl}
                 documentTitle={activeDoc.title}
                 currentPage={viewerPage ?? 1}
                 onPageChange={(p) => setViewerPage(p)}
@@ -593,17 +598,17 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xs text-ink-3 font-mono">
-                Connecting to Convex storage stream…
+                Connecting to storage stream…
               </div>
             )}
           </div>
         )}
 
         {/* Presentation Mode -> Dedicated Slide Deck Viewer */}
-        {isDeck && activeDoc.hasFile && (
+        {isDeck && hasVisualFile && (
           <PresentationViewer
             document={activeDoc}
-            fileUrl={fileData?.url ?? null}
+            fileUrl={resolvedPdfUrl ?? null}
             currentSlide={viewerPage ?? 1}
             onSlideChange={(s) => setViewerPage(s)}
             zoom={viewerZoom ?? 100}
@@ -619,7 +624,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
         )}
 
         {/* Legacy Course File Card (No file uploaded) */}
-        {!activeDoc.hasFile && (
+        {!hasVisualFile && (
           <div className="w-full h-full overflow-y-auto p-6 sm:p-10 flex items-center justify-center bg-paper-sunk">
             <div className="ruled max-w-lg w-full p-6 sm:p-8 bg-paper shadow-overlay">
               <div className="flex items-center gap-2 mb-3">
