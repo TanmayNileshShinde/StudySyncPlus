@@ -989,7 +989,7 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
                 <div className="flex items-center gap-2 mb-2 px-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-lime shrink-0" aria-hidden="true" />
                   <span className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-ink-2">
-                    StudySync AI
+                    StudySyncPlus AI
                   </span>
                   {turn.taggedPages && turn.taggedPages.length > 0 ? (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-lime/15 border border-lime text-[9.5px] font-mono text-ink font-semibold">

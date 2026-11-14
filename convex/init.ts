@@ -1,6 +1,7 @@
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { SEED_RESOURCES, SEED_SEMESTER, SEED_SUBJECTS } from "./seedData";
+import { SEED_RESOURCES, SEED_SEMESTER, SEED_SUBJECTS, STANDARD_FOLDERS } from "./seedData";
+import type { Id } from "./_generated/dataModel";
 
 /** Seed bookmarks for the calling owner, mirroring the old default profile. */
 const DEFAULT_BOOKMARK_LEGACY_IDS = ["res-001", "res-002"];
@@ -56,20 +57,60 @@ export async function ensureSeedData(ctx: MutationCtx): Promise<{ insertedSubjec
     insertedSubjects += 1;
   }
 
-  // 3. Official resources — matched by legacyId
+  // 3. Ensure official folders exist for every subject
+  const folderCache = new Map<string, Id<"folders">>();
+  const allSubjects = await ctx.db
+    .query("subjects")
+    .withIndex("by_semester", (q) => q.eq("semesterId", semesterId))
+    .collect();
+
+  for (const subjectDoc of allSubjects) {
+    for (const f of STANDARD_FOLDERS) {
+      const existingFolder = await ctx.db
+        .query("folders")
+        .withIndex("by_subject", (q) => q.eq("subjectId", subjectDoc._id))
+        .filter((q) => q.eq(q.field("name"), f.name))
+        .first();
+
+      if (!existingFolder) {
+        const newFolderId = await ctx.db.insert("folders", {
+          subjectId: subjectDoc._id,
+          semesterId,
+          name: f.name,
+          order: f.order,
+          createdAt: Date.now(),
+        });
+        folderCache.set(`${subjectDoc._id}:${f.name}`, newFolderId);
+      } else {
+        folderCache.set(`${subjectDoc._id}:${f.name}`, existingFolder._id);
+      }
+    }
+  }
+
+  // 4. Official resources — matched by legacyId and assigned to folders
   let insertedResources = 0;
   for (const resource of SEED_RESOURCES) {
-    const existing = await ctx.db
-      .query("resources")
-      .withIndex("by_legacy_id", (q) => q.eq("legacyId", resource.legacyId))
-      .first();
-    if (existing) continue;
-
     const subject = await ctx.db
       .query("subjects")
       .withIndex("by_semester_and_name", (q) => q.eq("semesterId", semesterId).eq("name", resource.subjectName))
       .first();
-    if (!subject) throw new Error(`Seed subject not found: ${resource.subjectName}`);
+    if (!subject) continue;
+
+    const folderId = resource.folderName
+      ? folderCache.get(`${subject._id}:${resource.folderName}`)
+      : undefined;
+
+    const existing = await ctx.db
+      .query("resources")
+      .withIndex("by_legacy_id", (q) => q.eq("legacyId", resource.legacyId))
+      .first();
+
+    if (existing) {
+      if (!existing.folderId && folderId) {
+        await ctx.db.patch(existing._id, { folderId });
+      }
+      continue;
+    }
 
     await ctx.db.insert("resources", {
       semesterId,
@@ -84,11 +125,12 @@ export async function ensureSeedData(ctx: MutationCtx): Promise<{ insertedSubjec
       fileSizeBytes: Math.round(resource.sizeMb * 1024 * 1024),
       downloadCount: resource.downloadCount,
       ratingSum: Math.round(resource.rating * 10),
-      ratingCount: 10, // synthetic peer-review baseline, consistent with the demo-data framing
+      ratingCount: 10,
       description: resource.description,
       tags: resource.tags,
       isOfficial: true,
       legacyId: resource.legacyId,
+      folderId,
     });
     insertedResources += 1;
   }
@@ -105,7 +147,9 @@ export const getState = query({
       .query("semesters")
       .withIndex("by_number", (q) => q.eq("number", SEED_SEMESTER.number))
       .first();
-    return { seeded: semester !== null };
+    if (!semester) return { seeded: false };
+    const count = (await ctx.db.query("resources").collect()).length;
+    return { seeded: count >= SEED_RESOURCES.length };
   },
 });
 

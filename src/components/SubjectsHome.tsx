@@ -223,7 +223,7 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="px-3 py-1 rounded-full bg-yellow-400 border-2 border-slate-900 font-mono text-xs font-black text-slate-900 shadow-[2px_2px_0px_#0f172a] flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-                SYCM3 · SAKEC
+                SYCM1 · SAKEC
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-900 font-mono text-xs font-bold text-slate-700">
                 70 Students

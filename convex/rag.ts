@@ -780,7 +780,7 @@ export const chat = action({
       taggedFocusDirective = `\n\n🎯 STRICT TAGGED FOCUS DIRECTIVE (ABSOLUTE PRIORITY):\nThe student has explicitly TAGGED the document "${docTitle}".\nYou MUST explain and answer based STRICTLY AND ONLY on the contents of this document.\nDo NOT refer to outside materials.\n`;
     }
 
-    const systemPrompt = `You are StudySync AI, the authoritative academic study assistant for Semester III Computer Engineering students at Shah & Anchor Kutchhi Engineering College (SAKEC).${taggedFocusDirective}
+    const systemPrompt = `You are StudySyncPlus AI, the authoritative academic study assistant for Semester III Computer Engineering students at Shah & Anchor Kutchhi Engineering College (SAKEC).${taggedFocusDirective}
 
 CRITICAL RESPONSE GUIDELINES (STRICTLY ENFORCED):
 

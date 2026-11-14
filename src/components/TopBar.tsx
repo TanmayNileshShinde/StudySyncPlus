@@ -212,10 +212,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenBookmarks, onOpenSheet, on
               </span>
             </button>
 
-            {/* SYCM3 Live Pill */}
+            {/* SYCM1 Live Pill */}
             <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border-2 border-slate-900 font-mono text-xs font-extrabold text-slate-900 shadow-[2px_2px_0px_#0f172a]">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-              <span>SYCM3</span>
+              <span>SYCM1</span>
               <span className="text-[10px] text-slate-500 font-semibold">• SAKEC Live</span>
             </div>
           </div>

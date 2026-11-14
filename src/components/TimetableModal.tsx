@@ -6,47 +6,53 @@ interface Period {
   subject: string;
   code: string;
   room: string;
-  type: 'Theory' | 'Lab' | 'Project';
+  type: 'Theory' | 'Lab' | 'Project' | 'Break';
   batch?: string;
+  faculty?: string;
 }
 
 const SCHEDULE: Record<string, Period[]> = {
   Monday: [
-    { time: '09:00 - 10:00', subject: 'Data Structures', code: 'CMCOR2PC203', room: 'CR-401', type: 'Theory' },
-    { time: '10:00 - 11:00', subject: 'Operating System', code: 'CMCOR2PC202', room: 'CR-401', type: 'Theory' },
-    { time: '11:15 - 01:15', subject: 'Web Technology II Lab', code: 'CMLOR2VS201', room: 'Lab 502', type: 'Lab', batch: 'All Batches' },
-    { time: '02:00 - 03:00', subject: 'Discrete Structures', code: 'CMCOR2PC201', room: 'CR-401', type: 'Theory' },
-    { time: '03:00 - 04:00', subject: 'Microprocessor', code: 'CMCOR2PC204', room: 'CR-401', type: 'Theory' }
+    { time: '10:00 - 11:00', subject: 'Engineering Career Navigation', code: 'CMLOR2ED201', room: 'CR-606', type: 'Theory', faculty: 'Prof. RD' },
+    { time: '11:00 - 12:00', subject: 'Engineering Career Navigation', code: 'CMLOR2ED201', room: 'CR-606', type: 'Theory', faculty: 'Prof. RD' },
+    { time: '12:00 - 01:00', subject: 'Recess / Lunch Break', code: 'BREAK', room: 'Campus', type: 'Break' },
+    { time: '01:00 - 03:00', subject: 'MP Lab (Batch A) / OS Lab (Batch B)', code: 'MP / OS LAB', room: 'Lab 620 / 623', type: 'Lab', batch: 'Batches A & B', faculty: 'Prof. SB / Prof. VK' },
+    { time: '03:00 - 04:00', subject: 'Operating System', code: 'CMCOR2PC202', room: 'CR-606', type: 'Theory', faculty: 'Prof. VK' }
   ],
   Tuesday: [
-    { time: '09:00 - 10:00', subject: 'Discrete Structures', code: 'CMCOR2PC201', room: 'CR-401', type: 'Theory' },
-    { time: '10:00 - 11:00', subject: 'Data Structures', code: 'CMCOR2PC203', room: 'CR-401', type: 'Theory' },
-    { time: '11:15 - 01:15', subject: 'Data Structures Lab', code: 'CMCOR2PC203', room: 'Lab 504', type: 'Lab', batch: 'B1 & B2' },
-    { time: '02:00 - 03:00', subject: 'Foundation of Embedded System', code: 'CMCOR2MD201', room: 'CR-401', type: 'Theory' },
-    { time: '03:00 - 04:00', subject: 'Operating System', code: 'CMCOR2PC202', room: 'CR-401', type: 'Theory' }
+    { time: '10:00 - 11:00', subject: 'Microprocessor', code: 'CMCOR2PC204', room: 'CR-606', type: 'Theory', faculty: 'Prof. SB' },
+    { time: '11:00 - 12:00', subject: 'Foundation of Embedded System', code: 'CMCOR2MD201', room: 'CR-606', type: 'Theory', faculty: 'Prof. VM' },
+    { time: '12:00 - 01:00', subject: 'Recess / Lunch Break', code: 'BREAK', room: 'Campus', type: 'Break' },
+    { time: '01:00 - 03:00', subject: 'OS Lab (Batch A) / MP Lab (Batch B)', code: 'OS / MP LAB', room: 'Lab 623 / 620', type: 'Lab', batch: 'Batches A & B', faculty: 'Prof. VK / Prof. SB' },
+    { time: '03:00 - 04:00', subject: 'Engineering Career Navigation', code: 'CMLOR2ED201', room: 'CR-606', type: 'Theory', faculty: 'Prof. RD' },
+    { time: '04:00 - 05:00', subject: 'Engineering Career Navigation (Tutorial)', code: 'CMLOR2ED201', room: 'CR-606', type: 'Theory', faculty: 'Prof. RD' }
   ],
   Wednesday: [
-    { time: '09:00 - 10:00', subject: 'Microprocessor', code: 'CMCOR2PC204', room: 'CR-401', type: 'Theory' },
-    { time: '10:00 - 11:00', subject: 'Foundation of Embedded System', code: 'CMCOR2MD201', room: 'CR-401', type: 'Theory' },
-    { time: '11:15 - 01:15', subject: 'OOP with Java Lab', code: 'CMLOR2VS202', room: 'Lab 501', type: 'Lab', batch: 'All Batches' },
-    { time: '02:00 - 04:00', subject: 'Community Engagement Project Lab', code: 'CMLOR2CP201', room: 'Seminar Hall', type: 'Project' }
+    { time: '10:00 - 11:00', subject: 'Foundation of Embedded System', code: 'CMCOR2MD201', room: 'CR-606', type: 'Theory', faculty: 'Prof. VM' },
+    { time: '11:00 - 12:00', subject: 'Foundation of Embedded System', code: 'CMCOR2MD201', room: 'CR-606', type: 'Theory', faculty: 'Prof. VM' },
+    { time: '12:00 - 01:00', subject: 'Recess / Lunch Break', code: 'BREAK', room: 'Campus', type: 'Break' },
+    { time: '01:00 - 03:00', subject: 'FES Lab (Batch A) / OS Lab (Batch B)', code: 'FES / OS LAB', room: 'Lab 603 / 623', type: 'Lab', batch: 'Batches A & B', faculty: 'Prof. VM / Prof. VK' },
+    { time: '03:00 - 04:00', subject: 'Microprocessor', code: 'CMCOR2PC204', room: 'CR-606', type: 'Theory', faculty: 'Prof. SB' },
+    { time: '04:00 - 05:00', subject: 'Operating System', code: 'CMCOR2PC202', room: 'CR-606', type: 'Theory', faculty: 'Prof. VK' }
   ],
   Thursday: [
-    { time: '09:00 - 10:00', subject: 'Operating System', code: 'CMCOR2PC202', room: 'CR-401', type: 'Theory' },
-    { time: '10:00 - 11:00', subject: 'Discrete Structures', code: 'CMCOR2PC201', room: 'CR-401', type: 'Theory' },
-    { time: '11:15 - 01:15', subject: 'Operating System Lab', code: 'CMCOR2PC202', room: 'Lab 503', type: 'Lab', batch: 'B1 & B2' },
-    { time: '02:00 - 03:00', subject: 'Data Structures', code: 'CMCOR2PC203', room: 'CR-401', type: 'Theory' },
-    { time: '03:00 - 04:00', subject: 'Engineering Career Navigation', code: 'CMLOR2ED201', room: 'CR-401', type: 'Theory' }
+    { time: '10:00 - 11:00', subject: 'Microprocessor', code: 'CMCOR2PC204', room: 'CR-606', type: 'Theory', faculty: 'Prof. SB' },
+    { time: '11:00 - 12:00', subject: 'Microprocessor', code: 'CMCOR2PC204', room: 'CR-606', type: 'Theory', faculty: 'Prof. SB' },
+    { time: '12:00 - 01:00', subject: 'Recess / Lunch Break', code: 'BREAK', room: 'Campus', type: 'Break' },
+    { time: '01:00 - 03:00', subject: 'MP Lab (Batch A) / FES Lab (Batch B)', code: 'MP / FES LAB', room: 'Lab 620 / 603', type: 'Lab', batch: 'Batches A & B', faculty: 'Prof. SB / Prof. VM' },
+    { time: '03:00 - 04:00', subject: 'FES Lab (Batch A) / MP Lab (Batch B)', code: 'FES / MP LAB', room: 'Lab 603 / 620', type: 'Lab', batch: 'Batches A & B', faculty: 'Prof. VM / Prof. SB' }
   ],
   Friday: [
-    { time: '09:00 - 10:00', subject: 'Foundation of Embedded System', code: 'CMCOR2MD201', room: 'CR-401', type: 'Theory' },
-    { time: '10:00 - 11:00', subject: 'Microprocessor', code: 'CMCOR2PC204', room: 'CR-401', type: 'Theory' },
-    { time: '11:15 - 01:15', subject: 'Microprocessor & Embedded Lab', code: 'CMCOR2PC204', room: 'Lab 402', type: 'Lab', batch: 'B1 & B2' },
-    { time: '02:00 - 03:30', subject: 'Web Technology II Tutorial', code: 'CMLOR2VS201', room: 'CR-401', type: 'Theory' }
+    { time: '10:00 - 11:00', subject: 'Foundation of Embedded System', code: 'CMCOR2MD201', room: 'CR-606', type: 'Theory', faculty: 'Prof. VM' },
+    { time: '11:00 - 12:00', subject: 'Operating System', code: 'CMCOR2PC202', room: 'CR-606', type: 'Theory', faculty: 'Prof. VK' },
+    { time: '12:00 - 01:00', subject: 'Recess / Lunch Break', code: 'BREAK', room: 'Campus', type: 'Break' },
+    { time: '01:00 - 03:00', subject: 'OS Lab (Batch A) / FES Lab (Batch B)', code: 'OS / FES LAB', room: 'Lab 623 / 603', type: 'Lab', batch: 'Batches A & B', faculty: 'Prof. VK / Prof. VM' },
+    { time: '03:00 - 04:00', subject: 'Operating System', code: 'CMCOR2PC202', room: 'CR-606', type: 'Theory', faculty: 'Prof. VK' }
   ],
   Saturday: [
-    { time: '09:30 - 11:30', subject: 'Remedial & Self Learning (PBL)', code: 'SL-PBL', room: 'Library / Lab 502', type: 'Project' },
-    { time: '11:45 - 01:15', subject: 'Club Activities & Coding Practice', code: 'STUDYSYNC+', room: 'T&P Hall', type: 'Project' }
+    { time: '10:00 - 12:00', subject: 'IPS (Batch A) / SCL (Batch B)', code: 'IPS / SCL', room: 'CR-606 / CR-706', type: 'Theory', batch: 'Batches A & B', faculty: 'Prof. DP / Prof. AB' },
+    { time: '12:00 - 01:00', subject: 'Recess / Lunch Break', code: 'BREAK', room: 'Campus', type: 'Break' },
+    { time: '01:00 - 05:00', subject: 'IPS (Batch A) / SCL (Batch B) Lecture & Seminar', code: 'IPS / SCL', room: 'CR-606 / CR-706', type: 'Theory', batch: 'Batches A & B', faculty: 'Prof. DP / Prof. AB' }
   ]
 };
 
@@ -79,7 +85,7 @@ export const TimetableModal: React.FC<{ isOpen: boolean; onClose: () => void }> 
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
-                  SYCM3 Weekly Timetable
+                  SYCM1 Weekly Timetable
                 </h2>
                 <span className="px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono text-[10px] font-bold">
                   ClassPost Live

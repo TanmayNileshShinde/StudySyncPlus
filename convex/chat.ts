@@ -44,7 +44,7 @@ export const createThread = mutation({
     const now = Date.now();
     return await ctx.db.insert("chatThreads", {
       ownerKey: args.ownerKey,
-      title: args.title.trim().slice(0, 80) || "StudySync AI Session",
+      title: args.title.trim().slice(0, 80) || "StudySyncPlus AI Session",
       mode: args.mode,
       resourceId: args.resourceId,
       semesterId: args.semesterId,
