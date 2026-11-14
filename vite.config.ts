@@ -4,7 +4,8 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // In production for GitHub Pages (repo StudySyncPlus), use '/StudySyncPlus/'.
-  // In dev (or if VITE_BASE is overridden), use root or custom base.
-  base: process.env.VITE_BASE || (process.env.NODE_ENV === 'production' ? '/StudySyncPlus/' : '/'),
+  // On Vercel (or any root domain deployment), base must be '/'.
+  // On GitHub Pages (subpath repo StudySyncPlus), base is '/StudySyncPlus/'.
+  // Vercel build environment automatically defines process.env.VERCEL = '1'.
+  base: process.env.VITE_BASE || (process.env.VERCEL ? '/' : (process.env.NODE_ENV === 'production' ? '/StudySyncPlus/' : '/')),
 })

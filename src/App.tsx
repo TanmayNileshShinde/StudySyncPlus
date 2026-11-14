@@ -19,7 +19,9 @@ import { JsSandboxModal } from './components/JsSandboxModal';
 import { Footer } from './components/Footer';
 import type { MoreSheetKind } from './types';
 
-const CONVEX_URL = import.meta.env.VITE_CONVEX_URL as string;
+const CONVEX_URL =
+  (import.meta.env.VITE_CONVEX_URL as string) ||
+  'https://wry-crane-347.convex.cloud';
 
 const SHEET_META: Record<MoreSheetKind, { title: string; subtitle: string }> = {
   scheme: {
@@ -189,10 +191,12 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
   }
 }
 
+const convexClient = new ConvexReactClient(CONVEX_URL);
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <ConvexProvider client={new ConvexReactClient(CONVEX_URL)}>
+      <ConvexProvider client={convexClient}>
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           <ResourceProvider>
             <Shell />
