@@ -152,17 +152,21 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
   // Scroll to target page smoothly
   const scrollToPage = useCallback((pageNum: number, smooth = true) => {
-    if (!scrollAreaRef.current) return;
-    const targetEl = scrollAreaRef.current.querySelector(`[data-page-number="${pageNum}"]`) as HTMLElement;
+    const scrollContainer = scrollAreaRef.current;
+    if (!scrollContainer) return;
+    const targetEl = scrollContainer.querySelector(`[data-page-number="${pageNum}"]`) as HTMLElement;
     if (targetEl) {
       isProgrammaticScroll.current = true;
-      targetEl.scrollIntoView({
-        behavior: smooth ? 'smooth' : 'auto',
-        block: 'start'
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const relativeTop = targetRect.top - containerRect.top;
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollTop + relativeTop - 16,
+        behavior: smooth ? 'smooth' : 'auto'
       });
       setTimeout(() => {
         isProgrammaticScroll.current = false;
-      }, 600);
+      }, 500);
     }
   }, []);
 
@@ -294,7 +298,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         ref={scrollAreaRef}
         tabIndex={0}
         aria-label={`PDF Document: ${documentTitle}`}
-        className="flex-1 h-full overflow-y-auto overflow-x-auto p-4 sm:p-6 focus:outline-none scroll-smooth relative"
+        className="flex-1 h-full overflow-y-auto overflow-x-auto p-4 sm:p-6 focus:outline-none scroll-smooth relative overscroll-contain"
       >
         {/* Loading Spinner with Progress */}
         {loading && (

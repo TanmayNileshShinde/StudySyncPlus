@@ -47,12 +47,13 @@ export const StudyWorkspace: React.FC<StudyWorkspaceProps> = ({
     return resources.find((r) => r.id === documentId) ?? null;
   }, [documentId, resources]);
 
-  // Set initial page in viewer context if supplied
+  // Set initial page in viewer context if supplied & reset window scroll to top
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (initialPage) {
       setViewerPage(initialPage);
     }
-  }, [initialPage, setViewerPage]);
+  }, [documentId, initialPage, setViewerPage]);
 
   // Keyboard shortcut: Cmd+\ or Ctrl+\ toggles AI panel collapse
   useEffect(() => {
@@ -142,7 +143,7 @@ export const StudyWorkspace: React.FC<StudyWorkspaceProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] w-full overflow-hidden bg-paper">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-paper">
       {/* Mobile Segmented Switcher (Visible only below md breakpoint: < 768px) */}
       <div className="md:hidden border-b border-ink bg-paper p-1.5 flex items-center justify-center shrink-0">
         <div className="flex items-center bg-paper-sunk border border-ink p-0.5 w-full max-w-xs">

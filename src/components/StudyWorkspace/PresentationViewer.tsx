@@ -281,8 +281,16 @@ export const PresentationViewer: React.FC<PresentationViewerProps> = ({
   useEffect(() => {
     if (!thumbnailsOpen) return;
     const btn = thumbnailRefs.current.get(currentSlide);
-    if (btn) {
-      btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (btn && btn.parentElement) {
+      const parent = btn.parentElement;
+      const parentRect = parent.getBoundingClientRect();
+      const btnRect = btn.getBoundingClientRect();
+      if (btnRect.top < parentRect.top || btnRect.bottom > parentRect.bottom) {
+        parent.scrollTo({
+          top: parent.scrollTop + (btnRect.top - parentRect.top) - 10,
+          behavior: 'smooth'
+        });
+      }
     }
   }, [currentSlide, thumbnailsOpen]);
 

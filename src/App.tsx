@@ -119,19 +119,23 @@ function Shell() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-notebook text-ink flex flex-col font-sans">
+    <div
+      className={`bg-notebook text-ink flex flex-col font-sans ${
+        view.kind === 'study' ? 'h-screen overflow-hidden' : 'min-h-screen'
+      }`}
+    >
       <TopBar
         onOpenBookmarks={handleOpenBookmarks}
         onOpenSheet={handleOpenSheet}
         onOpenTimetable={() => setIsTimetableOpen(true)}
       />
 
-      <div className="flex flex-1 min-h-0">
+      <div className={`flex flex-1 min-h-0 ${view.kind === 'study' ? 'overflow-hidden' : ''}`}>
         {view.kind === 'subject' && (
           <SubjectRail activeSubjectId={view.subjectId} onOpenSheet={handleOpenSheet} />
         )}
 
-        <main className="flex-1 min-w-0 flex flex-col">
+        <main className={`flex-1 min-w-0 flex flex-col ${view.kind === 'study' ? 'h-full overflow-hidden' : ''}`}>
           {view.kind === 'home' && (
             <>
               <SubjectsHome
