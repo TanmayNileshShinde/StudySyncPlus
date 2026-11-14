@@ -8,29 +8,48 @@ export default {
     extend: {
       colors: {
         paper: "#ffffff",
-        sunk: "#f7f7f5",
+        sunk: "#f8fafc",
         ink: {
-          DEFAULT: "#111111",
-          2: "#57534e",
-          3: "#78716c"
+          DEFAULT: "#0f172a",
+          2: "#475569",
+          3: "#64748b"
         },
-        rule: "#e7e5e4",
+        rule: "#cbd5e1",
+        'rule-dark': "#0f172a",
         lime: {
-          DEFAULT: "#a3e635",
-          text: "#365314",
-          wash: "#f4fce4",
-          deep: "#65a30d"
+          DEFAULT: "#facc15", // ClassPost signature yellow
+          text: "#713f12",
+          wash: "#fef9c3",
+          deep: "#eab308"
         },
-        alert: "#b91c1c",
-        chart2: "#78716c",
-        chart3: "#d6d3d1"
+        alert: "#ef4444",
+        cp: {
+          dark: "#0f172a",
+          yellow: "#facc15",
+          'yellow-light': "#fef9c3",
+          green: "#22c55e",
+          'green-light': "#dcfce7",
+          red: "#ef4444",
+          'red-light': "#fee2e2",
+          blue: "#3b82f6",
+          'blue-light': "#dbeafe",
+          purple: "#a855f7",
+          'purple-light': "#f3e8ff",
+          teal: "#14b8a6",
+          'teal-light': "#ccfbf1",
+          slate: "#f1f5f9"
+        }
       },
       fontFamily: {
-        sans: ["Archivo", "system-ui", "sans-serif"],
+        sans: ["Plus Jakarta Sans", "Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "monospace"]
       },
       boxShadow: {
-        overlay: "0 24px 64px rgba(17, 17, 17, 0.18)"
+        neo: "4px 4px 0px #0f172a",
+        'neo-sm': "2px 2px 0px #0f172a",
+        'neo-lg': "6px 6px 0px #0f172a",
+        'neo-hover': "6px 6px 0px #0f172a",
+        overlay: "0 24px 64px rgba(15, 23, 42, 0.25)"
       }
     },
   },

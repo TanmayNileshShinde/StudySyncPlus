@@ -16,6 +16,7 @@ import { CurriculumSchemeModal } from './components/CurriculumSchemeModal';
 import { SyllabusVivaModal } from './components/SyllabusVivaModal';
 import { AnalyticsCharts } from './components/AnalyticsCharts';
 import { JsSandboxModal } from './components/JsSandboxModal';
+import { TimetableModal } from './components/TimetableModal';
 import { Footer } from './components/Footer';
 import type { MoreSheetKind } from './types';
 
@@ -84,6 +85,7 @@ function Shell() {
   }, [location.pathname]);
 
   const [sheetOverride, setSheetOverride] = useState<MoreSheetKind | null>(null);
+  const [isTimetableOpen, setIsTimetableOpen] = useState(false);
   const sheet = sheetOverride ?? sheetFromPath;
 
   const handleOpenSheet = useCallback(
@@ -109,8 +111,12 @@ function Shell() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-paper text-ink flex flex-col">
-      <TopBar onOpenBookmarks={handleOpenBookmarks} onOpenSheet={handleOpenSheet} />
+    <div className="min-h-screen bg-notebook text-ink flex flex-col font-sans">
+      <TopBar
+        onOpenBookmarks={handleOpenBookmarks}
+        onOpenSheet={handleOpenSheet}
+        onOpenTimetable={() => setIsTimetableOpen(true)}
+      />
 
       <div className="flex flex-1 min-h-0">
         {view.kind === 'subject' && (
@@ -120,7 +126,10 @@ function Shell() {
         <main className="flex-1 min-w-0 flex flex-col">
           {view.kind === 'home' && (
             <>
-              <SubjectsHome />
+              <SubjectsHome
+                onOpenTimetable={() => setIsTimetableOpen(true)}
+                onOpenSheet={handleOpenSheet}
+              />
               <Footer />
             </>
           )}
@@ -140,12 +149,17 @@ function Shell() {
       </div>
 
       {view.kind !== 'study' && (
-        <BottomNav onOpenBookmarks={handleOpenBookmarks} onOpenSheet={handleOpenSheet} />
+        <BottomNav
+          onOpenBookmarks={handleOpenBookmarks}
+          onOpenSheet={handleOpenSheet}
+          onOpenTimetable={() => setIsTimetableOpen(true)}
+        />
       )}
 
       {/* Overlays */}
       <BulkUploadModal isOpen={uploadSubjectId !== null} onClose={closeUploadModal} subjectId={uploadSubjectId} folderId={uploadFolderId} />
       <ResourceEditModal />
+      <TimetableModal isOpen={isTimetableOpen} onClose={() => setIsTimetableOpen(false)} />
 
       {sheet && (
         <MoreSheet title={SHEET_META[sheet].title} subtitle={SHEET_META[sheet].subtitle} onClose={handleCloseSheet}>
