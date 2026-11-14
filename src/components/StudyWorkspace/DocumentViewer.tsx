@@ -38,6 +38,8 @@ interface DocumentViewerProps {
   onSwitchDocument: (documentId: string) => void;
   highlightedCitationPage?: number | null;
   onClearCitationHighlight?: () => void;
+  isAssistantCollapsed?: boolean;
+  onToggleAssistant?: () => void;
 }
 
 const RatingWidget: React.FC<{ resourceId: string }> = ({ resourceId }) => {
@@ -84,7 +86,9 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   document: activeDoc,
   onSwitchDocument,
   highlightedCitationPage,
-  onClearCitationHighlight
+  onClearCitationHighlight,
+  isAssistantCollapsed,
+  onToggleAssistant
 }) => {
   const {
     resources,
@@ -553,6 +557,22 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           >
             <Info className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
+
+          {onToggleAssistant && (
+            <button
+              onClick={onToggleAssistant}
+              className={`hidden md:inline-flex px-2.5 py-1 text-xs font-bold rounded-lg items-center gap-1.5 transition-all cursor-pointer ${
+                !isAssistantCollapsed
+                  ? 'bg-amber-300 hover:bg-amber-400 text-gray-900 border-2 border-gray-800 shadow-2xs'
+                  : 'bg-gray-900 hover:bg-black text-white border-2 border-gray-900 shadow-2xs'
+              }`}
+              title={isAssistantCollapsed ? 'Open Study Assistant (Cmd+\\)' : 'Collapse Study Assistant (Cmd+\\)'}
+              aria-label={isAssistantCollapsed ? 'Open Study Assistant' : 'Collapse Study Assistant'}
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${!isAssistantCollapsed ? 'text-gray-900' : 'text-amber-300'}`} aria-hidden="true" />
+              <span>{isAssistantCollapsed ? 'Open Assistant' : 'Assistant'}</span>
+            </button>
+          )}
         </div>
       </header>
 

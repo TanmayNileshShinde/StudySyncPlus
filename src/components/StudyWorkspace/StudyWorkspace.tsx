@@ -185,6 +185,8 @@ export const StudyWorkspace: React.FC<StudyWorkspaceProps> = ({
             onSwitchDocument={(newDocId) => switchStudyDocument(newDocId)}
             highlightedCitationPage={highlightedPage}
             onClearCitationHighlight={() => setHighlightedPage(null)}
+            isAssistantCollapsed={isCollapsed}
+            onToggleAssistant={() => setIsCollapsed((v) => !v)}
           />
         </div>
 
@@ -211,18 +213,6 @@ export const StudyWorkspace: React.FC<StudyWorkspaceProps> = ({
             )}
           </button>
         </div>
-
-        {/* Collapsed Expand Tab (when panel is collapsed on desktop) */}
-        {isCollapsed && (
-          <button
-            onClick={() => setIsCollapsed(false)}
-            className="hidden md:flex absolute top-3 right-0 z-40 bg-ink text-paper hover:bg-lime hover:text-ink px-2.5 py-1.5 items-center gap-1.5 text-xs font-mono font-semibold border border-ink shadow-overlay transition-colors"
-            title="Open Study Assistant (Cmd+\)"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-lime" aria-hidden="true" />
-            <span>Open Assistant</span>
-          </button>
-        )}
 
         {/* Right Sidebar: Collapsible & Resizable AI Panel */}
         <div
