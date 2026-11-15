@@ -460,8 +460,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           </div>
         </div>
 
-        {/* Right: Actions (Print, Download, Rate, Bookmark, Fullscreen, Info) */}
-        <div className="flex items-center gap-1 shrink-0">
+        {/* Right: Actions (Bookmark, Download, Fullscreen, Info, Assistant) */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <div className="hidden 2xl:block">
             <RatingWidget resourceId={activeDoc.id} />
           </div>
@@ -469,17 +469,19 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           {/* Bookmark Button */}
           <button
             onClick={() => void toggleBookmark(activeDoc.id)}
-            className={`btn btn-ghost p-1.5 ${bookmarked ? 'text-lime-deep' : 'text-ink-2'}`}
+            className={`h-9 w-9 p-0 rounded-xl border-2 border-gray-800 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 ${
+              bookmarked ? 'bg-amber-100 text-amber-600 border-amber-400' : 'bg-white hover:bg-neutral-50 text-gray-700'
+            }`}
             title={bookmarked ? 'Remove from saved revision list' : 'Save for revision'}
             aria-label="Bookmark document"
           >
-            <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? 'fill-lime' : ''}`} aria-hidden="true" />
+            <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? 'fill-amber-500 text-amber-500' : ''}`} aria-hidden="true" />
           </button>
 
           {/* Download Button */}
           <button
             onClick={handleDownload}
-            className="btn btn-primary px-2 sm:px-2.5 py-1 text-xs"
+            className="h-9 px-3 sm:px-3.5 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-2xs border-2 border-gray-900 flex items-center gap-1.5 cursor-pointer"
             title={`Download ${activeDoc.title}`}
           >
             <Download className="w-3.5 h-3.5" aria-hidden="true" />
@@ -489,7 +491,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           {/* Fullscreen Button */}
           <button
             onClick={toggleFullscreen}
-            className="btn btn-ghost p-1.5 hidden sm:inline-flex"
+            className="h-9 w-9 p-0 rounded-xl border-2 border-gray-800 bg-white hover:bg-neutral-50 text-gray-700 hidden sm:flex items-center justify-center transition-all active:scale-95 shadow-2xs cursor-pointer"
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Reading Mode'}
             aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Reading Mode'}
           >
@@ -503,7 +505,9 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           {/* Info Slideout Button */}
           <button
             onClick={() => setInfoOpen((v) => !v)}
-            className={`btn btn-ghost p-1.5 ${infoOpen ? 'bg-paper-sunk text-ink' : 'text-ink-2'}`}
+            className={`h-9 w-9 p-0 rounded-xl border-2 border-gray-800 flex items-center justify-center transition-all active:scale-95 shadow-2xs cursor-pointer ${
+              infoOpen ? 'bg-neutral-200 text-gray-900' : 'bg-white hover:bg-neutral-50 text-gray-700'
+            }`}
             title="Document metadata & course provenance"
             aria-label="Document info"
           >
@@ -513,10 +517,10 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           {onToggleAssistant && (
             <button
               onClick={onToggleAssistant}
-              className={`hidden md:inline-flex px-2.5 py-1 text-xs font-bold rounded-lg items-center gap-1.5 transition-all cursor-pointer ${
+              className={`h-9 px-3 sm:px-3.5 rounded-xl text-xs font-bold hidden md:inline-flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs border-2 ${
                 !isAssistantCollapsed
-                  ? 'bg-amber-300 hover:bg-amber-400 text-gray-900 border-2 border-gray-800 shadow-2xs'
-                  : 'bg-gray-900 hover:bg-black text-white border-2 border-gray-900 shadow-2xs'
+                  ? 'bg-amber-300 hover:bg-amber-400 text-gray-900 border-gray-800'
+                  : 'bg-gray-900 hover:bg-black text-white border-gray-900'
               }`}
               title={isAssistantCollapsed ? 'Open Study Assistant (Cmd+\\)' : 'Collapse Study Assistant (Cmd+\\)'}
               aria-label={isAssistantCollapsed ? 'Open Study Assistant' : 'Collapse Study Assistant'}
