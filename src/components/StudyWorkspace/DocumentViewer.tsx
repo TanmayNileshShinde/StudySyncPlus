@@ -27,7 +27,6 @@ import {
   Sparkles,
   BookOpen,
   Share2,
-  Printer,
   LayoutGrid
 } from 'lucide-react';
 
@@ -201,43 +200,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
       origin: { y: 0.7 },
       colors: CONFETTI_COLORS
     });
-  };
-
-  const handlePrint = () => {
-    if (!fileData?.url) {
-      window.print();
-      return;
-    }
-
-    try {
-      // Use clean hidden iframe print for authentic vector printing
-      const printIframe = window.document.createElement('iframe');
-      printIframe.style.position = 'fixed';
-      printIframe.style.right = '0';
-      printIframe.style.bottom = '0';
-      printIframe.style.width = '0';
-      printIframe.style.height = '0';
-      printIframe.style.border = '0';
-      printIframe.src = fileData.url;
-
-      printIframe.onload = () => {
-        try {
-          printIframe.contentWindow?.focus();
-          printIframe.contentWindow?.print();
-        } catch {
-          window.print();
-        }
-      };
-
-      window.document.body.appendChild(printIframe);
-      setTimeout(() => {
-        if (window.document.body.contains(printIframe)) {
-          window.document.body.removeChild(printIframe);
-        }
-      }, 60000);
-    } catch {
-      window.print();
-    }
   };
 
   const handleCopyLink = () => {
@@ -503,16 +465,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           <div className="hidden 2xl:block">
             <RatingWidget resourceId={activeDoc.id} />
           </div>
-
-          {/* Print Button (Hidden on compact screens to give breathing room) */}
-          <button
-            onClick={handlePrint}
-            className="btn btn-ghost p-1.5 hidden lg:inline-flex"
-            title="Print Document"
-            aria-label="Print Document"
-          >
-            <Printer className="w-3.5 h-3.5" aria-hidden="true" />
-          </button>
 
           {/* Bookmark Button */}
           <button
