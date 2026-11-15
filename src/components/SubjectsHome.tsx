@@ -44,7 +44,7 @@ interface SubjectTileData {
 }
 
 interface SubjectsHomeProps {
-  onOpenTimetable?: () => void;
+  onOpenTimetable?: (tab?: 'timetable' | 'exams') => void;
   onOpenSheet?: (kind: MoreSheetKind) => void;
 }
 
@@ -259,13 +259,13 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Timetable */}
           <div
-            onClick={onOpenTimetable}
+            onClick={() => onOpenTimetable?.('timetable')}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                onOpenTimetable?.();
+                onOpenTimetable?.('timetable');
               }
             }}
             className="group bg-white border-2 border-gray-800 rounded-xl p-4 sm:p-5 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex flex-col justify-between shadow-2xs"
@@ -278,13 +278,13 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
                 Weekly Timetable
               </h3>
               <p className="text-xs text-gray-500 mt-1 font-medium">
-                Live daily lectures, lab batches and classroom slots
+                Live daily lectures, DSY modules and lab slots
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-900">
               <span className="text-amber-700 font-black flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                LIVE TODAY
+                SYCM1 &amp; DSY
               </span>
               <span className="flex items-center gap-1 text-gray-700 group-hover:text-blue-900 group-hover:translate-x-1 transition-transform">
                 View →
@@ -294,13 +294,13 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
 
           {/* Card 2: Exam Timetable */}
           <div
-            onClick={() => onOpenSheet?.('scheme')}
+            onClick={() => onOpenTimetable?.('exams')}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                onOpenSheet?.('scheme');
+                onOpenTimetable?.('exams');
               }
             }}
             className="group bg-white border-2 border-gray-800 rounded-xl p-4 sm:p-5 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex flex-col justify-between shadow-2xs"
@@ -313,11 +313,11 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
                 Exam Timetable &amp; MSE
               </h3>
               <p className="text-xs text-gray-500 mt-1 font-medium">
-                Mid-Semester Exams, Internal Assessments &amp; Dates
+                Mid-Semester Exams, DSY Dates &amp; Practical Schedule
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-900">
-              <span className="text-blue-700 font-black">MSE SCHEDULE</span>
+              <span className="text-blue-700 font-black">MSE &amp; ESE SCHEDULE</span>
               <span className="flex items-center gap-1 text-gray-700 group-hover:text-blue-900 group-hover:translate-x-1 transition-transform">
                 Check →
               </span>

@@ -86,7 +86,13 @@ function Shell() {
 
   const [sheetOverride, setSheetOverride] = useState<MoreSheetKind | null>(null);
   const [isTimetableOpen, setIsTimetableOpen] = useState(false);
+  const [timetableTab, setTimetableTab] = useState<'timetable' | 'exams'>('timetable');
   const sheet = sheetOverride ?? sheetFromPath;
+
+  const handleOpenTimetable = useCallback((tab: 'timetable' | 'exams' = 'timetable') => {
+    setTimetableTab(tab);
+    setIsTimetableOpen(true);
+  }, []);
 
   const handleOpenSheet = useCallback(
     (kind: MoreSheetKind) => {
@@ -127,7 +133,7 @@ function Shell() {
       <TopBar
         onOpenBookmarks={handleOpenBookmarks}
         onOpenSheet={handleOpenSheet}
-        onOpenTimetable={() => setIsTimetableOpen(true)}
+        onOpenTimetable={() => handleOpenTimetable('timetable')}
       />
 
       <div className={`flex flex-1 min-h-0 ${view.kind === 'study' ? 'overflow-hidden' : ''}`}>
@@ -139,7 +145,7 @@ function Shell() {
           {view.kind === 'home' && (
             <>
               <SubjectsHome
-                onOpenTimetable={() => setIsTimetableOpen(true)}
+                onOpenTimetable={handleOpenTimetable}
                 onOpenSheet={handleOpenSheet}
               />
               <Footer />
@@ -164,14 +170,14 @@ function Shell() {
         <BottomNav
           onOpenBookmarks={handleOpenBookmarks}
           onOpenSheet={handleOpenSheet}
-          onOpenTimetable={() => setIsTimetableOpen(true)}
+          onOpenTimetable={() => handleOpenTimetable('timetable')}
         />
       )}
 
       {/* Overlays */}
       <BulkUploadModal isOpen={uploadSubjectId !== null} onClose={closeUploadModal} subjectId={uploadSubjectId} folderId={uploadFolderId} />
       <ResourceEditModal />
-      <TimetableModal isOpen={isTimetableOpen} onClose={() => setIsTimetableOpen(false)} />
+      <TimetableModal isOpen={isTimetableOpen} onClose={() => setIsTimetableOpen(false)} initialTab={timetableTab} />
 
       {sheet && (
         <MoreSheet title={SHEET_META[sheet].title} subtitle={SHEET_META[sheet].subtitle} onClose={handleCloseSheet}>
