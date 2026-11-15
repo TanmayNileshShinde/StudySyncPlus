@@ -49,6 +49,7 @@ export const StudyWorkspace: React.FC<StudyWorkspaceProps> = ({
 
   // Set initial page in viewer context if supplied & reset window scroll to top
   useEffect(() => {
+    if (!documentId) return;
     window.scrollTo(0, 0);
     if (initialPage) {
       setViewerPage(initialPage);

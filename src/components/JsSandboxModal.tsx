@@ -192,13 +192,13 @@ export const JsSandboxModal: React.FC = () => {
               className="btn btn-secondary mb-4"
             >
               <Play className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>{isRunningChain ? 'Executing Chain…' : 'Run Promise Pipeline'}</span>
+              <span>{isRunningChain ? 'Executing Chain...' : 'Run Promise Pipeline'}</span>
             </button>
 
             <div className="p-4 bg-ink text-paper font-mono text-xs space-y-1.5 min-h-[140px] max-h-56 overflow-y-auto">
-              <p className="text-ink-3">// Pipeline Console Stream</p>
+              <p className="text-ink-3">{`// Pipeline Console Stream`}</p>
               {chainLogs.length === 0 ? (
-                <p className="text-ink-3">// Awaiting promise execution trigger…</p>
+                <p className="text-ink-3">{`// Awaiting promise execution trigger...`}</p>
               ) : (
                 chainLogs.map((log, idx) => (
                   <p key={idx} className="leading-relaxed text-lime">

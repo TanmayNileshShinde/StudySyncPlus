@@ -32,6 +32,16 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const isProgrammaticScroll = useRef(false);
+  const currentPageRef = useRef(currentPage);
+  const onPageChangeRef = useRef(onPageChange);
+
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+  }, [currentPage]);
+
+  useEffect(() => {
+    onPageChangeRef.current = onPageChange;
+  }, [onPageChange]);
 
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
@@ -200,8 +210,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
         if (bestEntry) {
           const pageNum = parseInt(bestEntry.target.getAttribute('data-page-number') || '1', 10);
-          if (pageNum && pageNum !== currentPage) {
-            onPageChange(pageNum);
+          if (pageNum && pageNum !== currentPageRef.current) {
+            onPageChangeRef.current(pageNum);
           }
         }
       },
@@ -213,7 +223,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
     pageElements.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [pdfDoc, numPages, computedScale, currentPage, onPageChange]);
+  }, [pdfDoc, computedScale]);
 
   // Keyboard navigation for power study (PageUp, PageDown, Home, End)
   useEffect(() => {

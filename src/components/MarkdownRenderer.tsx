@@ -73,126 +73,128 @@ const CodeBlock: React.FC<{
   );
 };
 
+const MARKDOWN_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>['components'] = {
+  pre({ children }) {
+    return <>{children}</>;
+  },
+  code({ className, children, ...props }) {
+    const match = /language-(\w+)/.exec(className || '');
+    const rawText = extractTextContent(children);
+    const isInline = !match && !rawText.includes('\n');
+
+    if (isInline) {
+      return (
+        <code
+          className="px-1.5 py-0.5 font-mono text-[12px] bg-paper-sunk border border-rule text-ink font-semibold"
+          {...props}
+        >
+          {children}
+        </code>
+      );
+    }
+
+    return (
+      <CodeBlock language={match ? match[1] : undefined} rawText={rawText}>
+        {children}
+      </CodeBlock>
+    );
+  },
+  table({ children }) {
+    return (
+      <div className="my-3.5 border border-rule overflow-x-auto bg-paper">
+        <table className="w-full text-left text-xs border-collapse">
+          {children}
+        </table>
+      </div>
+    );
+  },
+  thead({ children }) {
+    return (
+      <thead className="bg-paper-sunk border-b border-rule font-mono text-[11px] uppercase tracking-wider text-ink font-bold">
+        {children}
+      </thead>
+    );
+  },
+  tbody({ children }) {
+    return <tbody className="divide-y divide-rule">{children}</tbody>;
+  },
+  tr({ children }) {
+    return <tr className="hover:bg-paper-sunk/40 transition-colors">{children}</tr>;
+  },
+  th({ children }) {
+    return <th className="p-3 border-r border-rule last:border-r-0 font-bold text-ink whitespace-nowrap">{children}</th>;
+  },
+  td({ children }) {
+    return (
+      <td className="p-3 border-r border-rule last:border-r-0 font-normal leading-normal text-ink">
+        {children}
+      </td>
+    );
+  },
+  h1({ children }) {
+    return (
+      <h1 className="font-extrabold text-xl sm:text-2xl text-ink tracking-tight mt-5 mb-2 pb-1.5 border-b border-rule">
+        {children}
+      </h1>
+    );
+  },
+  h2({ children }) {
+    return (
+      <h2 className="font-bold text-lg sm:text-xl text-ink tracking-tight mt-4 mb-2 pb-1 border-b border-rule">
+        {children}
+      </h2>
+    );
+  },
+  h3({ children }) {
+    return (
+      <h3 className="font-bold text-base text-ink tracking-tight mt-3 mb-1.5">
+        {children}
+      </h3>
+    );
+  },
+  ul({ children }) {
+    return <ul className="list-disc pl-5 space-y-1.5 my-2 marker:text-ink-3">{children}</ul>;
+  },
+  ol({ children }) {
+    return <ol className="list-decimal pl-5 space-y-1.5 my-2 font-mono text-[13px]">{children}</ol>;
+  },
+  li({ children }) {
+    return <li className="pl-1 leading-relaxed text-ink">{children}</li>;
+  },
+  blockquote({ children }) {
+    return (
+      <blockquote className="my-3 pl-3.5 py-1 border-l-2 border-lime bg-paper-sunk text-ink-2 italic text-xs">
+        {children}
+      </blockquote>
+    );
+  },
+  p({ children }) {
+    return <p className="leading-relaxed my-2">{children}</p>;
+  },
+  strong({ children }) {
+    return <strong className="font-bold text-ink">{children}</strong>;
+  },
+  a({ href, children }) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-ink font-semibold underline decoration-lime decoration-2 underline-offset-2 hover:text-ink-2"
+      >
+        {children}
+      </a>
+    );
+  },
+};
+
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   return (
     <div className="prose-clean space-y-3.5 text-[14px] leading-relaxed text-ink">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
-        components={{
-          pre({ children }) {
-            return <>{children}</>;
-          },
-          code({ className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || '');
-            const rawText = extractTextContent(children);
-            const isInline = !match && !rawText.includes('\n');
-
-            if (isInline) {
-              return (
-                <code
-                  className="px-1.5 py-0.5 font-mono text-[12px] bg-paper-sunk border border-rule text-ink font-semibold"
-                  {...props}
-                >
-                  {children}
-                </code>
-              );
-            }
-
-            return (
-              <CodeBlock language={match ? match[1] : undefined} rawText={rawText}>
-                {children}
-              </CodeBlock>
-            );
-          },
-          table({ children }) {
-            return (
-              <div className="my-3.5 border border-rule overflow-x-auto bg-paper">
-                <table className="w-full text-left text-xs border-collapse">
-                  {children}
-                </table>
-              </div>
-            );
-          },
-          thead({ children }) {
-            return (
-              <thead className="bg-paper-sunk border-b border-rule font-mono text-[11px] uppercase tracking-wider text-ink font-bold">
-                {children}
-              </thead>
-            );
-          },
-          tbody({ children }) {
-            return <tbody className="divide-y divide-rule">{children}</tbody>;
-          },
-          tr({ children }) {
-            return <tr className="hover:bg-paper-sunk/40 transition-colors">{children}</tr>;
-          },
-          th({ children }) {
-            return <th className="p-3 border-r border-rule last:border-r-0 font-bold text-ink whitespace-nowrap">{children}</th>;
-          },
-          td({ children }) {
-            return (
-              <td className="p-3 border-r border-rule last:border-r-0 font-normal leading-normal text-ink">
-                {children}
-              </td>
-            );
-          },
-          h1({ children }) {
-            return (
-              <h1 className="font-extrabold text-xl sm:text-2xl text-ink tracking-tight mt-5 mb-2 pb-1.5 border-b border-rule">
-                {children}
-              </h1>
-            );
-          },
-          h2({ children }) {
-            return (
-              <h2 className="font-bold text-lg sm:text-xl text-ink tracking-tight mt-4 mb-2 pb-1 border-b border-rule">
-                {children}
-              </h2>
-            );
-          },
-          h3({ children }) {
-            return (
-              <h3 className="font-bold text-base text-ink tracking-tight mt-3 mb-1.5">
-                {children}
-              </h3>
-            );
-          },
-          ul({ children }) {
-            return <ul className="list-disc pl-5 space-y-1.5 my-2 marker:text-ink-3">{children}</ul>;
-          },
-          ol({ children }) {
-            return <ol className="list-decimal pl-5 space-y-1.5 my-2 font-mono text-[13px]">{children}</ol>;
-          },
-          li({ children }) {
-            return <li className="pl-1 leading-relaxed text-ink">{children}</li>;
-          },
-          blockquote({ children }) {
-            return (
-              <blockquote className="my-3 pl-3.5 py-1 border-l-2 border-lime bg-paper-sunk text-ink-2 italic text-xs">
-                {children}
-              </blockquote>
-            );
-          },
-          p({ children }) {
-            return <p className="leading-relaxed my-2">{children}</p>;
-          },
-          strong({ children }) {
-            return <strong className="font-bold text-ink">{children}</strong>;
-          },
-          a({ href, children }) {
-            return (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-ink font-semibold underline decoration-lime decoration-2 underline-offset-2 hover:text-ink-2"
-              >
-                {children}
-              </a>
-            );
-          },
-        }}
+        components={MARKDOWN_COMPONENTS}
       >
         {content}
       </ReactMarkdown>
