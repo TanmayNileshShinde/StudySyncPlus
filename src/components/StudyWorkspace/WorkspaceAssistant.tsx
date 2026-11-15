@@ -123,7 +123,7 @@ function parseAssistantMessage(content: string): { thinking: string | null; answ
  * Extracts tagged slide or page numbers and document references from text.
  * Matches @slide 2, /slide 4, @slides 1, 3, 5, @slide 2-5, @2, /4, @doc, /document, etc.
  */
-export function parseTagsFromText(
+function parseTagsFromText(
   text: string,
   fallbackTarget?: { page?: number | null } | null
 ): {

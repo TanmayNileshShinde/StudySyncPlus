@@ -1,18 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   X,
   Calendar,
   Clock,
   MapPin,
-  Sparkles,
   Award,
-  BookOpen,
   GraduationCap,
   Users,
   CheckCircle2,
-  CalendarDays,
-  FileText,
-  AlertCircle
+  CalendarDays
 } from 'lucide-react';
 
 interface Period {
@@ -294,6 +290,16 @@ export const TimetableModal: React.FC<{
 }> = ({ isOpen, onClose, initialTab = 'timetable' }) => {
   // Mode tabs: 'timetable' | 'exams'
   const [activeTab, setActiveTab] = useState<'timetable' | 'exams'>(initialTab);
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+  if (initialTab !== prevInitialTab || (isOpen && !prevIsOpen)) {
+    setPrevInitialTab(initialTab);
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }
 
   // Student division: 'regular' (SYCM1) vs 'dsy' (Direct Second Year)
   const [division, setDivision] = useState<'regular' | 'dsy'>(() => {
@@ -305,26 +311,19 @@ export const TimetableModal: React.FC<{
   });
 
   // Regular selected day
-  const [selectedDay, setSelectedDay] = useState<string>('Monday');
+  const [selectedDay, setSelectedDay] = useState<string>(() => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const today = days[new Date().getDay()];
+    return today !== 'Sunday' && REGULAR_SCHEDULE[today] ? today : 'Monday';
+  });
 
   // DSY selected module block
   const [selectedBlockId, setSelectedBlockId] = useState<string>('dsy-phase-1');
 
-  // Sync initialTab when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setActiveTab(initialTab);
-    }
-  }, [isOpen, initialTab]);
-
-  // Set today for regular schedule
-  useEffect(() => {
+  const [currentDayName] = useState<string>(() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const today = days[new Date().getDay()];
-    if (today !== 'Sunday' && REGULAR_SCHEDULE[today]) {
-      setSelectedDay(today);
-    }
-  }, []);
+    return days[new Date().getDay()];
+  });
 
   const handleSelectDivision = (div: 'regular' | 'dsy') => {
     setDivision(div);
@@ -337,7 +336,6 @@ export const TimetableModal: React.FC<{
 
   if (!isOpen) return null;
 
-  const currentDayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date().getDay()];
   const activeDsyBlock = DSY_BLOCKS.find((b) => b.id === selectedBlockId) || DSY_BLOCKS[0];
 
   return (

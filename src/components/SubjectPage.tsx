@@ -39,7 +39,6 @@ import {
   LayoutGrid,
   ChevronDown,
   ChevronUp,
-  File,
   Star
 } from 'lucide-react';
 import { DocumentCardThumbnail } from './DocumentCardThumbnail';
@@ -516,6 +515,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
   }, [
     own,
     currentFolderId,
+    activeFolder,
     isUnorganizedView,
     searchScope,
     subjectSearch,

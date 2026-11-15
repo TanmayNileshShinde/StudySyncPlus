@@ -11,11 +11,6 @@ import {
   Presentation,
   Search,
   X,
-  Calendar,
-  Award,
-  TableProperties,
-  Sparkles,
-  Folder,
   UserCheck
 } from 'lucide-react';
 import type { StudyResource, MoreSheetKind } from '../types';
@@ -52,7 +47,6 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
   const {
     subjects,
     resources,
-    semester,
     bookmarkIds,
     isLibraryLoading,
     openSubject,
@@ -64,20 +58,20 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
   const [structureOpen, setStructureOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const greeting = useMemo(() => {
+  const [greeting] = useState(() => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
-  }, []);
+  });
 
-  const formattedDate = useMemo(() => {
+  const [formattedDate] = useState(() => {
     return new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric'
     });
-  }, []);
+  });
 
   // Keyboard shortcut: '/' focuses search input from anywhere
   useEffect(() => {

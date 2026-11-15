@@ -11,10 +11,10 @@ const THUMBNAIL_DATA_CACHE = new Map<string, string>();
 
 interface DocumentCardThumbnailProps {
   resource: StudyResource;
-  index: number;
+  index?: number;
 }
 
-export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ resource, index }) => {
+export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ resource, index: _index }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
 
@@ -36,17 +36,16 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
   const pdfUrl = fileData?.url || staticPdfUrl || ((resource as any).fileUrl as string | undefined) || null;
 
   const cacheKey = pdfUrl || resource.id || resource.title;
-  const [thumbUrl, setThumbUrl] = useState<string | null>(() => {
-    return THUMBNAIL_DATA_CACHE.get(cacheKey) || null;
-  });
+  const cachedUrl = THUMBNAIL_DATA_CACHE.get(cacheKey) || null;
+  const [prevCacheKey, setPrevCacheKey] = useState(cacheKey);
+  const [loadedThumbUrl, setLoadedThumbUrl] = useState<string | null>(null);
 
-  // If cached in memory, use immediately
-  useEffect(() => {
-    const cached = THUMBNAIL_DATA_CACHE.get(cacheKey);
-    if (cached) {
-      setThumbUrl(cached);
-    }
-  }, [cacheKey]);
+  if (prevCacheKey !== cacheKey) {
+    setPrevCacheKey(cacheKey);
+    setLoadedThumbUrl(null);
+  }
+
+  const thumbUrl = cachedUrl || loadedThumbUrl;
 
   // Lazy observation
   useEffect(() => {
@@ -118,8 +117,8 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
 
         const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
         THUMBNAIL_DATA_CACHE.set(cacheKey, dataUrl);
-        setThumbUrl(dataUrl);
-      } catch (err: any) {
+        setLoadedThumbUrl(dataUrl);
+      } catch {
         // Keeps the clean academic document sheet fallback
       }
     };

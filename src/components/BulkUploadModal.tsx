@@ -147,13 +147,13 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
   const [running, setRunning] = useState(false);
   const [confettiDone, setConfettiDone] = useState(false);
 
-  const rawSubjectFolders = useQuery(
+  const rawSubjectFoldersQuery = useQuery(
     api.folders.listBySubject,
     selectedSubjectId ? { subjectId: asSubjectId(selectedSubjectId) } : 'skip'
-  ) ?? [];
+  );
 
   const subjectFolders = useMemo(() => {
-    const existing = rawSubjectFolders;
+    const existing = rawSubjectFoldersQuery ?? [];
     const existingNames = new Set(existing.map((f) => f.name.toLowerCase().trim()));
     const matchedSub = subjects.find((s) => s.id === selectedSubjectId);
     const courseCode = matchedSub?.courseCode || selectedSubjectId;
@@ -166,7 +166,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
     })).filter((sf) => !existingNames.has(sf.name.toLowerCase().trim()));
 
     return [...existing, ...stdFolders];
-  }, [rawSubjectFolders, subjects, selectedSubjectId]);
+  }, [rawSubjectFoldersQuery, subjects, selectedSubjectId]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const itemsRef = useRef<QueueItem[]>([]);

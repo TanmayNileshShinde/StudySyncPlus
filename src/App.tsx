@@ -1,7 +1,8 @@
 import React, { Component, useState, useMemo, useCallback } from 'react';
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 import { ConvexProvider, ConvexReactClient } from 'convex/react';
-import { ResourceProvider, useResources } from './context/ResourceContext';
+import { ResourceProvider } from './context/ResourceProvider';
+import { useResources } from './context/ResourceContext';
 import { TopBar, BottomNav } from './components/TopBar';
 import { SubjectRail } from './components/SubjectRail';
 import { SubjectsHome } from './components/SubjectsHome';
