@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { asResourceId } from '../lib/convexIds';
 import type { StudyResource } from '../types';
 import { getStaticPdfUrl } from '../lib/staticMaterials';
 import { pdfjsLib, getSharedPdfWorker } from '../lib/pdfjsWorker';
@@ -14,14 +17,36 @@ interface DocumentCardThumbnailProps {
 export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ resource, index }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
+
+  // Check if resource has a server-stored file in Convex
+  const isServerId = Boolean(
+    resource &&
+    resource.hasFile &&
+    !resource.id.startsWith('res-') &&
+    resource.id.length > 10
+  );
+
+  // Fetch real file URL from Convex Storage
+  const fileData = useQuery(
+    api.resources.fileUrl,
+    isServerId ? { id: asResourceId(resource.id) } : 'skip'
+  );
+
+  const staticPdfUrl = useMemo(() => getStaticPdfUrl(resource), [resource]);
+  const pdfUrl = fileData?.url || staticPdfUrl || ((resource as any).fileUrl as string | undefined) || null;
+
+  const cacheKey = pdfUrl || resource.id || resource.title;
   const [thumbUrl, setThumbUrl] = useState<string | null>(() => {
-    const key = resource.id || resource.title;
-    return THUMBNAIL_DATA_CACHE.get(key) || null;
+    return THUMBNAIL_DATA_CACHE.get(cacheKey) || null;
   });
 
-  const pdfUrl = useMemo(() => {
-    return getStaticPdfUrl(resource) || ((resource as any).fileUrl as string | undefined) || null;
-  }, [resource]);
+  // If cached in memory, use immediately
+  useEffect(() => {
+    const cached = THUMBNAIL_DATA_CACHE.get(cacheKey);
+    if (cached) {
+      setThumbUrl(cached);
+    }
+  }, [cacheKey]);
 
   // Lazy observation
   useEffect(() => {
@@ -38,7 +63,7 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
         });
       },
       {
-        rootMargin: '250px 0px 250px 0px',
+        rootMargin: '300px 0px 300px 0px',
         threshold: 0
       }
     );
@@ -47,12 +72,11 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
     return () => observer.disconnect();
   }, [thumbUrl]);
 
-  // PDF.js render page 1 to dataURL
+  // PDF.js render real original page 1 to canvas dataURL
   useEffect(() => {
     if (!inView || thumbUrl || !pdfUrl) return;
 
     let cancelled = false;
-    const cacheKey = resource.id || resource.title;
 
     const renderFirstPage = async () => {
       try {
@@ -67,9 +91,9 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
         const page = await doc.getPage(1);
         if (cancelled) return;
 
-        // Render at a crisp thumbnail resolution (~280px wide)
+        // Render at a crisp thumbnail resolution (~360px wide)
         const unscaledViewport = page.getViewport({ scale: 1 });
-        const targetWidth = 320;
+        const targetWidth = 360;
         const scale = targetWidth / unscaledViewport.width;
         const viewport = page.getViewport({ scale });
 
@@ -81,7 +105,7 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
         if (!ctx) return;
 
         ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'medium';
+        ctx.imageSmoothingQuality = 'high';
 
         const renderTask = page.render({
           canvasContext: ctx,
@@ -92,11 +116,11 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
         await renderTask.promise;
         if (cancelled) return;
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
         THUMBNAIL_DATA_CACHE.set(cacheKey, dataUrl);
         setThumbUrl(dataUrl);
       } catch (err: any) {
-        // Fallback to styled SVG preview on load failure/CORS
+        // Keeps the clean academic document sheet fallback
       }
     };
 
@@ -105,24 +129,21 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
     return () => {
       cancelled = true;
     };
-  }, [inView, thumbUrl, pdfUrl, resource.id, resource.title]);
+  }, [inView, thumbUrl, pdfUrl, cacheKey]);
 
-  // Derived slide title and labels for styled slide cover preview
+  // Clean document title for fallback display
   const displayTitle = useMemo(() => {
-    const raw = resource.title || resource.fileName || 'Course Material';
+    const raw = resource.fileName || resource.title || 'Course Material';
     return raw.replace(/\.pdf$/i, '').trim();
   }, [resource.title, resource.fileName]);
-
-  const subjectHeading = useMemo(() => {
-    return resource.subjectName || resource.courseCode || 'Shah & Anchor Kutchhi Engineering College';
-  }, [resource.subjectName, resource.courseCode]);
 
   return (
     <div
       ref={containerRef}
-      className="w-full aspect-[16/10] rounded-xl overflow-hidden border border-gray-200 bg-[#0d1b2a] relative select-none shadow-xs group-hover:border-gray-800 transition-colors"
+      className="w-full aspect-[16/10] rounded-xl overflow-hidden border-2 border-gray-800 bg-white relative select-none shadow-2xs group-hover:shadow-md transition-all flex items-center justify-center"
     >
       {thumbUrl ? (
+        /* Real OG Scanned/Rendered Page 1 of the Document */
         <img
           src={thumbUrl}
           alt={resource.title}
@@ -130,45 +151,49 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
           loading="lazy"
         />
       ) : (
-        /* SAKEC Style Slide Deck Cover SVG matching ClassPost preview */
-        <div className="w-full h-full relative overflow-hidden flex flex-col justify-between p-3 bg-gradient-to-br from-[#0c192c] via-[#0d1b2a] to-[#070e17] text-white">
-          {/* Geometric Origami Polygons on Left (exact SAKEC slide design) */}
-          <div className="absolute -left-2 top-0 bottom-0 w-16 pointer-events-none opacity-90 overflow-hidden">
-            <svg viewBox="0 0 70 120" className="w-full h-full preserve-3d" preserveAspectRatio="none">
-              <polygon points="0,0 45,35 0,70" fill="#15803d" />
-              <polygon points="0,35 60,65 0,95" fill="#22c55e" />
-              <polygon points="0,65 35,90 0,120" fill="#4ade80" opacity="0.8" />
-              <polygon points="45,35 60,65 0,35" fill="#166534" opacity="0.6" />
-            </svg>
-          </div>
-
-          {/* Top Row: Institution Emblem Accent */}
-          <div className="flex items-center justify-between pl-10 relative z-10">
-            <span className="text-[9px] font-extrabold tracking-wider uppercase text-red-400 truncate max-w-[170px]">
-              {subjectHeading}
-            </span>
-            <div className="w-5 h-5 rounded-full border border-amber-300/40 bg-amber-400/10 flex items-center justify-center shrink-0">
-              <span className="text-[8px] font-bold text-amber-300">🏛</span>
+        /* Clean Authentic SAKEC Academic Document Cover (OG format) */
+        <div className="w-full h-full bg-white p-2.5 sm:p-3 flex flex-col justify-between text-gray-900 select-none">
+          {/* Official College Header */}
+          <div className="text-center border-b pb-1.5 border-gray-200">
+            <div className="flex items-center justify-center gap-1.5 mb-0.5">
+              <div className="w-4 h-4 rounded-sm border border-blue-900 bg-blue-50 text-blue-900 flex items-center justify-center text-[9px] font-bold">
+                ⚓
+              </div>
+              <span className="font-extrabold text-[10px] uppercase text-blue-950 tracking-tight truncate">
+                Shah &amp; Anchor Kutchhi Engg. College
+              </span>
             </div>
-          </div>
-
-          {/* Center Content: Module & Topic Title */}
-          <div className="pl-10 my-auto relative z-10">
-            <div className="text-[10px] font-extrabold uppercase tracking-wide text-red-500 mb-0.5">
-              {(resource as any).folderName || 'Module 1'}
-            </div>
-            <h5 className="font-extrabold text-[12px] sm:text-[13px] leading-snug text-amber-300 line-clamp-2 drop-shadow-xs">
-              {displayTitle}
-            </h5>
-            <p className="text-[9px] text-slate-400 mt-1 truncate">
-              {resource.uploadedBy ? `Prof. / Roll: ${resource.uploadedBy}` : 'Computer Engineering Dept · SAKEC'}
+            <p className="text-[7.5px] font-mono text-gray-500 uppercase tracking-wider">
+              Autonomous Institute • Department of Computer Engineering
             </p>
           </div>
 
-          {/* Bottom Row: File Info Badge */}
-          <div className="flex items-center justify-between pl-10 relative z-10 pt-1 border-t border-slate-700/50 text-[8.5px] font-mono text-slate-400">
-            <span>{resource.type || 'Lecture Notes'}</span>
-            <span className="text-amber-300 font-bold">{resource.fileSize}</span>
+          {/* Academic Metadata Grid (matching Image 2) */}
+          <div className="border border-gray-800 rounded text-[8px] font-mono my-1 overflow-hidden">
+            <div className="grid grid-cols-2 border-b border-gray-300 bg-gray-50 px-1.5 py-0.5 font-bold text-gray-800">
+              <span className="truncate">Course: {resource.subjectName || resource.courseCode}</span>
+              <span className="text-right truncate">Sem: III · SYCM1</span>
+            </div>
+            <div className="grid grid-cols-2 px-1.5 py-0.5 text-gray-600">
+              <span className="truncate">Code: {resource.courseCode}</span>
+              <span className="text-right truncate">Roll: {resource.rollNumber || '68'}</span>
+            </div>
+          </div>
+
+          {/* Document / Experiment Title Box */}
+          <div className="border border-gray-800 rounded bg-neutral-50 p-1.5 my-auto">
+            <span className="text-[8px] font-black uppercase text-red-600 block">
+              {(resource as any).folderName || resource.type || 'Course Material'}
+            </span>
+            <h5 className="font-extrabold text-[11px] text-gray-900 line-clamp-2 leading-tight">
+              {displayTitle}
+            </h5>
+          </div>
+
+          {/* Bottom Footer Info */}
+          <div className="flex items-center justify-between text-[8px] font-mono text-gray-500 pt-1 border-t border-gray-200">
+            <span className="font-bold text-blue-950">A.Y. 2026-2027</span>
+            <span className="bg-gray-100 px-1 rounded font-bold text-gray-700">{resource.fileSize}</span>
           </div>
         </div>
       )}
