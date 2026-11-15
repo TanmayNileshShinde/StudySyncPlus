@@ -4,7 +4,7 @@ import { SEED_RESOURCES, SEED_SEMESTER, SEED_SUBJECTS, STANDARD_FOLDERS } from "
 import type { Id } from "./_generated/dataModel";
 
 /** Seed bookmarks for the calling owner, mirroring the old default profile. */
-const DEFAULT_BOOKMARK_LEGACY_IDS = ["res-001", "res-002"];
+const DEFAULT_BOOKMARK_LEGACY_IDS = ["res-001", "res-010"];
 
 /**
  * Idempotently ensure the Semester III dataset exists. Safe to call any time:

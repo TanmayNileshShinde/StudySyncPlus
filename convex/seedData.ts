@@ -326,112 +326,10 @@ export const SEED_RESOURCES: SeedResource[] = [
       "Data visualization charts using Chart.js, responsive layouts, web hosting essentials, and CI/CD deployment onto Vercel and GitHub Pages.",
     tags: ["ChartJS", "Deployment", "GitHubPages", "Vercel"],
   },
-  {
-    legacyId: "res-045",
-    courseCode: "CMLOR2VS201",
-    title: "Web Technology II — Laboratory Journal & Practical Code Experiments",
-    subjectName: "Web Technology II",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Tanmay Shinde",
-    rollNumber: "126BTCM2008",
-    uploadDate: "2026-11-02",
-    sizeMb: 6.2,
-    downloadCount: 510,
-    rating: 4.9,
-    description:
-      "All semester experiments: ES6 calculator, dynamic DOM table filter, Fetch API currency converter, React todo list with context, and Chart.js analytics dashboard.",
-    tags: ["LabManual", "Practical", "Code", "WebTech2"],
-  },
-  {
-    legacyId: "res-wt2-exp1",
-    courseCode: "CMLOR2VS201",
-    title: "Web Technology II — Experiment 1: Form Validation & Local Storage Persistence",
-    subjectName: "Web Technology II",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Tanmay Nilesh Shinde",
-    rollNumber: "67 (126BTCM2008)",
-    uploadDate: "2026-10-18",
-    sizeMb: 0.48,
-    downloadCount: 142,
-    rating: 5.0,
-    description:
-      "Aim: Develop a form with validation using JavaScript and localStorage. Includes complete source code, DOM validation, DevTools Local Storage output, Review Questions (Swap numbers without 3rd variable, Find largest in array), and conclusion.",
-    tags: ["Experiment1", "FormValidation", "LocalStorage", "WebTech2", "SYCM1-B"],
-  },
-  {
-    legacyId: "res-wt2-exp2",
-    courseCode: "CMLOR2VS201",
-    title: "Web Technology II — Experiment 2: Live Clock & Interactive Calendar using DOM Manipulation",
-    subjectName: "Web Technology II",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Tanmay Nilesh Shinde",
-    rollNumber: "67 (126BTCM2008)",
-    uploadDate: "2026-10-24",
-    sizeMb: 0.39,
-    downloadCount: 156,
-    rating: 5.0,
-    description:
-      "Aim: Implement a live clock and calendar using JavaScript DOM methods. Includes real-time setInterval clock, dynamic calendar table generation with highlighted current date, Review Questions (change class background color, display weekdays with Date()), and conclusion.",
-    tags: ["Experiment2", "LiveClock", "Calendar", "DOM", "JavaScript", "SYCM1-B"],
-  },
-  {
-    legacyId: "res-wt2-exp3",
-    courseCode: "CMLOR2VS201",
-    title: "Web Technology II — Experiment 3: Consuming REST APIs using JavaScript Fetch API",
-    subjectName: "Web Technology II",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Tanmay Nilesh Shinde",
-    rollNumber: "67 (126BTCM2008)",
-    uploadDate: "2026-10-30",
-    sizeMb: 1.81,
-    downloadCount: 168,
-    rating: 5.0,
-    description:
-      "Aim: Create a webpage that consumes a REST API using fetch(). Includes asynchronous data fetching from jsonplaceholder API, dynamic table rendering, error handling, Review Questions (Random Quote Generator from quotable.io, Dog Image Fetcher from dog.ceo), and conclusion.",
-    tags: ["Experiment3", "RESTAPI", "FetchAPI", "Async", "JavaScript", "SYCM1-B"],
-  },
-  {
-    legacyId: "res-wt2-exp4",
-    courseCode: "CMLOR2VS201",
-    title: "Web Technology II — Experiment 4: Real-time Live Search Filter using AJAX & XMLHttpRequest",
-    subjectName: "Web Technology II",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Tanmay Nilesh Shinde",
-    rollNumber: "67 (126BTCM2008)",
-    uploadDate: "2026-11-05",
-    sizeMb: 0.68,
-    downloadCount: 185,
-    rating: 5.0,
-    description:
-      "Aim: Create a search bar that performs live filtering using AJAX. Includes XMLHttpRequest REST API fetch, instant client-side input filtering without page reload, Review Questions (AJAX user table, City alphabetical sort), and conclusion.",
-    tags: ["Experiment4", "AJAX", "LiveSearch", "XMLHttpRequest", "Filter", "SYCM1-B"],
-  },
 
   // ==========================================
   // Data Structures (CMCOR2PC203)
   // ==========================================
-  {
-    legacyId: "res-002",
-    courseCode: "CMCOR2PC203",
-    title: "Data Structures — AVL Trees, Graphs & Traversal Implementation",
-    subjectName: "Data Structures",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Aditya Shah",
-    rollNumber: "126BTCM2009",
-    uploadDate: "2026-09-28",
-    sizeMb: 5.2,
-    downloadCount: 512,
-    rating: 4.8,
-    description:
-      "Verified C++ programs for Balanced BSTs, B-Trees, Dijkstra shortest path, BFS/DFS traversals, and dynamic arrays with complexity proofs.",
-    tags: ["DataStructures", "CMCOR2PC203", "Trees", "Graphs", "Algorithms"],
-  },
   {
     legacyId: "res-010",
     courseCode: "CMCOR2PC203",
@@ -675,23 +573,6 @@ export const SEED_RESOURCES: SeedResource[] = [
     tags: ["MemoryManagement", "Paging", "VirtualMemory", "PageFaults"],
   },
   {
-    legacyId: "res-026",
-    courseCode: "CMCOR2PC202",
-    title: "Operating System — Linux Shell Scripting & System Programming Lab Manual",
-    subjectName: "Operating System",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Prof. VK",
-    rollNumber: "Faculty",
-    uploadDate: "2026-11-01",
-    sizeMb: 6.5,
-    downloadCount: 520,
-    rating: 4.9,
-    description:
-      "Hands-on Linux shell scripts, process creation using fork(), POSIX pthread multithreading, semaphore synchronization code in C, and CPU scheduling simulators.",
-    tags: ["Linux", "ShellScripting", "CProgramming", "LabManual"],
-  },
-  {
     legacyId: "res-027",
     courseCode: "CMCOR2PC202",
     title: "Operating System — Mid-Semester Exam & Autonomous End-Sem Question Papers",
@@ -798,23 +679,6 @@ export const SEED_RESOURCES: SeedResource[] = [
     tags: ["UART", "I2C", "SPI", "Protocols"],
   },
   {
-    legacyId: "res-032",
-    courseCode: "CMCOR2MD201",
-    title: "Foundation of Embedded System — Laboratory Experiments & Interfacing Code",
-    subjectName: "Foundation of Embedded System",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Prof. VM",
-    rollNumber: "Faculty",
-    uploadDate: "2026-11-03",
-    sizeMb: 6.1,
-    downloadCount: 480,
-    rating: 4.9,
-    description:
-      "Complete verified Keil µVision / Arduino / STM32 code implementations for GPIO blinking, LCD display interfacing, ADC read, and PWM dimming.",
-    tags: ["LabManual", "Keil", "Code", "FES"],
-  },
-  {
     legacyId: "res-033",
     courseCode: "CMCOR2MD201",
     title: "Foundation of Embedded System — Mid-Semester Exam & SAKEC Question Bank",
@@ -835,23 +699,6 @@ export const SEED_RESOURCES: SeedResource[] = [
   // ==========================================
   // Microprocessor (CMCOR2PC204)
   // ==========================================
-  {
-    legacyId: "res-005",
-    courseCode: "CMCOR2PC204",
-    title: "Microprocessor — 8086 Architecture, Assembly & Interfacing Manual",
-    subjectName: "Microprocessor",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Tanmay Shinde",
-    rollNumber: "126BTCM2008",
-    uploadDate: "2026-10-22",
-    sizeMb: 7.1,
-    downloadCount: 345,
-    rating: 4.8,
-    description:
-      "Assembly Language Programs (ALP) for 8086 addressing modes, string operations, 8255 PPI interfacing, and interrupt vector tables.",
-    tags: ["Microprocessor", "CMCOR2PC204", "8086", "Assembly", "MASM"],
-  },
   {
     legacyId: "res-034",
     courseCode: "CMCOR2PC204",
@@ -1025,23 +872,6 @@ export const SEED_RESOURCES: SeedResource[] = [
     description:
       "Collection interface hierarchy, List vs Set vs Map implementations, Iterators, Generics type safety, and file stream handling with BufferedReader/BufferedWriter.",
     tags: ["Collections", "ArrayList", "HashMap", "Generics"],
-  },
-  {
-    legacyId: "res-051",
-    courseCode: "CMLOR2VS202",
-    title: "OOP with Java — Laboratory Manual & Verified Solution Repository",
-    subjectName: "OOP with Java",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Tanmay Shinde",
-    rollNumber: "126BTCM2008",
-    uploadDate: "2026-11-04",
-    sizeMb: 5.9,
-    downloadCount: 530,
-    rating: 5.0,
-    description:
-      "All assigned lab programs with test cases: banking system with custom exceptions, producer-consumer thread monitor, student database collection, and file persistence.",
-    tags: ["LabManual", "Java", "Programs", "Code"],
   },
 
   // ==========================================
@@ -1381,27 +1211,6 @@ export const SEED_RESOURCES: SeedResource[] = [
     description:
       "Shabdabodha representation, conceptual dependency structures, building machine translation and knowledge graphs using Sanskrit grammatical constructs.",
     tags: ["KnowledgeRepresentation", "DependencyParsing", "Shabdabodha"],
-  },
-
-  // ==========================================
-  // Community Engagement Project Lab (CMLOR2CP201)
-  // ==========================================
-  {
-    legacyId: "res-069",
-    courseCode: "CMLOR2CP201",
-    title: "Community Engagement Project — Problem Identification & Social Survey Handbook",
-    subjectName: "Community Engagement Project Lab",
-    type: "Lab Manual",
-    folderName: "Lab Manuals & Code",
-    uploadedBy: "Prof. CEP",
-    rollNumber: "Faculty",
-    uploadDate: "2026-09-15",
-    sizeMb: 2.9,
-    downloadCount: 320,
-    rating: 4.8,
-    description:
-      "Guidelines for community needs assessment, field surveys, social impact indicators, stakeholder interviews, and engineering solutions for civic problems.",
-    tags: ["CEP", "Community", "FieldWork", "SocialImpact"],
   },
 
   // ==========================================
