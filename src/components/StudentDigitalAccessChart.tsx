@@ -16,12 +16,13 @@ import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import {
   Laptop,
   Wifi,
-  Globe,
   RefreshCw,
   Clock,
   TrendingUp,
   BarChart3,
   PieChart,
+  BookOpen,
+  GraduationCap,
   ShieldCheck,
   Zap,
   CheckCircle2
@@ -44,7 +45,6 @@ ChartJS.register(
 
 const INK = '#0f172a';
 const YELLOW = '#eab308';
-const EMERALD = '#10b981';
 const MONO = "'JetBrains Mono', monospace";
 
 const tooltipStyle = {
@@ -59,7 +59,7 @@ const tooltipStyle = {
 export const StudentDigitalAccessChart: React.FC = () => {
   const [data, setData] = useState<StudentDigitalAccessData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'devices' | 'internet' | 'trends' | 'worldbank'>('devices');
+  const [activeTab, setActiveTab] = useState<'devices' | 'internet' | 'subjects' | 'trends'>('devices');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   // Initial load
@@ -103,7 +103,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
         <div className="flex items-center justify-center gap-3">
           <RefreshCw className="w-5 h-5 text-slate-900 animate-spin" />
           <span className="font-mono text-sm font-bold text-slate-900">
-            Fetching Live API from World Bank &amp; Student Telemetry...
+            Querying Live Academic Question Bank &amp; Student Telemetry API...
           </span>
         </div>
       </div>
@@ -151,7 +151,31 @@ export const StudentDigitalAccessChart: React.FC = () => {
     ]
   };
 
-  // Chart 3: Weekly Online Study Hours Trend (Line Chart)
+  // Chart 3: Live Academic Subject Question Bank (Open Trivia DB API)
+  const subjectList = data.academicSubjectQuestions || [];
+  const subjectChartData = {
+    labels: subjectList.map((s) => s.subject),
+    datasets: [
+      {
+        label: 'Verified Questions (Live API)',
+        data: subjectList.map((s) => s.verifiedQuestions),
+        backgroundColor: 'rgba(59, 130, 246, 0.85)',
+        borderColor: INK,
+        borderWidth: 1.5,
+        borderRadius: 4
+      },
+      {
+        label: 'Total Question Bank Pool',
+        data: subjectList.map((s) => s.totalQuestions),
+        backgroundColor: 'rgba(234, 179, 8, 0.75)',
+        borderColor: INK,
+        borderWidth: 1.5,
+        borderRadius: 4
+      }
+    ]
+  };
+
+  // Chart 4: Weekly Online Study Hours Trend (Line Chart)
   const hoursChartData = {
     labels: data.weeklyOnlineHours.map((h) => h.semester),
     datasets: [
@@ -172,29 +196,6 @@ export const StudentDigitalAccessChart: React.FC = () => {
     ]
   };
 
-  // Chart 4: World Bank National Internet Access Growth (Line Chart)
-  const worldBankLabels = (data.worldBankData || []).map((w) => w.year);
-  const worldBankValues = (data.worldBankData || []).map((w) => w.percentage);
-  const worldBankChartData = {
-    labels: worldBankLabels,
-    datasets: [
-      {
-        label: 'Individuals Using the Internet (% of Population)',
-        data: worldBankValues,
-        borderColor: EMERALD,
-        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-        borderWidth: 2.5,
-        fill: true,
-        tension: 0.3,
-        pointBackgroundColor: EMERALD,
-        pointBorderColor: INK,
-        pointBorderWidth: 2,
-        pointRadius: 6,
-        pointHoverRadius: 8
-      }
-    ]
-  };
-
   return (
     <div className="card-neo bg-white rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a] p-5 sm:p-7 overflow-hidden">
       {/* 1. Header with Badge & Live API Controls */}
@@ -203,7 +204,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
           <div className="flex items-center flex-wrap gap-2 mb-1.5">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 border border-emerald-500 font-mono text-[11px] font-bold text-emerald-800">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Live Public API Feed
+              Live Student &amp; Academic API
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900 text-white font-mono text-[10px] font-bold">
               <CheckCircle2 className="w-3 h-3 text-emerald-400" />
@@ -216,11 +217,11 @@ export const StudentDigitalAccessChart: React.FC = () => {
           </div>
 
           <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Laptop className="w-5 h-5 text-yellow-500 stroke-[2.5]" />
-            Student Digital Learning &amp; Device Access
+            <GraduationCap className="w-5 h-5 text-yellow-500 stroke-[2.5]" />
+            Student Digital Learning &amp; Academic Telemetry
           </h2>
           <p className="text-xs text-slate-600 font-medium mt-0.5">
-            Live real-time visualization of student laptop availability, internet connectivity &amp; World Bank digital growth.
+            Live real-time data visualization of student laptop access, broadband connectivity &amp; academic subject question banks.
           </p>
         </div>
 
@@ -277,8 +278,8 @@ export const StudentDigitalAccessChart: React.FC = () => {
 
         <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 shadow-xs">
           <div className="flex items-center gap-1.5 text-slate-600 font-mono text-[11px] font-bold">
-            <Globe className="w-3.5 h-3.5 text-blue-600" />
-            <span>Hybrid / Online</span>
+            <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+            <span>Online Study Mode</span>
           </div>
           <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
             {data.keyMetrics.onlineStudyAdoption}%
@@ -329,6 +330,18 @@ export const StudentDigitalAccessChart: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('subjects')}
+          className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'subjects'
+              ? 'bg-blue-600 text-white border-slate-900 shadow-[2px_2px_0px_#eab308]'
+              : 'bg-blue-50 text-blue-800 border-blue-200 hover:border-slate-900'
+          }`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Academic Subject Bank (Live API)</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('trends')}
           className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             activeTab === 'trends'
@@ -338,18 +351,6 @@ export const StudentDigitalAccessChart: React.FC = () => {
         >
           <TrendingUp className="w-3.5 h-3.5" />
           <span>Semester Study Hours</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('worldbank')}
-          className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === 'worldbank'
-              ? 'bg-emerald-700 text-white border-slate-900 shadow-[2px_2px_0px_#eab308]'
-              : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:border-slate-900'
-          }`}
-        >
-          <Globe className="w-3.5 h-3.5" />
-          <span>World Bank Live Net Data</span>
         </button>
       </div>
 
@@ -420,6 +421,47 @@ export const StudentDigitalAccessChart: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'subjects' && (
+          <div className="w-full h-[260px]">
+            <Bar
+              data={subjectChartData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'top',
+                    labels: { font: { family: MONO, size: 10, weight: 'bold' }, color: INK }
+                  },
+                  tooltip: tooltipStyle,
+                  title: {
+                    display: true,
+                    text: 'Live Open Trivia DB Academic API: Question Bank Distribution by Subject',
+                    font: { family: MONO, size: 12, weight: 'bold' },
+                    color: INK
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    grid: { color: '#e2e8f0' },
+                    ticks: {
+                      font: { family: MONO, size: 10 },
+                      color: '#64748b'
+                    },
+                    border: { color: INK, width: 1.5 }
+                  },
+                  x: {
+                    grid: { display: false },
+                    ticks: { font: { family: MONO, size: 10, weight: 'bold' }, color: INK },
+                    border: { color: INK, width: 1.5 }
+                  }
+                }
+              }}
+            />
+          </div>
+        )}
+
         {activeTab === 'trends' && (
           <div className="w-full h-[260px]">
             <Line
@@ -445,46 +487,6 @@ export const StudentDigitalAccessChart: React.FC = () => {
                       font: { family: MONO, size: 10 },
                       color: '#64748b',
                       callback: (v) => `${v} hrs`
-                    },
-                    border: { color: INK, width: 1.5 }
-                  },
-                  x: {
-                    grid: { display: false },
-                    ticks: { font: { family: MONO, size: 10, weight: 'bold' }, color: INK },
-                    border: { color: INK, width: 1.5 }
-                  }
-                }
-              }}
-            />
-          </div>
-        )}
-
-        {activeTab === 'worldbank' && (
-          <div className="w-full h-[260px]">
-            <Line
-              data={worldBankChartData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: tooltipStyle,
-                  title: {
-                    display: true,
-                    text: 'Live World Bank API (api.worldbank.org): Internet Penetration Rate in India (%)',
-                    font: { family: MONO, size: 12, weight: 'bold' },
-                    color: INK
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    max: 100,
-                    grid: { color: '#e2e8f0' },
-                    ticks: {
-                      font: { family: MONO, size: 10 },
-                      color: '#64748b',
-                      callback: (v) => `${v}%`
                     },
                     border: { color: INK, width: 1.5 }
                   },
