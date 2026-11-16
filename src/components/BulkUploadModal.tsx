@@ -154,7 +154,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
 
   const subjectFolders = useMemo(() => {
     const existing = (rawSubjectFoldersQuery ?? []).filter(
-      (f) => f.name.toLowerCase().trim() === 'practicals'
+      (f) => !f.name.toLowerCase().includes('lab manual')
     );
     const existingNames = new Set(existing.map((f) => f.name.toLowerCase().trim()));
     const matchedSub = subjects.find((s) => s.id === selectedSubjectId);
@@ -168,7 +168,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
     })).filter((sf) => !existingNames.has(sf.name.toLowerCase().trim()));
 
     return [...existing, ...stdFolders].filter(
-      (f) => f.name.toLowerCase().trim() === 'practicals'
+      (f) => !f.name.toLowerCase().includes('lab manual')
     );
   }, [rawSubjectFoldersQuery, subjects, selectedSubjectId]);
 

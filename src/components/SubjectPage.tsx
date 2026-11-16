@@ -189,9 +189,9 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
   );
 
   const folders = useMemo(() => {
-    // Only allow single "Practicals" folder across all subjects
+    // Exclude obsolete "Lab Manuals" folder so "Practicals" is the single authoritative practicals folder
     const existing = ((rawFolders ?? []) as Folder[]).filter(
-      (f) => f.name.toLowerCase().trim() === 'practicals'
+      (f) => !f.name.toLowerCase().includes('lab manual')
     );
     const existingNames = new Set(existing.map((f) => f.name.toLowerCase().trim()));
 
@@ -210,18 +210,20 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
     })).filter((sf) => !existingNames.has(sf.name.toLowerCase().trim()));
 
     const all = [...existing, ...stdFolders].filter(
-      (f) => f.name.toLowerCase().trim() === 'practicals'
+      (f) => !f.name.toLowerCase().includes('lab manual')
     );
     return all.map((f) => {
       const count = own.filter((r) => {
         if (r.folderId === f.id) return true;
         if ((r as any).folderName === f.name) return true;
-        const isOsSubject =
-          (courseCode && courseCode.includes('202')) ||
-          (subject?.name && subject.name.toLowerCase().includes('operating system')) ||
-          (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating system'));
-        if (isOsSubject && (/Experiment|Expt|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
-          return true;
+        if (f.name.toLowerCase().trim() === 'practicals') {
+          const isOsSubject =
+            (courseCode && courseCode.includes('202')) ||
+            (subject?.name && subject.name.toLowerCase().includes('operating system')) ||
+            (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating system'));
+          if (isOsSubject && (/Experiment|Expt|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
+            return true;
+          }
         }
         return false;
       }).length;

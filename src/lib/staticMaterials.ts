@@ -16,5 +16,10 @@ export const getStaticPdfUrl = (doc?: { title?: string; fileName?: string | null
     }
   }
 
+  // Data Structures & Algorithms (DSA) Master Guide
+  if (/Data Structure|DSA|Stack|Queue|CMCOR2PC203|Tree|Linked List|res-020/i.test(str)) {
+    return `${base}/pdf-files-to-test/DSA_MSE_Master_Study_Guide.pdf`;
+  }
+
   return null;
 };
