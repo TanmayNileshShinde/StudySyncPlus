@@ -287,9 +287,10 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const rawFromServer = (resourceRows ?? []) as StudyResource[];
     // Keep real OS practicals and all module notes / question papers; filter out only old placeholder practicals in other subjects
     const fromServer = rawFromServer.filter((r) => {
-      if (r.id && String(r.id).startsWith('res-os-')) return true;
-      if (/SYCM1_67_OS_EXPT/i.test(r.fileName || '')) return true;
-      if (r.courseCode === 'CMCOR2PC202' && /OS Experiment/i.test(r.title || '')) return true;
+      // Exclude all OS practicals and experiment files
+      if (r.id && String(r.id).startsWith('res-os-')) return false;
+      if (/SYCM1_(67|68)_OS_EXPT/i.test(r.fileName || '') || /SYCM1_(67|68)_OS_EXPT/i.test(r.title || '')) return false;
+      if (r.courseCode === 'CMCOR2PC202' && /OS Experiment/i.test(r.title || '')) return false;
       if (r.isUserUploaded) return true;
 
       // Filter out old placeholder practicals and lab manuals in other subjects

@@ -217,19 +217,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
         if (r.folderId === f.id) return true;
         if ((r as any).folderName === f.name) return true;
         if (f.name.toLowerCase().trim() === 'practicals') {
-          // Strictly keep Tanmay's roll 67 practicals; exclude any 68 files from practicals
-          const roll = String(r.rollNumber || '');
-          const uploader = String(r.uploadedBy || '').toLowerCase();
-          if (roll.includes('68') || roll.includes('2009') || uploader.includes('aditya')) {
-            return false;
-          }
-          const isOsSubject =
-            (courseCode && courseCode.includes('202')) ||
-            (subject?.name && subject.name.toLowerCase().includes('operating system')) ||
-            (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating system'));
-          if (isOsSubject && (/SYCM1_67_OS_EXPT|Experiment|Expt|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
-            return true;
-          }
+          return false;
         }
         return false;
       }).length;
@@ -477,19 +465,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           if (r.folderId === currentFolderId) return true;
           if (activeFolder && (r as any).folderName === activeFolder.name) return true;
           if (activeFolder?.name.toLowerCase().trim() === 'practicals') {
-            // Strictly keep Tanmay's roll 67 practicals; exclude any 68 files from practicals
-            const roll = String(r.rollNumber || '');
-            const uploader = String(r.uploadedBy || '').toLowerCase();
-            if (roll.includes('68') || roll.includes('2009') || uploader.includes('aditya')) {
-              return false;
-            }
-            const isOsSubject =
-              (subject?.courseCode && subject.courseCode.includes('202')) ||
-              (subject?.name && subject.name.toLowerCase().includes('operating system')) ||
-              (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating system'));
-            if (isOsSubject && (/SYCM1_67_OS_EXPT|Experiment|Expt|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
-              return true;
-            }
+            return false;
           }
           return false;
         });
