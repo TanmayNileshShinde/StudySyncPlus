@@ -7,7 +7,8 @@ import type { Id } from '../../convex/_generated/dataModel';
 export function isConvexId(id: unknown): id is string {
   if (typeof id !== 'string' || !id) return false;
   if (id.startsWith('res-') || id.startsWith('std-') || id.startsWith('local-')) return false;
-  return id.length > 10;
+  // Convex IDs are strictly lowercase base32/alphanumeric strings (min length 16, no hyphens, underscores, dots, or uppercase characters)
+  return /^[0-9a-z]{16,40}$/.test(id);
 }
 
 /**

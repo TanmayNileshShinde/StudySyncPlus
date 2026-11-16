@@ -140,11 +140,11 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
     if (!trimmedQuery) return [];
     return resources.filter(
       (r) =>
-        r.title.toLowerCase().includes(trimmedQuery) ||
-        r.description.toLowerCase().includes(trimmedQuery) ||
-        r.tags.some((t) => t.toLowerCase().includes(trimmedQuery)) ||
-        r.courseCode.toLowerCase().includes(trimmedQuery) ||
-        r.uploadedBy.toLowerCase().includes(trimmedQuery)
+        (r.title || '').toLowerCase().includes(trimmedQuery) ||
+        (r.description || '').toLowerCase().includes(trimmedQuery) ||
+        (r.tags || []).some((t) => (t || '').toLowerCase().includes(trimmedQuery)) ||
+        (r.courseCode || '').toLowerCase().includes(trimmedQuery) ||
+        (r.uploadedBy || '').toLowerCase().includes(trimmedQuery)
     );
   }, [resources, trimmedQuery]);
 

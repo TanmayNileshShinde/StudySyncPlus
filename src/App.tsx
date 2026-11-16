@@ -194,32 +194,69 @@ function Shell() {
   );
 }
 
-class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean }> {
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<{ children: React.ReactNode }, ErrorBoundaryState> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('StudySyncPlus ErrorBoundary caught render error:', error, errorInfo);
   }
 
+  handleResetHome = () => {
+    this.setState({ hasError: false, error: null });
+    const base = import.meta.env.BASE_URL || '/';
+    window.location.href = base;
+  };
+
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-paper flex items-center justify-center p-6">
-          <div className="ruled p-8 max-w-md text-center">
-            <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-alert mb-2">Course file error</p>
-            <p className="text-sm text-ink-2 mb-4">
-              Something went wrong while rendering the shelf. Reloading usually restores it.
+        <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center p-6 font-sans">
+          <div className="bg-white border-2 border-gray-900 rounded-2xl p-8 max-w-lg text-center shadow-lg">
+            <span className="inline-block px-2.5 py-1 rounded-full bg-red-100 text-red-700 font-mono text-xs font-bold uppercase tracking-wider mb-3">
+              Course File System Notice
+            </span>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">
+              Something went wrong while rendering the shelf
+            </h2>
+            <p className="text-xs text-gray-600 mb-5 leading-relaxed">
+              {this.state.error?.message || 'A temporary render or query error occurred. Returning to the main course catalog or reloading usually restores it.'}
             </p>
-            <button onClick={() => window.location.reload()} className="btn btn-secondary">
-              Reload StudySyncPlus
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button 
+                onClick={() => window.location.reload()} 
+                className="w-full sm:w-auto px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-800 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              >
+                Reload StudySyncPlus
+              </button>
+              <button 
+                onClick={this.handleResetHome} 
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+              >
+                Return to Course Home
+              </button>
+            </div>
+            {this.state.error?.stack && (
+              <details className="mt-5 text-left border-t border-gray-100 pt-3">
+                <summary className="text-[10px] text-gray-400 cursor-pointer font-mono hover:text-gray-600">
+                  Diagnostics / Stack Trace
+                </summary>
+                <pre className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded text-[9px] text-gray-700 font-mono overflow-x-auto max-h-36 whitespace-pre-wrap">
+                  {this.state.error.stack}
+                </pre>
+              </details>
+            )}
           </div>
         </div>
       );

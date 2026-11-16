@@ -5,7 +5,7 @@ import { api } from '../../convex/_generated/api';
 import { useResources } from '../context/ResourceContext';
 import { downloadResourcesAsZip } from '../lib/zipDownload';
 import { SYLLABUS_MODULES } from '../data/syllabusData';
-import { asSubjectId } from '../lib/convexIds';
+import { asSubjectId, isConvexId } from '../lib/convexIds';
 import { getOwnerKey } from '../lib/owner';
 import { STANDARD_FOLDERS } from '../../convex/seedData';
 import type { StudyResource, MoreSheetKind, ResourceType, Folder } from '../types';
@@ -182,10 +182,11 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
     });
   }, [resources, subjectId, scheme, subject]);
 
-  // Queries
+  // Queries (safely skip if subject ID is a courseCode string rather than a Convex Id)
+  const targetSubjectId = (subject?.id && isConvexId(subject.id)) ? subject.id : (isConvexId(subjectId) ? subjectId : null);
   const rawFolders = useQuery(
     api.folders.listBySubject,
-    subjectId ? { subjectId: asSubjectId(subjectId) } : 'skip'
+    targetSubjectId ? { subjectId: asSubjectId(targetSubjectId) } : 'skip'
   );
 
   const folders = useMemo(() => {
@@ -479,10 +480,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       const q = subjectSearch.trim().toLowerCase();
       list = own.filter(
         (r) =>
-          r.title.toLowerCase().includes(q) ||
-          r.description.toLowerCase().includes(q) ||
-          r.uploadedBy.toLowerCase().includes(q) ||
-          r.tags.some((t) => t.toLowerCase().includes(q))
+          (r.title || '').toLowerCase().includes(q) ||
+          (r.description || '').toLowerCase().includes(q) ||
+          (r.uploadedBy || '').toLowerCase().includes(q) ||
+          (r.tags || []).some((t) => (t || '').toLowerCase().includes(q))
       );
     } else {
       // Local directory scope
@@ -535,10 +536,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       if (q) {
         list = list.filter(
           (r) =>
-            r.title.toLowerCase().includes(q) ||
-            r.description.toLowerCase().includes(q) ||
-            r.uploadedBy.toLowerCase().includes(q) ||
-            r.tags.some((t) => t.toLowerCase().includes(q))
+            (r.title || '').toLowerCase().includes(q) ||
+            (r.description || '').toLowerCase().includes(q) ||
+            (r.uploadedBy || '').toLowerCase().includes(q) ||
+            (r.tags || []).some((t) => (t || '').toLowerCase().includes(q))
         );
       }
     }
@@ -560,28 +561,28 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       list = list.filter((r) => r.ingestStatus === 'failed');
     }
     if (selectedTags.length > 0) {
-      list = list.filter((r) => selectedTags.every((t) => r.tags.includes(t)));
+      list = list.filter((r) => selectedTags.every((t) => (r.tags || []).includes(t)));
     }
 
     // Sort files with natural alphanumeric sorting (so Experiment 10 follows Experiment 9)
     return [...list].sort((a, b) => {
       let cmp = 0;
       if (sortField === 'name') {
-        cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+        cmp = (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
       } else if (sortField === 'date') {
         cmp = (b.uploadDate || '').localeCompare(a.uploadDate || '');
         if (cmp === 0) {
-          cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+          cmp = (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
         }
       } else if (sortField === 'size') {
         cmp = (a.fileSizeBytes || 0) - (b.fileSizeBytes || 0);
         if (cmp === 0) {
-          cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+          cmp = (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
         }
       } else if (sortField === 'type') {
-        cmp = a.type.localeCompare(b.type, undefined, { numeric: true, sensitivity: 'base' });
+        cmp = (a.type || '').localeCompare(b.type || '', undefined, { numeric: true, sensitivity: 'base' });
         if (cmp === 0) {
-          cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+          cmp = (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
         }
       }
       return sortDirection === 'asc' ? cmp : -cmp;

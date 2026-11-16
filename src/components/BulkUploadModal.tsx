@@ -3,7 +3,7 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useResources } from '../context/ResourceContext';
 import { useOverlayBehavior } from '../hooks/useOverlayBehavior';
-import { asSubjectId } from '../lib/convexIds';
+import { asSubjectId, isConvexId } from '../lib/convexIds';
 import { STANDARD_FOLDERS } from '../../convex/seedData';
 import type { ResourceType, StudyResource } from '../types';
 import { X, UploadCloud, FileText, Presentation, LoaderCircle, CheckCircle2, AlertCircle, Trash2, RotateCcw, ChevronDown, Folder as FolderIcon } from 'lucide-react';
@@ -147,9 +147,10 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
   const [running, setRunning] = useState(false);
   const [confettiDone, setConfettiDone] = useState(false);
 
+  const validConvexSubjectId = isConvexId(selectedSubjectId) ? selectedSubjectId : null;
   const rawSubjectFoldersQuery = useQuery(
     api.folders.listBySubject,
-    selectedSubjectId ? { subjectId: asSubjectId(selectedSubjectId) } : 'skip'
+    validConvexSubjectId ? { subjectId: asSubjectId(validConvexSubjectId) } : 'skip'
   );
 
   const subjectFolders = useMemo(() => {
