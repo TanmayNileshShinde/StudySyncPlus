@@ -285,21 +285,13 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // --- Derived data ----------------------------------------------------------
   const resources: StudyResource[] = useMemo(() => {
     const rawFromServer = (resourceRows ?? []) as StudyResource[];
-    // Filter out old/placeholder experiments and lab materials (user will provide new lab materials)
+    // Keep only real OS practical experiments or student uploads; delete all other legacy dummy materials
     const fromServer = rawFromServer.filter((r) => {
-      if (r.type === 'Lab Manual') return false;
-      const t = (r.title || '').toLowerCase();
-      const fn = (r.fileName || '').toLowerCase();
-      const fol = ((r as any).folderName || '').toLowerCase();
-      if (/\b(expt|experiment|lab manual|laboratory journal|laboratory experiments|practical code)\b/i.test(t)) return false;
-      if (/\b(expt|experiment)\b/i.test(fn)) return false;
-      if (fol.includes('lab manuals')) return false;
-      const labLegacyIds = new Set([
-        'res-045', 'res-wt2-exp1', 'res-wt2-exp2', 'res-wt2-exp3', 'res-wt2-exp4',
-        'res-002', 'res-026', 'res-032', 'res-005', 'res-051', 'res-069'
-      ]);
-      if (r.id && labLegacyIds.has(String(r.id))) return false;
-      return true;
+      if (r.id && String(r.id).startsWith('res-os-')) return true;
+      if (/SYCM1_67_OS_EXPT/i.test(r.fileName || '')) return true;
+      if (r.courseCode === 'CMCOR2PC202' && /OS Experiment/i.test(r.title || '')) return true;
+      if (r.isUserUploaded) return true;
+      return false;
     });
     const serverLegacyIds = new Set<string>(fromServer.map((r) => String(r.id)));
     const serverTitles = new Set(fromServer.map((r) => r.title.toLowerCase().trim()));

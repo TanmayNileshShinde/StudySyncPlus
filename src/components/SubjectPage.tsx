@@ -47,7 +47,7 @@ const CATEGORIES: Array<{ label: string; type: ResourceType | 'ALL' }> = [
   { label: 'All Categories', type: 'ALL' },
   { label: 'Lecture Notes', type: 'Lecture Notes' },
   { label: 'Past Papers / PYQs', type: 'Past Exam Papers' },
-  { label: 'Lab Manuals', type: 'Lab Manual' },
+  { label: 'Practicals', type: 'Lab Manual' },
   { label: 'Cheat Sheets', type: 'Cheat Sheet' },
   { label: 'Reference Books', type: 'Reference Book' }
 ];
@@ -189,7 +189,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
   );
 
   const folders = useMemo(() => {
-    const existing = (rawFolders ?? []) as Folder[];
+    // Only allow single "Practicals" folder across all subjects
+    const existing = ((rawFolders ?? []) as Folder[]).filter(
+      (f) => f.name.toLowerCase().trim() === 'practicals'
+    );
     const existingNames = new Set(existing.map((f) => f.name.toLowerCase().trim()));
 
     const courseCode = scheme?.courseCode || subject?.courseCode || subjectId;
@@ -206,12 +209,20 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       createdAt: 0,
     })).filter((sf) => !existingNames.has(sf.name.toLowerCase().trim()));
 
-    const all = [...existing, ...stdFolders];
+    const all = [...existing, ...stdFolders].filter(
+      (f) => f.name.toLowerCase().trim() === 'practicals'
+    );
     return all.map((f) => {
       const count = own.filter((r) => {
         if (r.folderId === f.id) return true;
         if ((r as any).folderName === f.name) return true;
-        if (f.name === 'Lab Manuals & Code' && (/Experiment|Expt|Lab|Manual/i.test(r.title) || r.type === 'Lab Manual')) return true;
+        const isOsSubject =
+          (courseCode && courseCode.includes('202')) ||
+          (subject?.name && subject.name.toLowerCase().includes('operating system')) ||
+          (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating system'));
+        if (isOsSubject && (/Experiment|Expt|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
+          return true;
+        }
         return false;
       }).length;
       return { ...f, resourceCount: count };
@@ -457,7 +468,15 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
         list = own.filter((r) => {
           if (r.folderId === currentFolderId) return true;
           if (activeFolder && (r as any).folderName === activeFolder.name) return true;
-          if (activeFolder?.name === 'Lab Manuals & Code' && (/Experiment|Expt|Lab|Manual/i.test(r.title) || r.type === 'Lab Manual')) return true;
+          if (activeFolder?.name.toLowerCase().trim() === 'practicals') {
+            const isOsSubject =
+              (subject?.courseCode && subject.courseCode.includes('202')) ||
+              (subject?.name && subject.name.toLowerCase().includes('operating system')) ||
+              (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating system'));
+            if (isOsSubject && (/Experiment|Expt|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
+              return true;
+            }
+          }
           return false;
         });
       } else {
@@ -524,7 +543,9 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
     selectedIndexStatus,
     selectedTags,
     sortField,
-    sortDirection
+    sortDirection,
+    subject,
+    scheme
   ]);
 
   // Unique tags across subject
@@ -1720,7 +1741,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                             {/* Show folder provenance if viewing root or searching across course */}
                             {(!currentFolderId || searchScope === 'subject') && (resource.folderId || (resource as any).folderName) && (
                               <span className="text-[10px] text-gray-500 block truncate font-medium">
-                                in 📁 {folderMap.get(resource.folderId || '')?.name ?? (resource as any).folderName ?? 'Lab Manuals & Code'} {resource.rollNumber ? `· Roll: ${resource.rollNumber}` : ''}
+                                in 📁 {folderMap.get(resource.folderId || '')?.name ?? (resource as any).folderName ?? 'Practicals'} {resource.rollNumber ? `· Roll: ${resource.rollNumber}` : ''}
                               </span>
                             )}
                           </div>
@@ -2357,7 +2378,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                   type="text"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
-                  placeholder="e.g. Module 1 - Trees, Lab Manuals"
+                  placeholder="e.g. Practicals"
                   className="field w-full px-3 py-2 text-xs"
                   autoFocus
                 />

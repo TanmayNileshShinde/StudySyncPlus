@@ -4,7 +4,7 @@ import { SEED_RESOURCES, SEED_SEMESTER, SEED_SUBJECTS, STANDARD_FOLDERS } from "
 import type { Id } from "./_generated/dataModel";
 
 /** Seed bookmarks for the calling owner, mirroring the old default profile. */
-const DEFAULT_BOOKMARK_LEGACY_IDS = ["res-001", "res-010"];
+const DEFAULT_BOOKMARK_LEGACY_IDS = ["res-os-001", "res-os-002"];
 
 /**
  * Idempotently ensure the Semester III dataset exists. Safe to call any time:
@@ -85,6 +85,17 @@ export async function ensureSeedData(ctx: MutationCtx): Promise<{ insertedSubjec
         folderCache.set(`${subjectDoc._id}:${f.name}`, existingFolder._id);
       }
     }
+
+    // Clean up any obsolete folders that are no longer standard
+    const existingSubjectFolders = await ctx.db
+      .query("folders")
+      .withIndex("by_subject", (q) => q.eq("subjectId", subjectDoc._id))
+      .collect();
+    for (const ef of existingSubjectFolders) {
+      if (!STANDARD_FOLDERS.some((sf) => sf.name.toLowerCase() === ef.name.toLowerCase())) {
+        await ctx.db.delete(ef._id);
+      }
+    }
   }
 
   // 4. Official resources — matched by legacyId and assigned to folders
@@ -106,8 +117,8 @@ export async function ensureSeedData(ctx: MutationCtx): Promise<{ insertedSubjec
       .first();
 
     if (existing) {
-      if (!existing.folderId && folderId) {
-        await ctx.db.patch(existing._id, { folderId });
+      if (folderId && existing.folderId !== folderId) {
+        await ctx.db.patch(existing._id, { folderId, isOfficial: true });
       }
       continue;
     }
@@ -133,6 +144,14 @@ export async function ensureSeedData(ctx: MutationCtx): Promise<{ insertedSubjec
       folderId,
     });
     insertedResources += 1;
+  }
+
+  // Remove official resources that are no longer in SEED_RESOURCES
+  const validLegacyIds = new Set(SEED_RESOURCES.map((r) => r.legacyId));
+  for await (const res of ctx.db.query("resources")) {
+    if (res.isOfficial && res.legacyId && !validLegacyIds.has(res.legacyId)) {
+      await ctx.db.delete(res._id);
+    }
   }
 
   return { insertedSubjects, insertedResources };
