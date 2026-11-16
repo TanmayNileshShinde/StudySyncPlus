@@ -8,7 +8,7 @@ export const getStaticPdfUrl = (doc?: { title?: string; fileName?: string | null
   const str = `${doc.title || ''} ${doc.fileName || ''} ${doc.id || ''} ${doc.courseCode || ''}`;
   const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
-  // Standardized Course Materials: 1 PDF Note & 1 PPTX Slide Deck per Module across all 7 subjects
+  // Standardized Course Materials: 1 PDF Note & 1 PPTX Slide Deck per Module across all 12 subjects
   const subjectSlugs = [
     { slug: 'dsa', code: 'CMCOR2PC203', name: 'data structures' },
     { slug: 'os', code: 'CMCOR2PC202', name: 'operating system' },
@@ -16,7 +16,12 @@ export const getStaticPdfUrl = (doc?: { title?: string; fileName?: string | null
     { slug: 'ds', code: 'CMCOR2PC201', name: 'discrete structures' },
     { slug: 'fes', code: 'CMCOR2MD201', name: 'foundation of embedded' },
     { slug: 'wt2', code: 'CMLOR2VS201', name: 'web technology' },
-    { slug: 'java', code: 'CMLOR2VS202', name: 'java' }
+    { slug: 'java', code: 'CMLOR2VS202', name: 'java' },
+    { slug: 'ips', code: 'CMLOR2IK201.1', name: 'indian philosophical' },
+    { slug: 'scl', code: 'CMLOR2IK201.2', name: 'sanskrit' },
+    { slug: 'ecn', code: 'CMLOR2ED201', name: 'engineering career' },
+    { slug: 'cep', code: 'CMLOR2CP201', name: 'community engagement' },
+    { slug: 'bc', code: 'CMLOR2BC201', name: 'bridge course' }
   ];
 
   for (const s of subjectSlugs) {

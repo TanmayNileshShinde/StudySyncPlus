@@ -285,13 +285,20 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // --- Derived data ----------------------------------------------------------
   const resources: StudyResource[] = useMemo(() => {
     const rawFromServer = (resourceRows ?? []) as StudyResource[];
-    const validSeedIds = new Set(SEED_RESOURCES.map((s) => s.legacyId));
+    const validSeedIds = new Set(SEED_RESOURCES.map((s) => s.legacyId.toLowerCase().trim()));
+    const validSeedTitles = new Set(SEED_RESOURCES.map((s) => s.title.toLowerCase().trim()));
+
     // Keep real practicals and active standardized module materials; filter out superseded rows
     const fromServer = rawFromServer.filter((r) => {
       // Exclude superseded seed resources that were removed in the new standardized syllabus
-      if (r.id && String(r.id).startsWith('res-') && !validSeedIds.has(String(r.id))) {
-        return false;
+      if (!r.isUserUploaded) {
+        const titleMatch = validSeedTitles.has((r.title || '').toLowerCase().trim());
+        const idMatch = r.id && validSeedIds.has(String(r.id).toLowerCase().trim());
+        if (!titleMatch && !idMatch) {
+          return false;
+        }
       }
+
       // Exclude old Roll 68 OS practicals
       if (/SYCM1_68_OS_EXPT/i.test(r.fileName || '') || /SYCM1_68_OS_EXPT/i.test(r.title || '')) return false;
       if (r.courseCode === 'CMCOR2PC202' && /OS Experiment.*68/i.test(r.title || '')) return false;
@@ -334,7 +341,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Keep all lecture notes, module materials, and exam question papers
       return true;
     });
-    const serverLegacyIds = new Set<string>(fromServer.map((r) => String(r.id)));
+    const serverLegacyIds = new Set<string>(fromServer.map((r) => String(r.id).toLowerCase().trim()));
     const serverTitles = new Set(fromServer.map((r) => r.title.toLowerCase().trim()));
 
     // Map subjects by name and course code to find subjectId
@@ -347,7 +354,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const synthesized: StudyResource[] = [];
     for (const seed of SEED_RESOURCES) {
-      if (serverLegacyIds.has(seed.legacyId) || serverTitles.has(seed.title.toLowerCase().trim())) {
+      if (serverLegacyIds.has(seed.legacyId.toLowerCase().trim()) || serverTitles.has(seed.title.toLowerCase().trim())) {
         continue;
       }
       const sId =
@@ -392,7 +399,8 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ingestedAt: STATIC_SEED_INGESTED_AT,
         chunkCount: 12,
         folderId: folderSlug,
-      });
+        folderName: seed.folderName,
+      } as any);
     }
 
     return [...fromServer, ...synthesized];

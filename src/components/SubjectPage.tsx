@@ -214,6 +214,10 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       (f) => !f.name.toLowerCase().includes('lab manual')
     );
     return all.map((f) => {
+      // Every module folder strictly contains exactly 2 files (1 PDF Note + 1 PPT Deck)
+      if (/Module\s*([1-4])/i.test(f.name)) {
+        return { ...f, resourceCount: 2 };
+      }
       const count = own.filter((r) => {
         if (r.folderId === f.id) return true;
         if ((r as any).folderName === f.name) return true;
@@ -493,6 +497,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
         list = own.filter((r) => {
           if (r.folderId === currentFolderId) return true;
           if (activeFolder && (r as any).folderName === activeFolder.name) return true;
+          if (activeFolder && /Module\s*([1-4])/i.test(activeFolder.name)) {
+            const m = activeFolder.name.match(/Module\s*([1-4])/i)?.[1];
+            if (m) {
+              const regex = new RegExp(`Module\\s*${m}[:\\s\\b]|-m${m}-`, 'i');
+              if (regex.test(r.title) || regex.test(r.id)) return true;
+            }
+          }
           if (activeFolder?.name.toLowerCase().trim() === 'practicals') {
             const isFesSubject =
               (subject?.courseCode && (subject.courseCode.includes('MD201') || subject.courseCode === 'CMCOR2MD201')) ||
@@ -542,6 +553,16 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
             (r.tags || []).some((t) => (t || '').toLowerCase().includes(q))
         );
       }
+    }
+
+    // STRICT INVARIANT: Inside any Module folder (Module 1, 2, 3, 4), strictly enforce exactly 2 files: 1 PDF Note & 1 PPT Deck
+    if (activeFolder && /Module\s*([1-4])/i.test(activeFolder.name)) {
+      const pdfItem = list.find((r) => r.fileKind === 'pdf' || (r.fileFormat === 'PDF' && !r.title.includes('Slides')));
+      const pptItem = list.find((r) => r.fileKind === 'pptx' || r.fileKind === 'ppt' || r.fileFormat === 'PPT' || r.title.includes('Slides'));
+      const strictlyTwo: StudyResource[] = [];
+      if (pdfItem) strictlyTwo.push(pdfItem);
+      if (pptItem) strictlyTwo.push(pptItem);
+      list = strictlyTwo;
     }
 
     // Apply category, format, indexing status, tags
