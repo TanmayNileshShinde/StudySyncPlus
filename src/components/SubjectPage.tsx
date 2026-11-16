@@ -217,6 +217,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
         if (r.folderId === f.id) return true;
         if ((r as any).folderName === f.name) return true;
         if (f.name.toLowerCase().trim() === 'practicals') {
+          const isFesSubject =
+            (courseCode && courseCode.includes('201')) ||
+            (subject?.name && subject.name.toLowerCase().includes('embedded')) ||
+            (scheme?.courseName && scheme.courseName.toLowerCase().includes('embedded'));
+          if (isFesSubject && (/SYCM1_67_FES_EXPT|res-fes-/i.test(r.title) || (r.id && String(r.id).startsWith('res-fes-')))) {
+            return true;
+          }
           return false;
         }
         return false;
@@ -465,6 +472,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           if (r.folderId === currentFolderId) return true;
           if (activeFolder && (r as any).folderName === activeFolder.name) return true;
           if (activeFolder?.name.toLowerCase().trim() === 'practicals') {
+            const isFesSubject =
+              (subject?.courseCode && subject.courseCode.includes('201')) ||
+              (subject?.name && subject.name.toLowerCase().includes('embedded')) ||
+              (scheme?.courseName && scheme.courseName.toLowerCase().includes('embedded'));
+            if (isFesSubject && (/SYCM1_67_FES_EXPT|res-fes-/i.test(r.title) || (r.id && String(r.id).startsWith('res-fes-')))) {
+              return true;
+            }
             return false;
           }
           return false;
