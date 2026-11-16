@@ -8,6 +8,14 @@ export const getStaticPdfUrl = (doc?: { title?: string; fileName?: string | null
   const str = `${doc.title || ''} ${doc.fileName || ''} ${doc.id || ''} ${doc.courseCode || ''}`;
   const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
+  // Web Technology II (WT2) Lab Experiments (SYCM1_67_WTII_EXPT*.pdf)
+  for (let i = 10; i >= 1; i--) {
+    const pattern = new RegExp(`\\b(res-wt2-0*${i}|SYCM1_67_WTII_EXPT0*${i}|WTII_EXPT0*${i}|WT2_EXPT0*${i})\\b`, 'i');
+    if (pattern.test(str)) {
+      return `${base}/pdf-files-to-test/wt2/SYCM1_67_WTII_EXPT${i}.pdf`;
+    }
+  }
+
   // Microprocessor (MP) Lab Experiments 1 through 8 (SYCM1_67_MP_EXPT1-8.pdf)
   for (let i = 8; i >= 1; i--) {
     const pattern = new RegExp(`\\b(res-mp-0*${i}|SYCM1_67_MP_EXPT0*${i}|MP_EXPT0*${i})\\b`, 'i');

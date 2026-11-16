@@ -301,6 +301,11 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (/SYCM1_67_MP_EXPT/i.test(r.fileName || '') || /SYCM1_67_MP_EXPT/i.test(r.title || '')) return true;
       if (r.courseCode === 'CMCOR2PC204' && /MP_EXPT/i.test(r.title || '')) return true;
 
+      // Keep real WT2 practicals (Roll 67)
+      if (r.id && String(r.id).startsWith('res-wt2-')) return true;
+      if (/SYCM1_67_WTII_EXPT/i.test(r.fileName || '') || /SYCM1_67_WTII_EXPT/i.test(r.title || '')) return true;
+      if (r.courseCode === 'CMLOR2VS201' && /WTII_EXPT|WT2_EXPT/i.test(r.title || '')) return true;
+
       // Keep real FES practicals
       if (r.id && String(r.id).startsWith('res-fes-')) return true;
       if (/SYCM1_67_FES_EXPT/i.test(r.fileName || '') || /SYCM1_67_FES_EXPT/i.test(r.title || '')) return true;

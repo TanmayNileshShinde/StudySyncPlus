@@ -218,24 +218,31 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
         if ((r as any).folderName === f.name) return true;
         if (f.name.toLowerCase().trim() === 'practicals') {
           const isFesSubject =
-            (courseCode && courseCode.includes('201')) ||
+            (courseCode && (courseCode.includes('MD201') || courseCode === 'CMCOR2MD201')) ||
             (subject?.name && subject.name.toLowerCase().includes('embedded')) ||
             (scheme?.courseName && scheme.courseName.toLowerCase().includes('embedded'));
           if (isFesSubject && (/SYCM1_67_FES_EXPT|res-fes-/i.test(r.title) || (r.id && String(r.id).startsWith('res-fes-')))) {
             return true;
           }
           const isOsSubject =
-            (courseCode && courseCode.includes('202')) ||
+            (courseCode && (courseCode.includes('202') || courseCode === 'CMCOR2PC202')) ||
             (subject?.name && subject.name.toLowerCase().includes('operating')) ||
             (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating'));
           if (isOsSubject && (/SYCM1_67_OS_EXPT|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
             return true;
           }
           const isMpSubject =
-            (courseCode && courseCode.includes('204')) ||
+            (courseCode && (courseCode.includes('204') || courseCode === 'CMCOR2PC204')) ||
             (subject?.name && subject.name.toLowerCase().includes('microprocessor')) ||
             (scheme?.courseName && scheme.courseName.toLowerCase().includes('microprocessor'));
           if (isMpSubject && (/SYCM1_67_MP_EXPT|res-mp-/i.test(r.title) || (r.id && String(r.id).startsWith('res-mp-')))) {
+            return true;
+          }
+          const isWt2Subject =
+            (courseCode && (courseCode.includes('VS201') || courseCode === 'CMLOR2VS201')) ||
+            (subject?.name && (subject.name.toLowerCase().includes('web technology') || subject.name.toLowerCase().includes('web tech'))) ||
+            (scheme?.courseName && scheme.courseName.toLowerCase().includes('web technology'));
+          if (isWt2Subject && (/SYCM1_67_WTII_EXPT|res-wt2-/i.test(r.title) || (r.id && String(r.id).startsWith('res-wt2-')))) {
             return true;
           }
           return false;
@@ -487,24 +494,31 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           if (activeFolder && (r as any).folderName === activeFolder.name) return true;
           if (activeFolder?.name.toLowerCase().trim() === 'practicals') {
             const isFesSubject =
-              (subject?.courseCode && subject.courseCode.includes('201')) ||
+              (subject?.courseCode && (subject.courseCode.includes('MD201') || subject.courseCode === 'CMCOR2MD201')) ||
               (subject?.name && subject.name.toLowerCase().includes('embedded')) ||
               (scheme?.courseName && scheme.courseName.toLowerCase().includes('embedded'));
             if (isFesSubject && (/SYCM1_67_FES_EXPT|res-fes-/i.test(r.title) || (r.id && String(r.id).startsWith('res-fes-')))) {
               return true;
             }
             const isOsSubject =
-              (subject?.courseCode && subject.courseCode.includes('202')) ||
+              (subject?.courseCode && (subject.courseCode.includes('202') || subject.courseCode === 'CMCOR2PC202')) ||
               (subject?.name && subject.name.toLowerCase().includes('operating')) ||
               (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating'));
             if (isOsSubject && (/SYCM1_67_OS_EXPT|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
               return true;
             }
             const isMpSubject =
-              (subject?.courseCode && subject.courseCode.includes('204')) ||
+              (subject?.courseCode && (subject.courseCode.includes('204') || subject.courseCode === 'CMCOR2PC204')) ||
               (subject?.name && subject.name.toLowerCase().includes('microprocessor')) ||
               (scheme?.courseName && scheme.courseName.toLowerCase().includes('microprocessor'));
             if (isMpSubject && (/SYCM1_67_MP_EXPT|res-mp-/i.test(r.title) || (r.id && String(r.id).startsWith('res-mp-')))) {
+              return true;
+            }
+            const isWt2Subject =
+              (subject?.courseCode && (subject.courseCode.includes('VS201') || subject.courseCode === 'CMLOR2VS201')) ||
+              (subject?.name && (subject.name.toLowerCase().includes('web technology') || subject.name.toLowerCase().includes('web tech'))) ||
+              (scheme?.courseName && scheme.courseName.toLowerCase().includes('web technology'));
+            if (isWt2Subject && (/SYCM1_67_WTII_EXPT|res-wt2-/i.test(r.title) || (r.id && String(r.id).startsWith('res-wt2-')))) {
               return true;
             }
             return false;
