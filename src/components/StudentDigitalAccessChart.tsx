@@ -23,6 +23,8 @@ import {
   PieChart,
   BookOpen,
   GraduationCap,
+  Library,
+  Users,
   ShieldCheck,
   Zap,
   CheckCircle2
@@ -59,7 +61,7 @@ const tooltipStyle = {
 export const StudentDigitalAccessChart: React.FC = () => {
   const [data, setData] = useState<StudentDigitalAccessData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'devices' | 'internet' | 'subjects' | 'trends'>('devices');
+  const [activeTab, setActiveTab] = useState<'devices' | 'subjects' | 'books' | 'demographics' | 'internet' | 'trends'>('devices');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   // Initial load
@@ -103,7 +105,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
         <div className="flex items-center justify-center gap-3">
           <RefreshCw className="w-5 h-5 text-slate-900 animate-spin" />
           <span className="font-mono text-sm font-bold text-slate-900">
-            Querying Live Academic Question Bank &amp; Student Telemetry API...
+            Querying Live APIs: Open Trivia DB, Open Library &amp; DummyJSON...
           </span>
         </div>
       </div>
@@ -120,7 +122,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
         label: 'Student Ownership & Access (%)',
         data: data.deviceDistribution.map((d) => d.percentage),
         backgroundColor: [
-          'rgba(234, 179, 8, 0.85)', // Yellow (Laptop - flagship)
+          'rgba(234, 179, 8, 0.85)', // Yellow (Laptop)
           'rgba(59, 130, 246, 0.85)', // Blue (Phone)
           'rgba(16, 185, 129, 0.85)', // Green (Desktop)
           'rgba(139, 92, 246, 0.85)'  // Purple (Tablet)
@@ -132,26 +134,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
     ]
   };
 
-  // Chart 2: Internet Connectivity (Doughnut Chart)
-  const internetChartData = {
-    labels: data.internetConnectivity.map((i) => i.category),
-    datasets: [
-      {
-        label: 'Connection Type (%)',
-        data: data.internetConnectivity.map((i) => i.percentage),
-        backgroundColor: [
-          'rgba(16, 185, 129, 0.9)', // Fiber
-          'rgba(59, 130, 246, 0.9)', // 5G/4G
-          'rgba(234, 179, 8, 0.9)',  // Campus Wi-Fi
-          'rgba(239, 68, 68, 0.9)'   // Limited
-        ],
-        borderColor: INK,
-        borderWidth: 2
-      }
-    ]
-  };
-
-  // Chart 3: Live Academic Subject Question Bank (Open Trivia DB API)
+  // Chart 2: Academic Question Bank (Open Trivia DB API)
   const subjectList = data.academicSubjectQuestions || [];
   const subjectChartData = {
     labels: subjectList.map((s) => s.subject),
@@ -175,7 +158,69 @@ export const StudentDigitalAccessChart: React.FC = () => {
     ]
   };
 
-  // Chart 4: Weekly Online Study Hours Trend (Line Chart)
+  // Chart 3: Open Library Computer Science Books (Open Library API)
+  const booksList = data.openLibraryBooks || [];
+  const booksChartData = {
+    labels: booksList.map((b) => b.title),
+    datasets: [
+      {
+        label: 'Published Editions (Internet Archive)',
+        data: booksList.map((b) => b.editions),
+        backgroundColor: [
+          'rgba(16, 185, 129, 0.85)',
+          'rgba(59, 130, 246, 0.85)',
+          'rgba(234, 179, 8, 0.85)',
+          'rgba(239, 68, 68, 0.85)',
+          'rgba(139, 92, 246, 0.85)',
+          'rgba(236, 72, 153, 0.85)'
+        ],
+        borderColor: INK,
+        borderWidth: 2,
+        borderRadius: 4
+      }
+    ]
+  };
+
+  // Chart 4: DummyJSON Student Demographics (DummyJSON API)
+  const demoList = data.dummyJsonDemographics || [];
+  const demoChartData = {
+    labels: demoList.map((d) => d.cohort),
+    datasets: [
+      {
+        label: 'Student Enrolment Count',
+        data: demoList.map((d) => d.count),
+        backgroundColor: [
+          'rgba(234, 179, 8, 0.9)',
+          'rgba(59, 130, 246, 0.9)',
+          'rgba(16, 185, 129, 0.9)',
+          'rgba(139, 92, 246, 0.9)'
+        ],
+        borderColor: INK,
+        borderWidth: 2
+      }
+    ]
+  };
+
+  // Chart 5: Internet Connectivity (Doughnut Chart)
+  const internetChartData = {
+    labels: data.internetConnectivity.map((i) => i.category),
+    datasets: [
+      {
+        label: 'Connection Type (%)',
+        data: data.internetConnectivity.map((i) => i.percentage),
+        backgroundColor: [
+          'rgba(16, 185, 129, 0.9)', // Fiber
+          'rgba(59, 130, 246, 0.9)', // 5G/4G
+          'rgba(234, 179, 8, 0.9)',  // Campus Wi-Fi
+          'rgba(239, 68, 68, 0.9)'   // Limited
+        ],
+        borderColor: INK,
+        borderWidth: 2
+      }
+    ]
+  };
+
+  // Chart 6: Weekly Online Study Hours Trend (Line Chart)
   const hoursChartData = {
     labels: data.weeklyOnlineHours.map((h) => h.semester),
     datasets: [
@@ -198,13 +243,13 @@ export const StudentDigitalAccessChart: React.FC = () => {
 
   return (
     <div className="card-neo bg-white rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a] p-5 sm:p-7 overflow-hidden">
-      {/* 1. Header with Badge & Live API Controls */}
+      {/* 1. Header with Live API Badges & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-slate-900 pb-5">
         <div>
           <div className="flex items-center flex-wrap gap-2 mb-1.5">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 border border-emerald-500 font-mono text-[11px] font-bold text-emerald-800">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Live Student &amp; Academic API
+              Live Student &amp; Academic APIs
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900 text-white font-mono text-[10px] font-bold">
               <CheckCircle2 className="w-3 h-3 text-emerald-400" />
@@ -214,14 +259,17 @@ export const StudentDigitalAccessChart: React.FC = () => {
               <Zap className="w-3 h-3 text-yellow-500" />
               {data.responseTimeMs}ms
             </span>
+            <span className="px-2 py-0.5 rounded bg-blue-100 border border-blue-300 text-blue-900 font-mono text-[10px] font-bold">
+              opentdb.com · openlibrary.org · dummyjson.com
+            </span>
           </div>
 
           <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             <GraduationCap className="w-5 h-5 text-yellow-500 stroke-[2.5]" />
-            Student Digital Learning &amp; Academic Telemetry
+            Student Digital Learning &amp; Academic Telemetry Hub
           </h2>
           <p className="text-xs text-slate-600 font-medium mt-0.5">
-            Live real-time data visualization of student laptop access, broadband connectivity &amp; academic subject question banks.
+            Live multi-API data visualization spanning student device access, academic subject banks, CS books &amp; university demographics.
           </p>
         </div>
 
@@ -243,7 +291,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
             className="px-3.5 py-1.5 rounded-lg bg-yellow-400 hover:bg-yellow-300 border-2 border-slate-900 text-slate-900 font-mono text-xs font-black transition-all shadow-[2px_2px_0px_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Fetch Live API</span>
+            <span>Fetch Live APIs</span>
           </button>
         </div>
       </div>
@@ -318,6 +366,42 @@ export const StudentDigitalAccessChart: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('subjects')}
+          className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'subjects'
+              ? 'bg-blue-600 text-white border-slate-900 shadow-[2px_2px_0px_#eab308]'
+              : 'bg-blue-50 text-blue-800 border-blue-200 hover:border-slate-900'
+          }`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Subject Bank (Open Trivia)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('books')}
+          className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'books'
+              ? 'bg-emerald-600 text-white border-slate-900 shadow-[2px_2px_0px_#eab308]'
+              : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:border-slate-900'
+          }`}
+        >
+          <Library className="w-3.5 h-3.5" />
+          <span>CS Books (Open Library)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('demographics')}
+          className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'demographics'
+              ? 'bg-purple-600 text-white border-slate-900 shadow-[2px_2px_0px_#eab308]'
+              : 'bg-purple-50 text-purple-800 border-purple-200 hover:border-slate-900'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Student Cohorts (DummyJSON)</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('internet')}
           className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             activeTab === 'internet'
@@ -330,18 +414,6 @@ export const StudentDigitalAccessChart: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setActiveTab('subjects')}
-          className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === 'subjects'
-              ? 'bg-blue-600 text-white border-slate-900 shadow-[2px_2px_0px_#eab308]'
-              : 'bg-blue-50 text-blue-800 border-blue-200 hover:border-slate-900'
-          }`}
-        >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Academic Subject Bank (Live API)</span>
-        </button>
-
-        <button
           onClick={() => setActiveTab('trends')}
           className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             activeTab === 'trends'
@@ -350,7 +422,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
           }`}
         >
           <TrendingUp className="w-3.5 h-3.5" />
-          <span>Semester Study Hours</span>
+          <span>Semester Hours</span>
         </button>
       </div>
 
@@ -396,31 +468,6 @@ export const StudentDigitalAccessChart: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'internet' && (
-          <div className="w-full h-[260px] flex items-center justify-center">
-            <Doughnut
-              data={internetChartData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'bottom',
-                    labels: { font: { family: MONO, size: 11 }, color: INK }
-                  },
-                  tooltip: tooltipStyle,
-                  title: {
-                    display: true,
-                    text: 'Primary Internet Connection Type Used for Online Study',
-                    font: { family: MONO, size: 12, weight: 'bold' },
-                    color: INK
-                  }
-                }
-              }}
-            />
-          </div>
-        )}
-
         {activeTab === 'subjects' && (
           <div className="w-full h-[260px]">
             <Bar
@@ -455,6 +502,95 @@ export const StudentDigitalAccessChart: React.FC = () => {
                     grid: { display: false },
                     ticks: { font: { family: MONO, size: 10, weight: 'bold' }, color: INK },
                     border: { color: INK, width: 1.5 }
+                  }
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === 'books' && (
+          <div className="w-full h-[260px]">
+            <Bar
+              data={booksChartData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: tooltipStyle,
+                  title: {
+                    display: true,
+                    text: 'Live Open Library API: Top Computer Science Reference Books by Published Editions',
+                    font: { family: MONO, size: 12, weight: 'bold' },
+                    color: INK
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    grid: { color: '#e2e8f0' },
+                    ticks: {
+                      font: { family: MONO, size: 10 },
+                      color: '#64748b',
+                      callback: (v) => `${v} ed.`
+                    },
+                    border: { color: INK, width: 1.5 }
+                  },
+                  x: {
+                    grid: { display: false },
+                    ticks: { font: { family: MONO, size: 9, weight: 'bold' }, color: INK },
+                    border: { color: INK, width: 1.5 }
+                  }
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === 'demographics' && (
+          <div className="w-full h-[260px] flex items-center justify-center">
+            <Doughnut
+              data={demoChartData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'bottom',
+                    labels: { font: { family: MONO, size: 11 }, color: INK }
+                  },
+                  tooltip: tooltipStyle,
+                  title: {
+                    display: true,
+                    text: 'Live DummyJSON API: Student Cohorts & University Academic Demographics',
+                    font: { family: MONO, size: 12, weight: 'bold' },
+                    color: INK
+                  }
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === 'internet' && (
+          <div className="w-full h-[260px] flex items-center justify-center">
+            <Doughnut
+              data={internetChartData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'bottom',
+                    labels: { font: { family: MONO, size: 11 }, color: INK }
+                  },
+                  tooltip: tooltipStyle,
+                  title: {
+                    display: true,
+                    text: 'Primary Internet Connection Type Used for Online Study',
+                    font: { family: MONO, size: 12, weight: 'bold' },
+                    color: INK
                   }
                 }
               }}
@@ -506,7 +642,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
       <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono text-slate-500">
         <div className="flex items-center gap-1.5 truncate">
           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span className="truncate">Live Request: <code className="text-slate-800 font-bold bg-slate-100 px-1.5 py-0.5 rounded">{data.endpointUrl}</code></span>
+          <span className="truncate">Live Endpoints: <code className="text-slate-800 font-bold bg-slate-100 px-1.5 py-0.5 rounded">{data.endpointUrl}</code></span>
         </div>
         <div className="tabular shrink-0">
           <span>Synced at: <strong className="text-slate-900">{data.timestamp}</strong></span>
