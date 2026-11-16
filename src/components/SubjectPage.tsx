@@ -224,6 +224,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           if (isFesSubject && (/SYCM1_67_FES_EXPT|res-fes-/i.test(r.title) || (r.id && String(r.id).startsWith('res-fes-')))) {
             return true;
           }
+          const isOsSubject =
+            (courseCode && courseCode.includes('202')) ||
+            (subject?.name && subject.name.toLowerCase().includes('operating')) ||
+            (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating'));
+          if (isOsSubject && (/SYCM1_67_OS_EXPT|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
+            return true;
+          }
           return false;
         }
         return false;
@@ -477,6 +484,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
               (subject?.name && subject.name.toLowerCase().includes('embedded')) ||
               (scheme?.courseName && scheme.courseName.toLowerCase().includes('embedded'));
             if (isFesSubject && (/SYCM1_67_FES_EXPT|res-fes-/i.test(r.title) || (r.id && String(r.id).startsWith('res-fes-')))) {
+              return true;
+            }
+            const isOsSubject =
+              (subject?.courseCode && subject.courseCode.includes('202')) ||
+              (subject?.name && subject.name.toLowerCase().includes('operating')) ||
+              (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating'));
+            if (isOsSubject && (/SYCM1_67_OS_EXPT|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
               return true;
             }
             return false;
