@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useResources } from '../../context/ResourceContext';
-import { asResourceId } from '../../lib/convexIds';
+import { asResourceId, isConvexId } from '../../lib/convexIds';
 import { getOwnerKey } from '../../lib/owner';
 import type { StudyResource } from '../../types';
 import { PdfViewer } from './PdfViewer';
@@ -44,10 +44,16 @@ interface DocumentViewerProps {
 const RatingWidget: React.FC<{ resourceId: string }> = ({ resourceId }) => {
   const { rateResource } = useResources();
   const ownerKey = getOwnerKey();
-  const myRating = useQuery(api.ratings.getMine, {
-    ownerKey,
-    resourceId: asResourceId(resourceId)
-  });
+  const validConvexId = isConvexId(resourceId);
+  const myRating = useQuery(
+    api.ratings.getMine,
+    validConvexId
+      ? {
+          ownerKey,
+          resourceId: asResourceId(resourceId)
+        }
+      : 'skip'
+  );
   const [hoverValue, setHoverValue] = useState<number | null>(null);
 
   const displayValue = hoverValue ?? myRating ?? 0;
@@ -166,9 +172,14 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   }, [activeDoc?.id, activeDoc?.title, activeDoc?.courseCode, activeDoc?.subjectId, viewerPage]);
 
   // Fetch real file URL from Convex Storage
+  const isServerId = Boolean(
+    activeDoc &&
+    activeDoc.hasFile &&
+    isConvexId(activeDoc.id)
+  );
   const fileData = useQuery(
     api.resources.fileUrl,
-    activeDoc && activeDoc.hasFile ? { id: asResourceId(activeDoc.id) } : 'skip'
+    isServerId && activeDoc ? { id: asResourceId(activeDoc.id) } : 'skip'
   );
 
   const staticPdfUrl = useMemo(() => getStaticPdfUrl(activeDoc), [activeDoc]);

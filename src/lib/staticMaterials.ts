@@ -9,8 +9,8 @@ export const getStaticPdfUrl = (doc?: { title?: string; fileName?: string | null
   const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
   // Foundation of Embedded System (FES) Lab Experiments 1 through 10 (SYCM1_67_FES_EXPT1-10.pdf)
-  for (let i = 1; i <= 10; i++) {
-    const pattern = new RegExp(`\\b(res-fes-0?${i}|SYCM1_67_FES_EXPT0?${i}|FES_EXPT0?${i})\\b`, 'i');
+  for (let i = 10; i >= 1; i--) {
+    const pattern = new RegExp(`\\b(res-fes-0*${i}|SYCM1_67_FES_EXPT0*${i}|FES_EXPT0*${i})\\b`, 'i');
     if (pattern.test(str)) {
       return `${base}/pdf-files-to-test/fes/SYCM1_67_FES_EXPT${i}.pdf`;
     }

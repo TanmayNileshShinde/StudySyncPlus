@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { asResourceId } from '../../lib/convexIds';
+import { asResourceId, isConvexId } from '../../lib/convexIds';
 import { useResources } from '../../context/ResourceContext';
 import type { StudyResource } from '../../types';
 import { init as initPptx } from 'pptx-preview';
@@ -56,11 +56,15 @@ export const PresentationViewer: React.FC<PresentationViewerProps> = ({
   const thumbnailRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
 
   // Convex queries
+  const isServerId = Boolean(doc && isConvexId(doc.id));
   const fileData = useQuery(
     api.resources.fileUrl,
-    doc && doc.hasFile ? { id: asResourceId(doc.id) } : 'skip'
+    doc && doc.hasFile && isServerId ? { id: asResourceId(doc.id) } : 'skip'
   );
-  const chunksData = useQuery(api.resources.getChunks, { id: asResourceId(doc.id) });
+  const chunksData = useQuery(
+    api.resources.getChunks,
+    isServerId ? { id: asResourceId(doc.id) } : 'skip'
+  );
 
   // Effective file URL (prop, Convex query, or test file fallback)
   const targetUrl = useMemo(() => {

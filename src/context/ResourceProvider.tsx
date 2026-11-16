@@ -21,7 +21,7 @@ import type {
   NewSubjectInput
 } from '../types';
 import { getOwnerKey } from '../lib/owner';
-import { asFolderId, asResourceId, asSemesterId, asStorageId, asSubjectId } from '../lib/convexIds';
+import { asFolderId, asResourceId, asSemesterId, asStorageId, asSubjectId, isConvexId } from '../lib/convexIds';
 import { apiService } from '../services/apiService';
 import { getStaticPdfUrl } from '../lib/staticMaterials';
 import { SEED_RESOURCES, SEED_SUBJECTS } from '../../convex/seedData';
@@ -362,7 +362,9 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isUserUploaded: false,
         ownerKey: null,
         hasFile: true,
-        fileName: `${seed.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`,
+        fileName: seed.title.toLowerCase().endsWith('.pdf')
+          ? seed.title
+          : `${seed.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`,
         fileKind: 'pdf',
         ingestStatus: 'ready',
         ingestError: null,
@@ -428,7 +430,18 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }));
   }, [subjectRows]);
 
-  const bookmarkIds: string[] = useMemo(() => bookmarkRows ?? [], [bookmarkRows]);
+  const [localBookmarkIds, setLocalBookmarkIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('studysync_local_bookmarks') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const bookmarkIds: string[] = useMemo(() => {
+    const serverIds = bookmarkRows ?? [];
+    return Array.from(new Set([...serverIds, ...localBookmarkIds]));
+  }, [bookmarkRows, localBookmarkIds]);
   const bookmarkIdSet = useMemo(() => new Set(bookmarkIds), [bookmarkIds]);
 
   const isLibraryLoading = seedState === undefined || semester === undefined || resourceRows === undefined;
@@ -438,6 +451,18 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const toggleBookmark = useCallback(
     async (id: string) => {
+      if (!isConvexId(id)) {
+        setLocalBookmarkIds((prev) => {
+          const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+          try {
+            localStorage.setItem('studysync_local_bookmarks', JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+        const isNowSaved = !bookmarkIdSet.has(id);
+        showToast(isNowSaved ? 'Added to saved bookmarks' : 'Removed from saved bookmarks');
+        return;
+      }
       try {
         const result = await toggleBookmarkMut({ ownerKey, resourceId: asResourceId(id) });
         showToast(result.saved ? 'Added to saved bookmarks' : 'Removed from saved bookmarks');
@@ -445,7 +470,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         showToast(e instanceof Error ? e.message : 'Could not update the bookmark.');
       }
     },
-    [ownerKey, toggleBookmarkMut, showToast]
+    [ownerKey, toggleBookmarkMut, showToast, bookmarkIdSet]
   );
 
   /**
@@ -544,6 +569,10 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const deleteResource = useCallback(
     async (id: string) => {
+      if (!isConvexId(id)) {
+        showToast('Official course materials cannot be deleted.');
+        return;
+      }
       try {
         await removeResourceMut({ id: asResourceId(id), ownerKey });
         showToast('Resource removed');
@@ -556,6 +585,9 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const reindexResource = useCallback(
     async (id: string): Promise<{ status: string; message: string }> => {
+      if (!isConvexId(id)) {
+        return { status: 'ready', message: 'Official course material is already indexed.' };
+      }
       const result = await reindexAction({ resourceId: asResourceId(id) });
       return { status: result.status, message: result.message };
     },
@@ -567,12 +599,15 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     async (resource: StudyResource): Promise<{ url: string; fileName: string } | null> => {
       const staticUrl = getStaticPdfUrl(resource);
       if (staticUrl) {
+        const cleanName = (resource.fileName || resource.title)
+          .replace(/_pdf\.pdf$/i, '.pdf')
+          .replace(/\.pdf$/i, '') + '.pdf';
         return {
           url: staticUrl,
-          fileName: `${resource.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
+          fileName: cleanName
         };
       }
-      if (!resource.hasFile) return null;
+      if (!resource.hasFile || !isConvexId(resource.id)) return null;
       try {
         const result = await downloadMut({ id: asResourceId(resource.id) });
         if (!result) return null;
@@ -589,9 +624,12 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         const staticUrl = getStaticPdfUrl(resource);
         if (staticUrl) {
+          const cleanName = (resource.fileName || resource.title)
+            .replace(/_pdf\.pdf$/i, '.pdf')
+            .replace(/\.pdf$/i, '') + '.pdf';
           const anchor = document.createElement('a');
           anchor.href = staticUrl;
-          anchor.download = `${resource.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+          anchor.download = cleanName;
           document.body.appendChild(anchor);
           anchor.click();
           document.body.removeChild(anchor);
@@ -627,6 +665,10 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const rateResource = useCallback(
     async (id: string, value: number) => {
+      if (!isConvexId(id)) {
+        showToast(`You rated this resource ${value}/5`);
+        return;
+      }
       try {
         const result = await rateMut({ ownerKey, resourceId: asResourceId(id), value });
         showToast(`You rated this resource ${result.yourRating}/5`);
@@ -665,6 +707,10 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // --- Folder & Organization Operations -------------------------------------
   const moveToFolder = useCallback(
     async (id: string, folderId: string | null) => {
+      if (!isConvexId(id)) {
+        showToast('Official syllabus resources cannot be moved.');
+        return;
+      }
       try {
         await moveToFolderMut({
           id: asResourceId(id),
@@ -680,9 +726,14 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const bulkMoveToFolder = useCallback(
     async (ids: string[], folderId: string | null): Promise<number> => {
+      const validIds = ids.filter(isConvexId);
+      if (validIds.length === 0) {
+        showToast('No user-uploaded resources selected.');
+        return 0;
+      }
       try {
         const moved = await bulkMoveToFolderMut({
-          ids: ids.map(asResourceId),
+          ids: validIds.map(asResourceId),
           folderId: folderId ? asFolderId(folderId) : null,
         });
         showToast(folderId ? `Moved ${moved} item${moved === 1 ? '' : 's'} to folder` : `Moved ${moved} item${moved === 1 ? '' : 's'} to Unorganized`);
@@ -697,9 +748,14 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const bulkDelete = useCallback(
     async (ids: string[]): Promise<number> => {
+      const validIds = ids.filter(isConvexId);
+      if (validIds.length === 0) {
+        showToast('Official syllabus resources cannot be deleted.');
+        return 0;
+      }
       try {
         const count = await bulkDeleteMut({
-          ids: ids.map(asResourceId),
+          ids: validIds.map(asResourceId),
           ownerKey,
         });
         showToast(`Removed ${count} item${count === 1 ? '' : 's'}`);
@@ -714,9 +770,14 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const bulkUpdateTags = useCallback(
     async (ids: string[], addTags?: string[], removeTags?: string[]): Promise<number> => {
+      const validIds = ids.filter(isConvexId);
+      if (validIds.length === 0) {
+        showToast('No user-uploaded resources selected.');
+        return 0;
+      }
       try {
         const count = await bulkUpdateTagsMut({
-          ids: ids.map(asResourceId),
+          ids: validIds.map(asResourceId),
           addTags,
           removeTags,
         });

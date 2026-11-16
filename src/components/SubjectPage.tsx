@@ -1884,7 +1884,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                               className="text-xs sm:text-sm font-bold text-gray-900 group-hover:text-blue-900 line-clamp-1 leading-snug truncate"
                               title={resource.title}
                             >
-                              {resource.fileName || `${resource.title}.pdf`}
+                              {(resource.fileName || (resource.title.toLowerCase().endsWith('.pdf') ? resource.title : `${resource.title}.pdf`)).replace(/_pdf\.pdf$/i, '.pdf')}
                             </h4>
                             {(!currentFolderId || searchScope === 'subject') && (resource.folderId || (resource as any).folderName) && (
                               <span className="text-[10px] text-gray-500 block truncate font-medium mt-0.5">

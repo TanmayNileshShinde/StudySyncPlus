@@ -3,7 +3,7 @@ import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useResources } from '../../context/ResourceContext';
 import { getOwnerKey } from '../../lib/owner';
-import { asResourceId, asSubjectId, asSemesterId, asThreadId, asFolderId } from '../../lib/convexIds';
+import { asResourceId, asSubjectId, asSemesterId, asThreadId, asFolderId, isConvexId } from '../../lib/convexIds';
 import { MarkdownRenderer } from '../MarkdownRenderer';
 import type { StudyResource, StudyScopeKind } from '../../types';
 import {
@@ -635,30 +635,59 @@ export const WorkspaceAssistant: React.FC<WorkspaceAssistantProps> = ({
       // Extract tagged slides / pages from input text (e.g. @slide 2, 4 or /slide 1-3)
       const { taggedPages: parsedTaggedPages, isDocumentTagged } = parseTagsFromText(trimmed, taggedTarget);
 
+      const hasServerDocId = Boolean(activeDocument && isConvexId(activeDocument.id));
+      const hasServerSubjectId = Boolean(activeDocument && isConvexId(activeDocument.subjectId));
+      const hasServerFolderId = Boolean(activeDocument?.folderId && isConvexId(activeDocument.folderId));
+
       if (parsedTaggedPages.length > 0 && activeDocument) {
-        args.mode = 'resource';
-        args.resourceId = asResourceId(activeDocument.id);
-        args.taggedResourceId = asResourceId(activeDocument.id);
+        if (hasServerDocId) {
+          args.mode = 'resource';
+          args.resourceId = asResourceId(activeDocument.id);
+          args.taggedResourceId = asResourceId(activeDocument.id);
+        } else if (hasServerSubjectId) {
+          args.mode = 'subject';
+          args.subjectId = asSubjectId(activeDocument.subjectId);
+        } else {
+          args.mode = 'library';
+        }
         args.taggedPages = parsedTaggedPages;
         args.taggedPage = parsedTaggedPages[0];
       } else if (isDocumentTagged && activeDocument) {
-        args.mode = 'resource';
-        args.resourceId = asResourceId(activeDocument.id);
-        args.taggedResourceId = asResourceId(activeDocument.id);
+        if (hasServerDocId) {
+          args.mode = 'resource';
+          args.resourceId = asResourceId(activeDocument.id);
+          args.taggedResourceId = asResourceId(activeDocument.id);
+        } else if (hasServerSubjectId) {
+          args.mode = 'subject';
+          args.subjectId = asSubjectId(activeDocument.subjectId);
+        } else {
+          args.mode = 'library';
+        }
       } else if (studyScope === 'document' && activeDocument) {
-        args.mode = 'resource';
-        args.resourceId = asResourceId(activeDocument.id);
-      } else if (studyScope === 'folder' && activeDocument?.folderId) {
+        if (hasServerDocId) {
+          args.mode = 'resource';
+          args.resourceId = asResourceId(activeDocument.id);
+        } else if (hasServerSubjectId) {
+          args.mode = 'subject';
+          args.subjectId = asSubjectId(activeDocument.subjectId);
+        } else {
+          args.mode = 'library';
+        }
+      } else if (studyScope === 'folder' && hasServerFolderId) {
         args.mode = 'folder';
-        args.folderId = asFolderId(activeDocument.folderId);
-        args.subjectId = asSubjectId(activeDocument.subjectId);
-      } else if (studyScope === 'subject' && activeDocument) {
+        args.folderId = asFolderId(activeDocument!.folderId!);
+        if (hasServerSubjectId) {
+          args.subjectId = asSubjectId(activeDocument!.subjectId);
+        }
+      } else if (studyScope === 'subject' && hasServerSubjectId) {
         args.mode = 'subject';
-        args.subjectId = asSubjectId(activeDocument.subjectId);
+        args.subjectId = asSubjectId(activeDocument!.subjectId);
       } else {
-        args.mode = 'semester';
-        if (semester) {
+        if (semester?.id && isConvexId(semester.id)) {
+          args.mode = 'semester';
           args.semesterId = asSemesterId(semester.id);
+        } else {
+          args.mode = 'library';
         }
       }
 

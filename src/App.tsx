@@ -204,6 +204,10 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
     return { hasError: true };
   }
 
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('StudySyncPlus ErrorBoundary caught render error:', error, errorInfo);
+  }
+
   render() {
     if (this.state.hasError) {
       return (
