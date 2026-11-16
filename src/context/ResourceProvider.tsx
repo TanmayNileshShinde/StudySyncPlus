@@ -285,8 +285,13 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // --- Derived data ----------------------------------------------------------
   const resources: StudyResource[] = useMemo(() => {
     const rawFromServer = (resourceRows ?? []) as StudyResource[];
-    // Keep real OS practicals and all module notes / question papers; filter out only old placeholder practicals in other subjects
+    const validSeedIds = new Set(SEED_RESOURCES.map((s) => s.legacyId));
+    // Keep real practicals and active standardized module materials; filter out superseded rows
     const fromServer = rawFromServer.filter((r) => {
+      // Exclude superseded seed resources that were removed in the new standardized syllabus
+      if (r.id && String(r.id).startsWith('res-') && !validSeedIds.has(String(r.id))) {
+        return false;
+      }
       // Exclude old Roll 68 OS practicals
       if (/SYCM1_68_OS_EXPT/i.test(r.fileName || '') || /SYCM1_68_OS_EXPT/i.test(r.title || '')) return false;
       if (r.courseCode === 'CMCOR2PC202' && /OS Experiment.*68/i.test(r.title || '')) return false;
@@ -370,16 +375,18 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         downloadCount: seed.downloadCount,
         rating: seed.rating,
         ratingCount: 1,
-        fileFormat: 'PDF',
+        fileFormat: seed.title.includes('Slides') ? 'PPT' : 'PDF',
         description: seed.description,
         tags: seed.tags,
         isUserUploaded: false,
         ownerKey: null,
         hasFile: true,
-        fileName: seed.title.toLowerCase().endsWith('.pdf')
+        fileName: seed.title.toLowerCase().endsWith('.pdf') || seed.title.toLowerCase().endsWith('.pptx') || seed.title.toLowerCase().endsWith('.ppt')
           ? seed.title
-          : `${seed.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`,
-        fileKind: 'pdf',
+          : seed.title.includes('Slides')
+            ? `${seed.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pptx`
+            : `${seed.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`,
+        fileKind: seed.title.includes('Slides') ? 'pptx' : 'pdf',
         ingestStatus: 'ready',
         ingestError: null,
         ingestedAt: STATIC_SEED_INGESTED_AT,

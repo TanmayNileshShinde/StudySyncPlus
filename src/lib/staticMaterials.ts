@@ -8,6 +8,35 @@ export const getStaticPdfUrl = (doc?: { title?: string; fileName?: string | null
   const str = `${doc.title || ''} ${doc.fileName || ''} ${doc.id || ''} ${doc.courseCode || ''}`;
   const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
+  // Standardized Course Materials: 1 PDF Note & 1 PPTX Slide Deck per Module across all 7 subjects
+  const subjectSlugs = [
+    { slug: 'dsa', code: 'CMCOR2PC203', name: 'data structures' },
+    { slug: 'os', code: 'CMCOR2PC202', name: 'operating system' },
+    { slug: 'mp', code: 'CMCOR2PC204', name: 'microprocessor' },
+    { slug: 'ds', code: 'CMCOR2PC201', name: 'discrete structures' },
+    { slug: 'fes', code: 'CMCOR2MD201', name: 'foundation of embedded' },
+    { slug: 'wt2', code: 'CMLOR2VS201', name: 'web technology' },
+    { slug: 'java', code: 'CMLOR2VS202', name: 'java' }
+  ];
+
+  for (const s of subjectSlugs) {
+    const isSubject = str.toLowerCase().includes(s.code.toLowerCase()) || 
+                      str.toLowerCase().includes(s.name.toLowerCase()) || 
+                      str.toLowerCase().includes(`res-${s.slug}-`);
+    if (isSubject) {
+      for (let m = 1; m <= 4; m++) {
+        const isModule = new RegExp(`\\b(module\\s*${m}|mod\\s*${m}|m${m})\\b`, 'i').test(str);
+        if (isModule) {
+          const isSlide = /slide|presentation|pptx|\bppt\b/i.test(str);
+          if (isSlide) {
+            return `${base}/materials/${s.slug}/${s.slug}_mod${m}_slides.pptx`;
+          }
+          return `${base}/materials/${s.slug}/${s.slug}_mod${m}_notes.pdf`;
+        }
+      }
+    }
+  }
+
   // Web Technology II (WT2) Lab Experiments (SYCM1_67_WTII_EXPT*.pdf)
   for (let i = 10; i >= 1; i--) {
     const pattern = new RegExp(`\\b(res-wt2-0*${i}|SYCM1_67_WTII_EXPT0*${i}|WTII_EXPT0*${i}|WT2_EXPT0*${i})\\b`, 'i');
