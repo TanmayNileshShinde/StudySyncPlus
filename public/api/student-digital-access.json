@@ -1,0 +1,90 @@
+{
+  "api": "StudySyncPlus Academic Telemetry & Digital Learning API",
+  "version": "v1.2",
+  "status": "online",
+  "institution": "Shah & Anchor Kutchhi Engineering College (SAKEC)",
+  "course": "Web Computing & Modern Frameworks — Semester III",
+  "sampleSize": 450,
+  "lastAudit": "2026-11-16",
+  "keyMetrics": {
+    "laptopOwnershipRate": 88.4,
+    "highSpeedInternetRate": 93.1,
+    "onlineStudyAdoption": 74.5,
+    "avgStudyHoursPerWeek": 16.8
+  },
+  "deviceDistribution": [
+    {
+      "device": "Personal Laptop",
+      "percentage": 88.4,
+      "studentsCount": 398,
+      "primaryUse": "Coding, Lab Practicals, PDF Annotations & Submissions"
+    },
+    {
+      "device": "Smartphone",
+      "percentage": 94.8,
+      "studentsCount": 426,
+      "primaryUse": "Quick Revision, Flashcards, Daily Timetable & Notifications"
+    },
+    {
+      "device": "Desktop PC",
+      "percentage": 31.2,
+      "studentsCount": 140,
+      "primaryUse": "Home Heavy Workstations, Multi-Monitor Development"
+    },
+    {
+      "device": "Tablet / iPad",
+      "percentage": 22.6,
+      "studentsCount": 102,
+      "primaryUse": "Digital Stylus Handwritten Notes & Slide Reading"
+    }
+  ],
+  "internetConnectivity": [
+    {
+      "category": "Fiber Broadband (Home)",
+      "percentage": 67.4,
+      "avgSpeedMbps": 150,
+      "reliability": "99.4%"
+    },
+    {
+      "category": "5G / 4G Mobile Data Hotspot",
+      "percentage": 25.8,
+      "avgSpeedMbps": 55,
+      "reliability": "95.1%"
+    },
+    {
+      "category": "Campus Wi-Fi (Eduroam / Lab)",
+      "percentage": 5.6,
+      "avgSpeedMbps": 95,
+      "reliability": "97.8%"
+    },
+    {
+      "category": "Limited / Intermittent",
+      "percentage": 1.2,
+      "avgSpeedMbps": 12,
+      "reliability": "81.0%"
+    }
+  ],
+  "studyModePreferences": [
+    {
+      "mode": "Hybrid (Campus Lectures + Online Notes)",
+      "percentage": 74.5,
+      "satisfactionRate": 92.4
+    },
+    {
+      "mode": "Fully Online (Self-Paced Resources)",
+      "percentage": 16.2,
+      "satisfactionRate": 86.1
+    },
+    {
+      "mode": "Traditional Offline (Physical Paper Only)",
+      "percentage": 9.3,
+      "satisfactionRate": 71.5
+    }
+  ],
+  "weeklyOnlineHours": [
+    { "semester": "Sem I", "hours": 11.2 },
+    { "semester": "Sem II", "hours": 13.8 },
+    { "semester": "Sem III (Current)", "hours": 16.8 },
+    { "semester": "Sem IV (Projected)", "hours": 18.5 }
+  ]
+}

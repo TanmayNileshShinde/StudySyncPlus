@@ -22,7 +22,9 @@ import {
   TrendingUp,
   BarChart3,
   PieChart,
-  ShieldCheck
+  ShieldCheck,
+  Zap,
+  CheckCircle2
 } from 'lucide-react';
 import { apiService, type StudentDigitalAccessData } from '../services/apiService';
 
@@ -42,6 +44,7 @@ ChartJS.register(
 
 const INK = '#0f172a';
 const YELLOW = '#eab308';
+const EMERALD = '#10b981';
 const MONO = "'JetBrains Mono', monospace";
 
 const tooltipStyle = {
@@ -56,7 +59,7 @@ const tooltipStyle = {
 export const StudentDigitalAccessChart: React.FC = () => {
   const [data, setData] = useState<StudentDigitalAccessData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'devices' | 'internet' | 'trends'>('devices');
+  const [activeTab, setActiveTab] = useState<'devices' | 'internet' | 'trends' | 'worldbank'>('devices');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   // Initial load
@@ -100,7 +103,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
         <div className="flex items-center justify-center gap-3">
           <RefreshCw className="w-5 h-5 text-slate-900 animate-spin" />
           <span className="font-mono text-sm font-bold text-slate-900">
-            Connecting to Academic Telemetry API...
+            Fetching Live API from World Bank &amp; Student Telemetry...
           </span>
         </div>
       </div>
@@ -169,33 +172,62 @@ export const StudentDigitalAccessChart: React.FC = () => {
     ]
   };
 
+  // Chart 4: World Bank National Internet Access Growth (Line Chart)
+  const worldBankLabels = (data.worldBankData || []).map((w) => w.year);
+  const worldBankValues = (data.worldBankData || []).map((w) => w.percentage);
+  const worldBankChartData = {
+    labels: worldBankLabels,
+    datasets: [
+      {
+        label: 'Individuals Using the Internet (% of Population)',
+        data: worldBankValues,
+        borderColor: EMERALD,
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: EMERALD,
+        pointBorderColor: INK,
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8
+      }
+    ]
+  };
+
   return (
     <div className="card-neo bg-white rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a] p-5 sm:p-7 overflow-hidden">
       {/* 1. Header with Badge & Live API Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-slate-900 pb-5">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center flex-wrap gap-2 mb-1.5">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 border border-emerald-500 font-mono text-[11px] font-bold text-emerald-800">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Live API Feed
+              Live Public API Feed
             </span>
-            <span className="font-mono text-xs text-slate-500 font-semibold">
-              · Sample: {data.sampleSize} Students
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900 text-white font-mono text-[10px] font-bold">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              {data.httpStatus}
+            </span>
+            <span className="inline-flex items-center gap-1 font-mono text-[11px] text-slate-500 font-semibold">
+              <Zap className="w-3 h-3 text-yellow-500" />
+              {data.responseTimeMs}ms
             </span>
           </div>
+
           <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             <Laptop className="w-5 h-5 text-yellow-500 stroke-[2.5]" />
             Student Digital Learning &amp; Device Access
           </h2>
           <p className="text-xs text-slate-600 font-medium mt-0.5">
-            Real-time visualization of student laptop availability, internet connectivity &amp; online study telemetry.
+            Live real-time visualization of student laptop availability, internet connectivity &amp; World Bank digital growth.
           </p>
         </div>
 
         <div className="flex items-center flex-wrap gap-2 shrink-0">
           <button
             onClick={() => setAutoRefresh((v) => !v)}
-            className={`px-3 py-1.5 rounded-lg border-2 border-slate-900 font-mono text-xs font-bold transition-all shadow-[2px_2px_0px_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg border-2 border-slate-900 font-mono text-xs font-bold transition-all shadow-[2px_2px_0px_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1.5 cursor-pointer ${
               autoRefresh ? 'bg-emerald-300 text-slate-900' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
             title="Toggle automatic 8-second real-time polling (Experiment 10)"
@@ -210,7 +242,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
             className="px-3.5 py-1.5 rounded-lg bg-yellow-400 hover:bg-yellow-300 border-2 border-slate-900 text-slate-900 font-mono text-xs font-black transition-all shadow-[2px_2px_0px_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh API</span>
+            <span>Fetch Live API</span>
           </button>
         </div>
       </div>
@@ -271,7 +303,7 @@ export const StudentDigitalAccessChart: React.FC = () => {
       </div>
 
       {/* 3. Visualization Mode Switcher Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 mb-4 font-mono text-xs">
+      <div className="flex items-center flex-wrap gap-2 border-b border-slate-200 pb-3 mb-4 font-mono text-xs">
         <button
           onClick={() => setActiveTab('devices')}
           className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -306,6 +338,18 @@ export const StudentDigitalAccessChart: React.FC = () => {
         >
           <TrendingUp className="w-3.5 h-3.5" />
           <span>Semester Study Hours</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('worldbank')}
+          className={`px-3 py-1.5 rounded-lg border-2 font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'worldbank'
+              ? 'bg-emerald-700 text-white border-slate-900 shadow-[2px_2px_0px_#eab308]'
+              : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:border-slate-900'
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5" />
+          <span>World Bank Live Net Data</span>
         </button>
       </div>
 
@@ -414,15 +458,55 @@ export const StudentDigitalAccessChart: React.FC = () => {
             />
           </div>
         )}
+
+        {activeTab === 'worldbank' && (
+          <div className="w-full h-[260px]">
+            <Line
+              data={worldBankChartData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: tooltipStyle,
+                  title: {
+                    display: true,
+                    text: 'Live World Bank API (api.worldbank.org): Internet Penetration Rate in India (%)',
+                    font: { family: MONO, size: 12, weight: 'bold' },
+                    color: INK
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: '#e2e8f0' },
+                    ticks: {
+                      font: { family: MONO, size: 10 },
+                      color: '#64748b',
+                      callback: (v) => `${v}%`
+                    },
+                    border: { color: INK, width: 1.5 }
+                  },
+                  x: {
+                    grid: { display: false },
+                    ticks: { font: { family: MONO, size: 10, weight: 'bold' }, color: INK },
+                    border: { color: INK, width: 1.5 }
+                  }
+                }
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* 5. Footer with Academic Telemetry Timestamp & Metadata */}
       <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono text-slate-500">
-        <div className="flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>Source: {data.source}</span>
+        <div className="flex items-center gap-1.5 truncate">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span className="truncate">Live Request: <code className="text-slate-800 font-bold bg-slate-100 px-1.5 py-0.5 rounded">{data.endpointUrl}</code></span>
         </div>
-        <div className="tabular">
+        <div className="tabular shrink-0">
           <span>Synced at: <strong className="text-slate-900">{data.timestamp}</strong></span>
         </div>
       </div>
