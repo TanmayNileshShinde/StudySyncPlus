@@ -132,8 +132,7 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
 
   // Clean document title for fallback display
   const displayTitle = useMemo(() => {
-    const raw = resource.fileName || resource.title || 'Course Material';
-    return raw.replace(/\.pdf$/i, '').trim();
+    return resource.title || resource.fileName || 'Course Material';
   }, [resource.title, resource.fileName]);
 
   return (
@@ -175,7 +174,7 @@ export const DocumentCardThumbnail: React.FC<DocumentCardThumbnailProps> = ({ re
             </div>
             <div className="grid grid-cols-2 px-1.5 py-0.5 text-gray-600">
               <span className="truncate">Code: {resource.courseCode}</span>
-              <span className="text-right truncate">Roll: {resource.rollNumber || '68'}</span>
+              <span className="text-right truncate">Roll: {resource.rollNumber || '67'}</span>
             </div>
           </div>
 

@@ -10,7 +10,7 @@ export const getStaticPdfUrl = (doc?: { title?: string; fileName?: string | null
 
   // OS Lab Experiments 1 through 8 (SYCM1_67_OS_EXPT1-8.pdf)
   for (let i = 1; i <= 8; i++) {
-    const pattern = new RegExp(`\\b(res-os-00${i}|EXPT0?${i}|Experiment\\s*0?${i})\\b`, 'i');
+    const pattern = new RegExp(`\\b(res-os-00${i}|SYCM1_67_OS_EXPT0?${i}|EXPT0?${i}|Experiment\\s*0?${i})\\b`, 'i');
     if (pattern.test(str)) {
       return `${base}/pdf-files-to-test/os/SYCM1_67_OS_EXPT${i}.pdf`;
     }
