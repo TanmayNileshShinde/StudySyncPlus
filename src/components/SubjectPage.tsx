@@ -521,17 +521,26 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
       list = list.filter((r) => selectedTags.every((t) => r.tags.includes(t)));
     }
 
-    // Sort files
+    // Sort files with natural alphanumeric sorting (so Experiment 10 follows Experiment 9)
     return [...list].sort((a, b) => {
       let cmp = 0;
       if (sortField === 'name') {
-        cmp = a.title.localeCompare(b.title);
+        cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
       } else if (sortField === 'date') {
         cmp = (b.uploadDate || '').localeCompare(a.uploadDate || '');
+        if (cmp === 0) {
+          cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+        }
       } else if (sortField === 'size') {
         cmp = (a.fileSizeBytes || 0) - (b.fileSizeBytes || 0);
+        if (cmp === 0) {
+          cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+        }
       } else if (sortField === 'type') {
-        cmp = a.type.localeCompare(b.type);
+        cmp = a.type.localeCompare(b.type, undefined, { numeric: true, sensitivity: 'base' });
+        if (cmp === 0) {
+          cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+        }
       }
       return sortDirection === 'asc' ? cmp : -cmp;
     });

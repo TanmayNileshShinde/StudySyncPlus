@@ -192,7 +192,9 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   // Sibling resources in same subject for quick switching
   const siblingResources = useMemo(() => {
     if (!activeDoc) return [];
-    return resources.filter((r) => r.subjectId === activeDoc.subjectId);
+    return resources
+      .filter((r) => r.subjectId === activeDoc.subjectId)
+      .sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
   }, [activeDoc, resources]);
 
   // Active subject name
