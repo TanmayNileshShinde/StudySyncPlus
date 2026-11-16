@@ -296,6 +296,11 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (/SYCM1_67_OS_EXPT/i.test(r.fileName || '') || /SYCM1_67_OS_EXPT/i.test(r.title || '')) return true;
       if (r.courseCode === 'CMCOR2PC202' && /OS_EXPT/i.test(r.title || '')) return true;
 
+      // Keep real MP practicals (Roll 67)
+      if (r.id && String(r.id).startsWith('res-mp-')) return true;
+      if (/SYCM1_67_MP_EXPT/i.test(r.fileName || '') || /SYCM1_67_MP_EXPT/i.test(r.title || '')) return true;
+      if (r.courseCode === 'CMCOR2PC204' && /MP_EXPT/i.test(r.title || '')) return true;
+
       // Keep real FES practicals
       if (r.id && String(r.id).startsWith('res-fes-')) return true;
       if (/SYCM1_67_FES_EXPT/i.test(r.fileName || '') || /SYCM1_67_FES_EXPT/i.test(r.title || '')) return true;

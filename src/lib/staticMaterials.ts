@@ -8,6 +8,14 @@ export const getStaticPdfUrl = (doc?: { title?: string; fileName?: string | null
   const str = `${doc.title || ''} ${doc.fileName || ''} ${doc.id || ''} ${doc.courseCode || ''}`;
   const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
+  // Microprocessor (MP) Lab Experiments 1 through 8 (SYCM1_67_MP_EXPT1-8.pdf)
+  for (let i = 8; i >= 1; i--) {
+    const pattern = new RegExp(`\\b(res-mp-0*${i}|SYCM1_67_MP_EXPT0*${i}|MP_EXPT0*${i})\\b`, 'i');
+    if (pattern.test(str)) {
+      return `${base}/pdf-files-to-test/mp/SYCM1_67_MP_EXPT${i}.pdf`;
+    }
+  }
+
   // Operating System (OS) Lab Experiments 1 through 8 (SYCM1_67_OS_EXPT1-8.pdf)
   for (let i = 8; i >= 1; i--) {
     const pattern = new RegExp(`\\b(res-os-0*${i}|SYCM1_67_OS_EXPT0*${i}|OS_EXPT0*${i})\\b`, 'i');

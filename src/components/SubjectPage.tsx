@@ -231,6 +231,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           if (isOsSubject && (/SYCM1_67_OS_EXPT|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
             return true;
           }
+          const isMpSubject =
+            (courseCode && courseCode.includes('204')) ||
+            (subject?.name && subject.name.toLowerCase().includes('microprocessor')) ||
+            (scheme?.courseName && scheme.courseName.toLowerCase().includes('microprocessor'));
+          if (isMpSubject && (/SYCM1_67_MP_EXPT|res-mp-/i.test(r.title) || (r.id && String(r.id).startsWith('res-mp-')))) {
+            return true;
+          }
           return false;
         }
         return false;
@@ -491,6 +498,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
               (subject?.name && subject.name.toLowerCase().includes('operating')) ||
               (scheme?.courseName && scheme.courseName.toLowerCase().includes('operating'));
             if (isOsSubject && (/SYCM1_67_OS_EXPT|res-os-/i.test(r.title) || (r.id && String(r.id).startsWith('res-os-')))) {
+              return true;
+            }
+            const isMpSubject =
+              (subject?.courseCode && subject.courseCode.includes('204')) ||
+              (subject?.name && subject.name.toLowerCase().includes('microprocessor')) ||
+              (scheme?.courseName && scheme.courseName.toLowerCase().includes('microprocessor'));
+            if (isMpSubject && (/SYCM1_67_MP_EXPT|res-mp-/i.test(r.title) || (r.id && String(r.id).startsWith('res-mp-')))) {
               return true;
             }
             return false;
