@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useResources } from '../context/ResourceContext';
+import { StudentDigitalAccessChart } from './StudentDigitalAccessChart';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -758,6 +759,11 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
           )}
         </section>
       )}
+
+      {/* 9. Student Digital Learning & Device Access (Real-Time API Visualization - Experiment 10) */}
+      <section className="mt-8">
+        <StudentDigitalAccessChart />
+      </section>
     </div>
   );
 };
