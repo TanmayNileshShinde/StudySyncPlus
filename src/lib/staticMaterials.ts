@@ -60,9 +60,9 @@ export const getStaticPdfUrl = (doc?: { title?: string; fileName?: string | null
 
   // Operating System (OS) Lab Experiments 1 through 8 (SYCM1_67_OS_EXPT1-8.pdf)
   for (let i = 8; i >= 1; i--) {
-    const pattern = new RegExp(`\\b(res-os-0*${i}|SYCM1_67_OS_EXPT0*${i}|OS_EXPT0*${i})\\b`, 'i');
+    const pattern = new RegExp(`\\b(res-os-expt-0*${i}|res-os-0*${i}|SYCM1_67_OS_EXPT0*${i}|OS_EXPT0*${i})\\b`, 'i');
     if (pattern.test(str)) {
-      return `${base}/pdf-files-to-test/os/SYCM1_67_OS_EXPT${i}.pdf`;
+      return `${base}/materials/os/SYCM1_67_OS_EXPT${i}.pdf`;
     }
   }
 

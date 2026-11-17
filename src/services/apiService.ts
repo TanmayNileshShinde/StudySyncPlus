@@ -396,16 +396,16 @@ Developed by:
   }
 
   /**
-   * Generates a downloadable dummy file (Blob URL) to demonstrate browser DOM interaction (CO1.2)
+   * Generates a downloadable summary document (Blob URL) to demonstrate browser DOM interaction (CO1.2)
    */
   generateAndDownloadResource(resource: StudyResource): void {
     const content = this.generateResourceSummaryText(resource);
 
-    const blob = new Blob([content], { type: 'application/pdf;charset=utf-8' });
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
     downloadAnchor.href = url;
-    downloadAnchor.download = `${resource.title.replace(/[^a-zA-Z0-9]/g, '_')}_StudySyncPlus.pdf`;
+    downloadAnchor.download = `${resource.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Summary.txt`;
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     document.body.removeChild(downloadAnchor);

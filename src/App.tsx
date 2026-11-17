@@ -13,13 +13,24 @@ import { NotFoundView } from './components/NotFoundView';
 import { BulkUploadModal } from './components/BulkUploadModal';
 import { ResourceEditModal } from './components/ResourceEditModal';
 import { MoreSheet } from './components/MoreSheet';
-import { CurriculumSchemeModal } from './components/CurriculumSchemeModal';
-import { SyllabusVivaModal } from './components/SyllabusVivaModal';
-import { AnalyticsCharts } from './components/AnalyticsCharts';
-import { JsSandboxModal } from './components/JsSandboxModal';
-import { TimetableModal } from './components/TimetableModal';
 import { Footer } from './components/Footer';
 import type { MoreSheetKind } from './types';
+
+const CurriculumSchemeModal = React.lazy(() =>
+  import('./components/CurriculumSchemeModal').then((m) => ({ default: m.CurriculumSchemeModal }))
+);
+const SyllabusVivaModal = React.lazy(() =>
+  import('./components/SyllabusVivaModal').then((m) => ({ default: m.SyllabusVivaModal }))
+);
+const AnalyticsCharts = React.lazy(() =>
+  import('./components/AnalyticsCharts').then((m) => ({ default: m.AnalyticsCharts }))
+);
+const JsSandboxModal = React.lazy(() =>
+  import('./components/JsSandboxModal').then((m) => ({ default: m.JsSandboxModal }))
+);
+const TimetableModal = React.lazy(() =>
+  import('./components/TimetableModal').then((m) => ({ default: m.TimetableModal }))
+);
 
 const CONVEX_URL =
   (import.meta.env.VITE_CONVEX_URL as string) ||
@@ -178,14 +189,18 @@ function Shell() {
       {/* Overlays */}
       <BulkUploadModal isOpen={uploadSubjectId !== null} onClose={closeUploadModal} subjectId={uploadSubjectId} folderId={uploadFolderId} />
       <ResourceEditModal />
-      <TimetableModal isOpen={isTimetableOpen} onClose={() => setIsTimetableOpen(false)} initialTab={timetableTab} />
+      <React.Suspense fallback={null}>
+        <TimetableModal isOpen={isTimetableOpen} onClose={() => setIsTimetableOpen(false)} initialTab={timetableTab} />
+      </React.Suspense>
 
       {sheet && (
         <MoreSheet title={SHEET_META[sheet].title} subtitle={SHEET_META[sheet].subtitle} onClose={handleCloseSheet}>
-          {sheet === 'scheme' && <CurriculumSchemeModal onOpenSubject={handleOpenSubjectFromSheet} />}
-          {sheet === 'syllabus' && <SyllabusVivaModal />}
-          {sheet === 'analytics' && <AnalyticsCharts />}
-          {sheet === 'async-lab' && <JsSandboxModal />}
+          <React.Suspense fallback={<div className="p-8 text-center font-mono text-xs text-ink-3">Loading…</div>}>
+            {sheet === 'scheme' && <CurriculumSchemeModal onOpenSubject={handleOpenSubjectFromSheet} />}
+            {sheet === 'syllabus' && <SyllabusVivaModal />}
+            {sheet === 'analytics' && <AnalyticsCharts />}
+            {sheet === 'async-lab' && <JsSandboxModal />}
+          </React.Suspense>
         </MoreSheet>
       )}
 
