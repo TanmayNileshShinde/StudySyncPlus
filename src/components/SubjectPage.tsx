@@ -1204,56 +1204,76 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
           </div>
 
           {/* 2. File Manager Filter & Search Toolbar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 p-3 bg-white border-2 border-gray-800 rounded-xl shadow-2xs">
-            {/* Search Input with Scope Selector */}
-            <div className="flex items-center gap-2 flex-1 min-w-[260px]">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
-                <input
-                  type="search"
-                  value={subjectSearch}
-                  onChange={(e) => setSubjectSearch(e.target.value)}
-                  placeholder={
-                    searchScope === 'subject'
-                      ? 'Search all materials in course…'
-                      : activeFolder
-                      ? `Search in “${activeFolder.name}”…`
-                      : 'Search in this folder…'
-                  }
-                  aria-label="Search materials"
-                  className="w-full pl-9 pr-8 py-2 bg-neutral-50 focus:bg-white border-2 border-gray-800 rounded-xl text-xs font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-800 shadow-xs"
-                />
-                {subjectSearch && (
-                  <button
-                    onClick={() => setSubjectSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-800 p-0.5 cursor-pointer"
-                    aria-label="Clear filter"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+          <div className="bg-white border-2 border-gray-800 rounded-xl shadow-2xs p-3 space-y-2.5">
+            {/* Top Row: Search Input, Scope Selector & Directory Summary Count */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+              {/* Search Input with Scope Selector */}
+              <div className="flex items-center gap-2 flex-1 max-w-xl min-w-0">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={subjectSearch}
+                    onChange={(e) => setSubjectSearch(e.target.value)}
+                    placeholder={
+                      searchScope === 'subject'
+                        ? 'Search all materials in course…'
+                        : activeFolder
+                        ? `Search in “${activeFolder.name}”…`
+                        : 'Search in this folder…'
+                    }
+                    aria-label="Search materials"
+                    className="w-full pl-9 pr-8 py-2 bg-neutral-50 focus:bg-white border-2 border-gray-800 rounded-xl text-xs font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-800 shadow-xs"
+                  />
+                  {subjectSearch && (
+                    <button
+                      onClick={() => setSubjectSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-800 p-0.5 cursor-pointer"
+                      aria-label="Clear filter"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Search Scope Switcher (Current folder vs Entire Subject) */}
+                <select
+                  value={searchScope}
+                  onChange={(e) => setSearchScope(e.target.value as 'current' | 'subject')}
+                  aria-label="Search scope"
+                  className="px-3 py-2 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none shrink-0"
+                >
+                  <option value="current">Current folder</option>
+                  <option value="subject">Entire course</option>
+                </select>
               </div>
 
-              {/* Search Scope Switcher (Current folder vs Entire Subject) */}
-              <select
-                value={searchScope}
-                onChange={(e) => setSearchScope(e.target.value as 'current' | 'subject')}
-                aria-label="Search scope"
-                className="px-3 py-2 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
-              >
-                <option value="current">Current folder</option>
-                <option value="subject">Entire course</option>
-              </select>
+              {/* Directory Count Pill Badge */}
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-700 shadow-2xs tabular-nums shrink-0 self-start sm:self-center">
+                <span className="text-gray-900 font-extrabold">{directoryResources.length}</span>
+                <span>{directoryResources.length === 1 ? 'file' : 'files'}</span>
+                {directoryFolders.length > 0 && (
+                  <>
+                    <span className="text-gray-400">·</span>
+                    <span className="text-gray-900 font-extrabold">{directoryFolders.length}</span>
+                    <span>{directoryFolders.length === 1 ? 'folder' : 'folders'}</span>
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Filter Dropdowns in One Clean Row */}
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* Bottom Row: Filter Dropdowns, Tags & Reset */}
+            <div className="flex items-center gap-2 flex-wrap pt-2 border-t-2 border-gray-100">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-400 mr-1 hidden sm:inline">
+                Filters:
+              </span>
+
               {/* Category Select */}
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value as ResourceType | 'ALL')}
                 aria-label="Filter by material category"
-                className="px-3 py-2 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
+                className="px-3 py-1.5 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat.type} value={cat.type}>
@@ -1267,7 +1287,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 value={selectedFormat}
                 onChange={(e) => setSelectedFormat(e.target.value as 'ALL' | 'pdf' | 'ppt')}
                 aria-label="Filter by file format"
-                className="px-3 py-2 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
+                className="px-3 py-1.5 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
               >
                 <option value="ALL">All Formats</option>
                 <option value="pdf">PDF only</option>
@@ -1279,7 +1299,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 value={selectedIndexStatus}
                 onChange={(e) => setSelectedIndexStatus(e.target.value as 'ALL' | 'ready' | 'processing' | 'failed')}
                 aria-label="Filter by AI indexing status"
-                className="px-3 py-2 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
+                className="px-3 py-1.5 bg-white border-2 border-gray-800 rounded-xl text-xs font-bold text-gray-900 shadow-xs cursor-pointer focus:outline-none"
               >
                 <option value="ALL">All Index States</option>
                 <option value="ready">Indexed for AI</option>
@@ -1292,7 +1312,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 <button
                   type="button"
                   onClick={() => setShowTagBar((v) => !v)}
-                  className={`px-3 py-2 text-xs font-bold rounded-xl border-2 border-gray-800 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl border-2 border-gray-800 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
                     showTagBar || selectedTags.length > 0
                       ? 'bg-gray-900 text-white'
                       : 'bg-white text-gray-900 hover:bg-neutral-100'
@@ -1304,13 +1324,22 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({ subjectId }) => {
                 </button>
               )}
 
-              {/* Directory Count */}
-              <div className="text-xs text-gray-600 font-bold px-2 tabular-nums">
-                <span className="text-gray-900">{directoryResources.length}</span> files
-                {directoryFolders.length > 0 && (
-                  <span> · <strong className="text-gray-900">{directoryFolders.length}</strong> folders</span>
-                )}
-              </div>
+              {/* Reset Filters button if any active */}
+              {(selectedCategory !== 'ALL' || selectedFormat !== 'ALL' || selectedIndexStatus !== 'ALL' || selectedTags.length > 0 || subjectSearch) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory('ALL');
+                    setSelectedFormat('ALL');
+                    setSelectedIndexStatus('ALL');
+                    setSelectedTags([]);
+                    setSubjectSearch('');
+                  }}
+                  className="text-xs font-bold text-gray-500 hover:text-red-600 underline ml-auto cursor-pointer"
+                >
+                  Reset filters
+                </button>
+              )}
             </div>
           </div>
 
