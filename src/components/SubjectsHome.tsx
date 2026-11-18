@@ -243,7 +243,7 @@ export const SubjectsHome: React.FC<SubjectsHomeProps> = ({ onOpenTimetable, onO
               </span>
             </div>
             <p className="text-xs text-gray-800 font-semibold leading-relaxed">
-              Tanmay Shinde <span className="font-mono font-bold text-gray-500">(Roll 67)</span> &amp; Aditya Shah <span className="font-mono font-bold text-gray-500">(Roll 68)</span>
+              Tanmay Shinde <span className="font-mono font-bold text-gray-500">(Roll 67)</span>, Aditya Shah <span className="font-mono font-bold text-gray-500">(Roll 68)</span> &amp; Bhavik Waykole <span className="font-mono font-bold text-gray-500">(Roll 64)</span>
             </p>
           </div>
         </div>

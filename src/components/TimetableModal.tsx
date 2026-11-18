@@ -801,7 +801,7 @@ export const TimetableModal: React.FC<{
         <div className="p-3.5 bg-white border-t-2 border-slate-900 flex items-center justify-between text-xs text-slate-600 font-medium">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping hidden sm:inline-block" />
-            <span>CRs: Tanmay Shinde (67) &amp; Aditya Shah (68)</span>
+            <span>CRs: Tanmay Shinde (67), Aditya Shah (68) &amp; Bhavik Waykole (64)</span>
           </div>
           <button
             onClick={onClose}
