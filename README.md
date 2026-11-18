@@ -268,7 +268,7 @@ npm run deploy
 
 ## 📄 License & Academic Attribution
 
-This project is submitted for academic evaluation in **Semester III Computer Engineering** at **Shah & Anchor Kutchhi Engineering College (SAKEC)**.
+This project is submitted for academic evaluation in **Semester III Computer Engineering** at **Shah & Anchor Kutchhi Engineering College (SAKEC)**
 
 Released under the **[MIT License](https://opensource.org/licenses/MIT)**.  
 Copyright © 2026 **Tanmay Shinde** & **Aditya Shah**. All rights reserved.
